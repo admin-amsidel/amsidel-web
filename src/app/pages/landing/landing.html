@@ -1,0 +1,203 @@
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ic-doors" viewBox="0 0 100 100">
+      <rect x="24" y="12" width="52" height="76" fill="none" stroke="#2A2A2E" stroke-width="5" />
+      <path d="M50 12 V88 M24 50 H76" stroke="#2A2A2E" stroke-width="3" />
+      <circle cx="43" cy="56" r="4" fill="#B08A4E" />
+    </symbol>
+    <symbol id="ic-dot" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="7" fill="none" stroke="#B08A4E" stroke-width="2" />
+      <circle cx="10" cy="10" r="2.5" fill="#B08A4E" />
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <a class="brandmark" href="#top" (click)="goTo($event, 'top')" aria-label="Amsidel Enterprises home">
+      <img src="brand/amsidel-mark.png" alt="" width="60" height="28" />
+      <span>Amsidel</span>
+    </a>
+    <div class="header-actions">
+      <a class="store-link" routerLink="/doors-windows">Doors &amp; Windows <span aria-hidden="true">→</span></a>
+      <button
+        #menuBtn
+        class="menu-btn"
+        type="button"
+        aria-controls="rail"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="toggleMenu()"
+      >
+        <span>Explore</span>
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="4" r="2" />
+          <circle cx="10" cy="10" r="2" />
+          <circle cx="10" cy="16" r="2" />
+          <path d="M10 6v2M10 12v2" stroke="currentColor" stroke-width="1.4" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="intro" id="top">
+    <h1>
+      <img class="logo-full" src="brand/amsidel-logo.png" alt="Amsidel Enterprises Private Limited" width="760" height="602" />
+    </h1>
+    <p class="lede">
+      One group at the centre, a growing family of brands around it. Each brand moves on its own path and shares one
+      standard of quality.
+    </p>
+  </section>
+
+  <section class="system-wrap" id="brands" aria-label="Amsidel brands">
+    <div class="system">
+      <div class="orbit o1">
+        <div class="planet-slot">
+          <div class="planet-upright">
+            <a class="planet" routerLink="/doors-windows" aria-label="Visit Amsidel Doors and Windows">
+              <span class="body"><svg aria-hidden="true"><use href="#ic-doors" /></svg></span>
+              <span class="name"><em>Amsidel</em>Doors &amp; Windows</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="sun" role="img" aria-label="Amsidel Enterprises logo">
+        <img src="brand/amsidel-mark.png" alt="" width="360" height="167" />
+      </div>
+    </div>
+    <p class="hint">Click the planet to explore Doors &amp; Windows</p>
+
+    <div class="chips">
+      <a class="chip" routerLink="/doors-windows"><b></b>Shop Doors &amp; Windows</a>
+    </div>
+  </section>
+
+  <div class="glance" aria-label="Amsidel at a glance">
+    <div><b>2026</b><span>Year founded</span></div>
+    <div><b>10</b><span>Product families</span></div>
+    <div><b>100%</b><span>Made to measure</span></div>
+    <div><b>IN</b><span>Rooted in India</span></div>
+  </div>
+
+  <section class="block vm" id="vision">
+    <div>
+      <p class="kicker">Our Vision</p>
+      <h2>Spaces people are proud to live, work and rest in</h2>
+      <p class="vision-quote">
+        To build a family of trusted Indian brands that make everyday spaces better: designed with care, built to last
+        and served with honesty.
+      </p>
+    </div>
+    <div>
+      <p class="kicker">Our Mission</p>
+      <ul class="mission">
+        <li>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><use href="#ic-dot" /></svg>
+          <div><strong>Build focused brands</strong><span>Give every brand its own team, product and identity, with the backing of one strong group.</span></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><use href="#ic-dot" /></svg>
+          <div><strong>Deliver lasting quality</strong><span>Choose materials, partners and processes that stand up to years of real use.</span></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><use href="#ic-dot" /></svg>
+          <div><strong>Earn long-term trust</strong><span>Treat customers, partners and employees fairly, and keep every promise we make.</span></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><use href="#ic-dot" /></svg>
+          <div><strong>Grow responsibly</strong><span>Expand into new sectors at a steady pace, with care for people and the environment.</span></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block" id="values">
+    <div class="values-head">
+      <div>
+        <p class="kicker">What We Stand For</p>
+        <h2>Our Values</h2>
+      </div>
+      <p>Four principles shared by every Amsidel brand, whatever it makes or serves.</p>
+    </div>
+    <div class="values">
+      <div class="value">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 32 L20 8 L32 32" fill="none" stroke="#2A2A2E" stroke-width="2.4" /><path d="M13 24 H27" stroke="#B08A4E" stroke-width="2.4" /></svg>
+        <h3>Craftsmanship</h3>
+        <p>Attention to detail in every frame, finish and room.</p>
+      </div>
+      <div class="value">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="9" width="22" height="22" fill="none" stroke="#2A2A2E" stroke-width="2.4" transform="rotate(45 20 20)" /><circle cx="20" cy="20" r="3.5" fill="#B08A4E" /></svg>
+        <h3>Integrity</h3>
+        <p>Clear pricing, honest timelines and promises we keep.</p>
+      </div>
+      <div class="value">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="15" r="6" fill="none" stroke="#2A2A2E" stroke-width="2.4" /><path d="M8 34 C10 26 30 26 32 34" fill="none" stroke="#2A2A2E" stroke-width="2.4" /><path d="M14 34 H26" stroke="#B08A4E" stroke-width="2.4" /></svg>
+        <h3>Customer First</h3>
+        <p>Service that continues long after the sale or the stay.</p>
+      </div>
+      <div class="value">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 6 C31 14 31 27 20 34 C9 27 9 14 20 6 Z" fill="none" stroke="#2A2A2E" stroke-width="2.4" /><path d="M20 12 V34" stroke="#B08A4E" stroke-width="2.4" /></svg>
+        <h3>Sustainability</h3>
+        <p>Energy-efficient, long-life products that waste less.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block model" id="way">
+    <div>
+      <p class="kicker">The Amsidel Way</p>
+      <h2>One group. Focused brands. Shared strength.</h2>
+      <p class="body-copy">
+        Each Amsidel brand runs as its own business with its own experts. The group gives every brand the same
+        foundation, so a new venture starts with the experience of all the others.
+      </p>
+    </div>
+    <div class="shared">
+      <div><strong>Design standards</strong><span>One eye for quality across products and spaces.</span></div>
+      <div><strong>Trusted sourcing</strong><span>Vetted suppliers for materials, fittings and services.</span></div>
+      <div><strong>Governance</strong><span>Sound financial and legal practice as a private limited company.</span></div>
+      <div><strong>People</strong><span>Skilled teams trained to the Amsidel way of working.</span></div>
+    </div>
+  </section>
+
+  <section class="partner" id="partner">
+    <div>
+      <p class="kicker">Partner With Us</p>
+      <h2>Let's build what comes next, together</h2>
+      <p>
+        We welcome conversations with architects, builders, dealers, suppliers and investors as Amsidel Doors &amp;
+        Windows grows.
+      </p>
+      <a class="btn btn--gold partner-cta" routerLink="/doors-windows/contact">Get in touch</a>
+    </div>
+    <ul aria-label="Who we work with">
+      <li>Architects</li>
+      <li>Builders</li>
+      <li>Dealers</li>
+      <li>Suppliers</li>
+      <li>Investors</li>
+      <li>Interior designers</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>© {{ year }} {{ site.company }}</span>
+    <span>{{ site.website }} · Doors &amp; Windows</span>
+  </footer>
+</div>
+
+<!-- Right-side roadmap menu -->
+<nav #rail class="rail" id="rail" aria-label="Page sections" [class.open]="menuOpen()" (transitionend)="setFill()">
+  <div class="rail-head">Explore Amsidel</div>
+  <ol #railList [style.--fill.px]="fill()">
+    @for (s of sections; track s.id; let i = $index) {
+      <li [class.active]="i === active()" [class.done]="i < active()">
+        <a [href]="'#' + s.id" [attr.aria-current]="i === active() ? 'true' : null" (click)="goTo($event, s.id)">
+          <span class="lbl">{{ s.label }}<small>{{ s.sub }}</small></span>
+          <i #railDot></i>
+        </a>
+      </li>
+    }
+  </ol>
+</nav>

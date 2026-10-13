@@ -1,0 +1,298 @@
+<!-- Hero slider -->
+<section
+  class="hero"
+  aria-roledescription="carousel"
+  aria-label="Featured collections"
+  (mouseenter)="pause(true)"
+  (mouseleave)="pause(false)"
+  (focusin)="pause(true)"
+  (focusout)="pause(false)"
+>
+  @for (s of slides; track s.image; let i = $index) {
+    <div
+      class="hero__slide"
+      [class.is-active]="i === current()"
+      [style.background-image]="'url(' + s.image + ')'"
+      role="group"
+      aria-roledescription="slide"
+      [attr.aria-label]="i + 1 + ' of ' + slides.length"
+      [attr.aria-hidden]="i !== current()"
+      [attr.inert]="i !== current() ? '' : null"
+    >
+      <div class="container hero__content">
+        <p class="kicker">{{ s.kicker }}</p>
+        @if (i === 0) {
+          <h1>{{ s.title }}</h1>
+        } @else {
+          <h2>{{ s.title }}</h2>
+        }
+        <p class="hero__text">{{ s.text }}</p>
+        <div class="hero__actions">
+          <a class="btn btn--gold" [routerLink]="s.link">Explore range</a>
+          <a class="btn btn--ghost-light" routerLink="/doors-windows/contact" fragment="quote">Free site visit</a>
+        </div>
+      </div>
+    </div>
+  }
+  <div class="hero__controls container">
+    <div class="hero__dots">
+      @for (s of slides; track s.image; let i = $index) {
+        <button
+          type="button"
+          [class.is-active]="i === current()"
+          [attr.aria-label]="'Show slide ' + (i + 1)"
+          [attr.aria-current]="i === current() ? 'true' : null"
+          (click)="go(i)"
+        ></button>
+      }
+    </div>
+    <div class="hero__arrows">
+      <button type="button" aria-label="Previous slide" (click)="prev()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+      </button>
+      <button type="button" aria-label="Next slide" (click)="next()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Range showcase -->
+<section class="section range">
+  <div class="container">
+    <div class="range__head">
+      <div>
+        <p class="kicker">Our Range</p>
+        <h2>Choose your material.<br /><em>We&rsquo;ll make it to measure.</em></h2>
+      </div>
+      <p class="range__lede">
+        Ten product families, one team. Pick a material to see where it works best, then explore the designs.
+      </p>
+    </div>
+
+    <div class="range__body">
+      <nav class="range__menu" aria-label="Product families">
+        @for (g of rangeGroups; track g.label) {
+          <p class="range__group">{{ g.label }}</p>
+          <ul>
+            @for (c of g.items; track c.slug) {
+              <li>
+                <button
+                  type="button"
+                  class="range__item"
+                  [class.is-active]="selected() === c.slug"
+                  [attr.aria-pressed]="selected() === c.slug"
+                  aria-controls="range-panel"
+                  (click)="selected.set(c.slug)"
+                  (mouseenter)="preview(c.slug)"
+                >
+                  <span class="range__num">{{ indexOf(c.slug) }}</span>
+                  <span class="range__label">
+                    <strong>{{ c.name }}</strong>
+                    <small>{{ c.tagline }}</small>
+                  </span>
+                  <span class="range__count">{{ countOf(c.slug) }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </nav>
+
+      <!-- re-created on every change so the fade-in animation replays -->
+      @for (c of [selectedCat()]; track c.slug) {
+        <article class="range__panel" id="range-panel" aria-live="polite">
+          <figure class="range__figure">
+            <img [src]="c.cover" [alt]="c.name + ' in a room setting'" width="900" height="506" />
+            <figcaption>
+              <span class="range__badge">{{ indexOf(c.slug) }} / {{ categories.length }}</span>
+              <h3>{{ c.name }}</h3>
+              <p>{{ c.tagline }}</p>
+            </figcaption>
+          </figure>
+
+          <div class="range__info">
+            <p class="range__desc">{{ c.description }}</p>
+            <ul class="range__chips">
+              @for (f of c.features.slice(0, 3); track f) {
+                <li>{{ f }}</li>
+              }
+            </ul>
+
+            <div class="range__thumbs" [class.range__thumbs--photo]="c.group === 'doors-windows'">
+              @for (p of selectedProducts(); track p.slug) {
+                <a [routerLink]="['/doors-windows/product', p.slug]" [attr.aria-label]="p.name">
+                  <img [src]="p.image" alt="" loading="lazy" width="120" height="150" />
+                  <span>{{ p.model }}</span>
+                </a>
+              }
+            </div>
+
+            <div class="range__cta">
+              <a class="btn btn--dark" [routerLink]="['/doors-windows/category', c.slug]">
+                Explore {{ c.short }} <span aria-hidden="true">&rarr;</span>
+              </a>
+              <a class="range__all" routerLink="/doors-windows/products" [queryParams]="{ type: c.slug }">
+                See all {{ countOf(c.slug) }} designs
+              </a>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- About split -->
+<section class="section section--soft about">
+  <div class="container about__grid">
+    <div class="about__media">
+      <img src="images/gallery/gallery-04.webp" alt="Large aluminium sliding doors opening onto a patio" loading="lazy" width="700" height="700" />
+      <img class="about__inset" src="images/gallery/gallery-08.webp" alt="Wood-finish entrance door with glass panel" loading="lazy" width="320" height="320" />
+    </div>
+    <div class="about__copy">
+      <p class="kicker">About Amsidel</p>
+      <h2>Doors and windows, done properly from measurement to handover</h2>
+      <p>
+        Amsidel Doors &amp; Windows is the building-products brand of Amsidel Enterprises Private Limited. We bring
+        uPVC, aluminium, WPC and steel systems, together with a full range of interior and entrance doors, under one
+        roof, so homeowners, architects and builders deal with a single team for every opening.
+      </p>
+      <ul class="ticks">
+        <li>Ten product families, one point of contact</li>
+        <li>Site survey and advice before you commit</li>
+        <li>Installation by our own trained team</li>
+      </ul>
+      <a class="btn btn--dark" routerLink="/doors-windows/about">More about us</a>
+    </div>
+  </div>
+</section>
+
+<!-- Featured products -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <p class="kicker">Collections</p>
+      <h2>Popular designs</h2>
+      <span class="title-rule"></span>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Filter featured products">
+      @for (t of tabs; track t.slug) {
+        <button type="button" role="tab" [attr.aria-selected]="tab() === t.slug" (click)="tab.set(t.slug)">{{ t.label }}</button>
+      }
+    </div>
+    <div class="products-grid">
+      @for (p of featured(); track p.slug) {
+        <app-product-card [product]="p" />
+      }
+    </div>
+    <div class="center">
+      <a class="btn btn--outline" routerLink="/doors-windows/products">View all products</a>
+    </div>
+  </div>
+</section>
+
+<!-- Why choose us -->
+<section class="section why">
+  <div class="container">
+    <div class="section-head">
+      <p class="kicker">Why Amsidel</p>
+      <h2>What you can expect from us</h2>
+      <span class="title-rule"></span>
+    </div>
+    <div class="why__grid">
+      @for (r of reasons; track r.title; let i = $index) {
+        <div class="why__item">
+          <div class="why__top">
+            <span class="why__icon" aria-hidden="true">
+              <svg viewBox="0 0 40 40" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                @switch (r.icon) {
+                  @case ('measure') {
+                    <!-- tape measure -->
+                    <rect x="5" y="12" width="22" height="18" rx="4" stroke="#2A2A2E" stroke-width="2.2" />
+                    <circle cx="16" cy="21" r="4" stroke="#2A2A2E" stroke-width="2.2" />
+                    <path d="M27 26 H36 M30 26 V23 M33 26 V24 M36 26 V23" stroke="#B08A4E" stroke-width="2.2" />
+                  }
+                  @case ('frame') {
+                    <!-- window frame with set square -->
+                    <rect x="6" y="6" width="22" height="26" stroke="#2A2A2E" stroke-width="2.2" />
+                    <path d="M17 6 V32 M6 19 H28" stroke="#2A2A2E" stroke-width="1.6" />
+                    <path d="M24 35 L35 35 L35 24 Z" stroke="#B08A4E" stroke-width="2.2" />
+                  }
+                  @case ('tools') {
+                    <!-- wrench and screwdriver -->
+                    <path d="M25 6 a6 6 0 0 0 -5.6 8.2 L7 26.6 a2.8 2.8 0 0 0 4 4 L23.4 18.2 A6 6 0 0 0 31.6 12 l-3.6 3.6 -3.4 -1 -1 -3.4 3.6 -3.6 A6 6 0 0 0 25 6 Z" stroke="#2A2A2E" stroke-width="2.2" />
+                    <path d="M22 26 L32 36 M30 28 L34 24 L36 26 L32 30" stroke="#B08A4E" stroke-width="2.2" />
+                  }
+                  @case ('quote') {
+                    <!-- itemised quotation -->
+                    <path d="M9 4 H25 L32 11 V36 H9 Z" stroke="#2A2A2E" stroke-width="2.2" />
+                    <path d="M25 4 V11 H32" stroke="#2A2A2E" stroke-width="2.2" />
+                    <path d="M14 17 H27 M14 22 H27 M14 27 H21" stroke="#2A2A2E" stroke-width="1.8" />
+                    <path d="M23 29 l2.5 2.5 L30 27" stroke="#B08A4E" stroke-width="2.4" />
+                  }
+                  @case ('lock') {
+                    <!-- padlock -->
+                    <path d="M13 17 V12 a7 7 0 0 1 14 0 V17" stroke="#2A2A2E" stroke-width="2.2" />
+                    <rect x="8" y="17" width="24" height="18" rx="3" stroke="#2A2A2E" stroke-width="2.2" />
+                    <circle cx="20" cy="24.5" r="2.4" stroke="#B08A4E" stroke-width="2.2" />
+                    <path d="M20 27 V30.5" stroke="#B08A4E" stroke-width="2.2" />
+                  }
+                  @case ('support') {
+                    <!-- headset -->
+                    <path d="M8 23 V19 a12 12 0 0 1 24 0 V23" stroke="#2A2A2E" stroke-width="2.2" />
+                    <rect x="5" y="21" width="6" height="10" rx="2.5" stroke="#2A2A2E" stroke-width="2.2" />
+                    <rect x="29" y="21" width="6" height="10" rx="2.5" stroke="#2A2A2E" stroke-width="2.2" />
+                    <path d="M32 31 c0 4 -4 5 -9 5" stroke="#B08A4E" stroke-width="2.2" />
+                    <circle cx="21" cy="36" r="1.6" fill="#B08A4E" />
+                  }
+                }
+              </svg>
+            </span>
+            <span class="why__num">{{ (i + 1).toString().padStart(2, '0') }}</span>
+          </div>
+          <h3>{{ r.title }}</h3>
+          <p>{{ r.text }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Process -->
+<section class="section section--soft">
+  <div class="container">
+    <div class="section-head">
+      <p class="kicker">How It Works</p>
+      <h2>From first call to final fitting</h2>
+      <span class="title-rule"></span>
+    </div>
+    <ol class="steps">
+      @for (s of steps; track s.n) {
+        <li>
+          <span class="steps__n">{{ s.n }}</span>
+          <h3>{{ s.title }}</h3>
+          <p>{{ s.text }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>
+
+<!-- Inspiration strip -->
+<section class="section">
+  <div class="container">
+    <div class="insp__head">
+      <div>
+        <p class="kicker">Inspiration</p>
+        <h2>Ideas for your next project</h2>
+      </div>
+      <a class="btn btn--outline" routerLink="/doors-windows/projects">See the gallery</a>
+    </div>
+    <div class="insp">
+      @for (img of inspiration; track img) {
+        <a routerLink="/doors-windows/projects"><img [src]="img" alt="" loading="lazy" width="400" height="400" /></a>
+      }
+    </div>
+  </div>
+</section>
