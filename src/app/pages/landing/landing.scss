@@ -92,6 +92,9 @@ h1 { margin: 0; line-height: 0; }
   .rail:not(.open):not(:hover) li:not(.active) .lbl { opacity: 0; }
   .rail:not(.open) li.active .lbl { opacity: 0; }
   .rail:not(.open) { right: 4px; padding: 12px 8px; }
+  /* labels are hidden here but still take space; only the dots should catch taps, or the rail blocks the page (and the planet) on phones */
+  .rail:not(.open), .rail:not(.open) a { pointer-events: none; }
+  .rail:not(.open) i { pointer-events: auto; }
   .rail:not(.open) ol { gap: 18px; }
   .rail:not(.open) i { width: 10px; height: 10px; }
   .rail:not(.open) ol::before, .rail:not(.open) ol::after { right: 4px; top: 5px; }
@@ -114,7 +117,11 @@ h1 { margin: 0; line-height: 0; }
 .orbit { pointer-events: none; }
 .planet { pointer-events: auto; position: relative; z-index: 2; }
 .planet::before { content: ""; position: absolute; inset: -12px; border-radius: 50%; }
-@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+/* explicit `from`: Safari/iOS WebKit does not animate an implicit-from rotate here, so the planet spun in place instead of orbiting */
+@keyframes spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
 @keyframes counter { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
 .planet-slot { position: absolute; left: 50%; top: 0; transform: translate(-50%, -50%); }
@@ -278,5 +285,14 @@ footer {
 a.chip { text-decoration: none; }
 .partner-cta { margin-top: 24px; }
 @media (max-width: 560px) {
-  .store-link { display: none; }
+  /* keep the Doors & Windows link on phones: compact pill, icon-only Explore, mark-only brand */
+  header { gap: 10px; }
+  .header-actions { gap: 8px; }
+  .brandmark span { display: none; }
+  .store-link {
+    font-size: .72rem; letter-spacing: .08em; white-space: nowrap;
+    padding: 10px 14px; border: 1px solid var(--brass); border-radius: 40px;
+  }
+  .menu-btn { padding: 10px 12px; }
+  .menu-btn span { display: none; }
 }

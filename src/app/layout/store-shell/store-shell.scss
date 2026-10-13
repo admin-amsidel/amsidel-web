@@ -51,10 +51,19 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(255, 255, 255, 0.97);
   border-bottom: 1px solid var(--line);
   transition: box-shadow 0.25s;
-  backdrop-filter: blur(8px);
+
+  /* blur lives on a pseudo-element: backdrop-filter on .header itself would make it the containing block
+     for the fixed mobile nav, squashing the drawer to the header's height */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(8px);
+  }
 }
 
 .header--scrolled {
@@ -328,7 +337,7 @@
 
   .nav {
     position: fixed;
-    top: var(--header-h);
+    top: var(--nav-top, var(--header-h));
     left: 0;
     right: 0;
     bottom: 0;

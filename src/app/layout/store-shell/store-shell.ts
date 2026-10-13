@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, effect, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { CATEGORIES } from '../../data/products';
@@ -11,6 +11,7 @@ import { ScrollTo } from '../../shared/scroll-to';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ScrollTo],
   templateUrl: './store-shell.html',
   styleUrl: './store-shell.scss',
+  host: { '[style.--nav-top.px]': 'navTop()' },
 })
 export class StoreShell {
   protected readonly site = SITE;
@@ -23,8 +24,16 @@ export class StoreShell {
   protected readonly scrolled = signal(false);
   protected readonly drawerOpen = signal(false);
   protected readonly productsOpen = signal(false);
+  /** Bottom edge of the header, so the mobile drawer starts right below it (the top bar shifts it until scrolled). */
+  protected readonly navTop = signal<number | null>(null);
+
+  private readonly header = viewChild<ElementRef<HTMLElement>>('header');
 
   constructor() {
+    // keep the page from scrolling behind the open mobile drawer
+    effect(() => {
+      document.body.style.overflow = this.drawerOpen() ? 'hidden' : '';
+    });
     inject(Router)
       .events.pipe(filter((e) => e instanceof NavigationEnd))
       .subscribe(() => {
@@ -45,6 +54,8 @@ export class StoreShell {
   }
 
   protected toggleDrawer(): void {
+    const el = this.header()?.nativeElement;
+    if (el) this.navTop.set(Math.round(el.getBoundingClientRect().bottom));
     this.drawerOpen.update((v) => !v);
   }
 
