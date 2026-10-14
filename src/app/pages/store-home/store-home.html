@@ -29,7 +29,7 @@
         <p class="hero__text">{{ s.text }}</p>
         <div class="hero__actions">
           <a class="btn btn--gold" [routerLink]="s.link">Explore range</a>
-          <a class="btn btn--ghost-light" routerLink="/doors-windows/contact" fragment="quote">Free site visit</a>
+          <a class="btn btn--ghost-light" routerLink="/doors-windows/site-visit">Free site visit</a>
         </div>
       </div>
     </div>
@@ -189,6 +189,13 @@
     <div class="center">
       <a class="btn btn--outline" routerLink="/doors-windows/products">View all products</a>
     </div>
+  </div>
+</section>
+
+<!-- Brochure download -->
+<section class="section section--tight-top">
+  <div class="container">
+    <app-brochure-cta />
   </div>
 </section>
 

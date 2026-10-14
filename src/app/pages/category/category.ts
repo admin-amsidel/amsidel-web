@@ -2,13 +2,14 @@ import { Component, computed, effect, inject, input } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import { CATEGORIES, categoryBySlug, productsIn } from '../../data/products';
+import { BrochureCta } from '../../shared/brochure-cta';
 import { ProductCard } from '../../shared/product-card';
 import { QuoteForm } from '../../shared/quote-form';
 import { ScrollTo } from '../../shared/scroll-to';
 
 @Component({
   selector: 'app-category',
-  imports: [RouterLink, ProductCard, QuoteForm, ScrollTo],
+  imports: [RouterLink, BrochureCta, ProductCard, QuoteForm, ScrollTo],
   template: `
     @if (category(); as c) {
       <section class="page-banner" [style.background-image]="'url(' + c.banner + ')'">
@@ -56,6 +57,12 @@ import { ScrollTo } from '../../shared/scroll-to';
               <app-product-card [product]="p" />
             }
           </div>
+        </div>
+      </section>
+
+      <section class="section section--tight-top">
+        <div class="container">
+          <app-brochure-cta />
         </div>
       </section>
 

@@ -88,6 +88,11 @@ h2 {
   background: var(--soft);
 }
 
+/* follows a section on the same background, so skip the doubled gap */
+.section--tight-top {
+  padding-top: 0;
+}
+
 .kicker {
   font-size: 0.75rem;
   letter-spacing: 0.22em;

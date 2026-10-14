@@ -28,7 +28,9 @@ header {
   padding-block: 22px; border-bottom: 1px solid var(--line);
 }
 .brandmark { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
-.brandmark img { height: 28px; width: auto; flex: none; }
+.brandmark { flex: none; }
+/* global img max-width: 100% squeezed the mark on 320px phones when the header got tight */
+.brandmark img { height: 28px; width: auto; max-width: none; flex: none; }
 .brandmark span { font-family: var(--display); font-size: 1.15rem; letter-spacing: .16em; text-transform: uppercase; }
 .menu-btn {
   display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
@@ -78,9 +80,18 @@ h1 { margin: 0; line-height: 0; }
 .rail a:hover .lbl { color: var(--ink); }
 .rail a:focus-visible { outline: none; }
 .rail a:focus-visible i { outline: 2px solid var(--brass); outline-offset: 3px; }
-/* expand: hover the rail or use the Menu button to show every stop */
-.rail:hover, .rail.open { background: rgba(255,255,255,.96); box-shadow: 0 16px 40px rgba(30,30,33,.12); }
-.rail:hover .lbl, .rail.open .lbl, .rail a:focus-visible .lbl { opacity: 1; transform: none; pointer-events: auto; }
+/* expand: use the Explore button to show every stop; hovering expands it too, but only with a real mouse —
+   on touch screens a tapped dot leaves :hover stuck, which half-opened the rail over the page */
+.rail.open { background: #FFFFFF; box-shadow: 0 16px 40px rgba(30,30,33,.18); }
+.rail.open .lbl, .rail a:focus-visible .lbl { opacity: 1; transform: none; pointer-events: auto; }
+@media (hover: hover) and (pointer: fine) {
+  .rail:hover { background: #FFFFFF; box-shadow: 0 16px 40px rgba(30,30,33,.18); }
+  .rail:hover .lbl { opacity: 1; transform: none; pointer-events: auto; }
+}
+/* readable labels once expanded: dark text, darker gold subtitle */
+.rail.open a, .rail:hover a { color: var(--ink); }
+.rail.open .lbl small, .rail:hover .lbl small { color: var(--brass-dark, #8F6D38); }
+.rail.open li.active .lbl { color: var(--brass-dark, #8F6D38); }
 .rail-head {
   display: none; font-size: .7rem; letter-spacing: .22em; text-transform: uppercase; color: var(--brass);
   font-weight: 600; text-align: right; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
@@ -98,6 +109,13 @@ h1 { margin: 0; line-height: 0; }
   .rail:not(.open) ol { gap: 18px; }
   .rail:not(.open) i { width: 10px; height: 10px; }
   .rail:not(.open) ol::before, .rail:not(.open) ol::after { right: 4px; top: 5px; }
+}
+/* phones/tablets: open menu as a solid panel with bigger, easier-to-tap labels */
+@media (max-width: 860px) {
+  .rail.open { right: 12px; padding: 18px 16px; max-width: calc(100vw - 24px); }
+  .rail.open .lbl { font-size: .86rem; letter-spacing: .1em; }
+  .rail.open .lbl small { font-size: .82em; letter-spacing: .06em; }
+  .rail.open ol { gap: 22px; }
 }
 .lede { max-width: 54ch; margin: 4px 0 0; color: var(--muted); font-size: 1.02rem; }
 
@@ -157,12 +175,16 @@ h1 { margin: 0; line-height: 0; }
   background: radial-gradient(circle, #FFFFFF 58%, #F5EEE3 100%);
   border: 1px solid #EADFCB;
   box-shadow: 0 0 0 10px rgba(176,138,78,.06), 0 0 0 22px rgba(176,138,78,.04), 0 0 60px rgba(176,138,78,.25);
-  animation: glow 6s ease-in-out infinite;
+}
+/* pulse by fading a second, stronger glow in and out: opacity runs on the GPU, while animating box-shadow
+   repainted every frame and made scrolling stutter on low-end phones */
+.sun::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 0 12px rgba(176,138,78,.08), 0 0 0 26px rgba(176,138,78,.05), 0 0 80px rgba(176,138,78,.32);
+  opacity: 0; animation: glow 6s ease-in-out infinite; will-change: opacity;
 }
 .sun img { width: 64%; height: auto; }
-@keyframes glow {
-  50% { box-shadow: 0 0 0 12px rgba(176,138,78,.08), 0 0 0 26px rgba(176,138,78,.05), 0 0 80px rgba(176,138,78,.32); }
-}
+@keyframes glow { 50% { opacity: 1; } }
 
 /* Pause everything while the visitor hovers or tabs into the system */
 .system:hover .orbit, .system:hover .planet-upright,
@@ -268,7 +290,7 @@ footer {
   .system-wrap { padding-block: 36px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .orbit, .planet-upright, .sun { animation-play-state: paused; animation: none; }
+  .orbit, .planet-upright, .sun::after { animation-play-state: paused; animation: none; }
   .orbit { transform: translate(-50%, -50%) rotate(var(--rest, 0deg)); }
   .planet-upright { transform: rotate(calc(-1 * var(--rest, 0deg))); }
   .orbit.o1 { --rest: 300deg; }

@@ -1,6 +1,7 @@
 import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CATEGORIES, PRODUCTS } from '../../data/products';
+import { SITE } from '../../data/site.config';
 import { ProductCard } from '../../shared/product-card';
 
 /** All products, filterable by category via the `?type=` query parameter. */
@@ -10,6 +11,10 @@ import { ProductCard } from '../../shared/product-card';
   template: `
     <section class="page-banner" style="background-image: url('images/hero/hero-2.webp')">
       <div class="container">
+        <a class="btn btn--gold brochure-btn" [href]="brochure.url" [attr.download]="brochure.file" [title]="'PDF · ' + brochure.size">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16" /></svg>
+          Download brochure
+        </a>
         <ol class="crumbs">
           <li><a routerLink="/doors-windows">Home</a></li>
           <li>Products</li>
@@ -60,7 +65,19 @@ import { ProductCard } from '../../shared/product-card';
     </section>
   `,
   styles: `
-    .layout { display: grid; grid-template-columns: 260px 1fr; gap: 48px; align-items: start; }
+    /* brochure download pinned to the banner's top-right corner, lined up with the page container's right edge
+       (.page-banner is the positioned parent; .container is 1240px max with 20px padding) */
+    .brochure-btn {
+      position: absolute; top: 28px; right: max(20px, calc((100% - 1240px) / 2 + 20px));
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .25);
+    }
+    @media (max-width: 560px) {
+      .brochure-btn { top: 16px; right: 20px; min-height: 40px; padding: 10px 16px; font-size: .72rem; letter-spacing: .1em; }
+    }
+    .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 48px; align-items: start; }
+    /* grid items default to min-width: auto, so the nowrap filter-chip row on phones would stretch the column
+       (and the product grid with it) to ~2000px; let it scroll inside the screen width instead */
+    .layout > * { min-width: 0; }
     .filters { position: sticky; top: calc(var(--header-h) + 24px); }
     .filters ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
     .filters a {
@@ -76,7 +93,7 @@ import { ProductCard } from '../../shared/product-card';
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
     @media (max-width: 1080px) { .grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 860px) {
-      .layout { grid-template-columns: 1fr; gap: 28px; }
+      .layout { grid-template-columns: minmax(0, 1fr); gap: 28px; }
       .filters { position: static; }
       .filters ul { display: flex; gap: 8px; overflow-x: auto; border: 0; padding-bottom: 6px; }
       .filters li { flex: none; }
@@ -91,6 +108,7 @@ export class Products {
   readonly type = input<string>();
 
   protected readonly categories = CATEGORIES;
+  protected readonly brochure = SITE.brochure;
   protected readonly total = PRODUCTS.length;
   protected readonly active = computed(() => CATEGORIES.find((c) => c.slug === this.type()));
   protected readonly list = computed(() => {

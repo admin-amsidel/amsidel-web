@@ -1,6 +1,7 @@
 import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CATEGORIES, PRODUCTS, productsIn } from '../../data/products';
+import { BrochureCta } from '../../shared/brochure-cta';
 import { ProductCard } from '../../shared/product-card';
 
 /** How long each hero image is shown, in milliseconds. */
@@ -16,7 +17,7 @@ interface Slide {
 
 @Component({
   selector: 'app-store-home',
-  imports: [RouterLink, ProductCard],
+  imports: [BrochureCta, RouterLink, ProductCard],
   templateUrl: './store-home.html',
   styleUrl: './store-home.scss',
 })

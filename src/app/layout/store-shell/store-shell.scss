@@ -273,6 +273,13 @@
   transform: translate(-50%, 0);
 }
 
+/* after a link in the menu is clicked, keep it shut until the pointer leaves, even though it is still hovered */
+.has-mega.is-suppressed:not(.is-open) .mega {
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
+
 .header__actions {
   display: flex;
   align-items: center;
@@ -405,6 +412,10 @@
   .nav__cta-mobile {
     display: flex;
     margin-top: 24px;
+
+    & + & {
+      margin-top: 12px;
+    }
   }
 }
 

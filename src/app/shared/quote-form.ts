@@ -1,19 +1,17 @@
 import { Component, ElementRef, inject, input, OnInit, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { DEFAULT_DIAL } from '../data/dial-codes';
 import { CATEGORIES } from '../data/products';
 import { SITE } from '../data/site.config';
+import { sendViaFormSubmit } from './form-submit';
+import { formatPhone, PhoneField, phoneValidator } from './phone-field';
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
 
-/**
- * Enquiry form. Submissions are emailed to SITE.enquiryEmail through FormSubmit
- * (https://formsubmit.co), which needs no backend or API key. The very first
- * submission triggers an activation email to that inbox; enquiries are delivered
- * once the link in it has been clicked.
- */
+/** Enquiry form, emailed to SITE.enquiryEmail (see form-submit.ts). */
 @Component({
   selector: 'app-quote-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PhoneField],
   template: `
     <form class="form" [formGroup]="form" (ngSubmit)="send()" novalidate>
       <div class="row">
@@ -22,11 +20,7 @@ type SendState = 'idle' | 'sending' | 'sent' | 'error';
           <input id="q-name" formControlName="name" autocomplete="name" />
           @if (showError('name')) { <span class="error">Please enter your name.</span> }
         </div>
-        <div class="field">
-          <label for="q-phone">Phone *</label>
-          <input id="q-phone" formControlName="phone" type="tel" autocomplete="tel" />
-          @if (showError('phone')) { <span class="error">Please enter a valid phone number.</span> }
-        </div>
+        <app-phone-field [group]="form" inputId="q-phone" />
       </div>
       <div class="row">
         <div class="field">
@@ -97,7 +91,8 @@ export class QuoteForm implements OnInit {
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     name: ['', Validators.required],
-    phone: ['', [Validators.required, Validators.pattern(/^[+\d][\d\s-]{6,}$/)]],
+    country: [DEFAULT_DIAL.iso],
+    phone: ['', [Validators.required, phoneValidator]],
     email: ['', Validators.email],
     city: [''],
     product: [''],
@@ -123,30 +118,25 @@ export class QuoteForm implements OnInit {
 
     this.state.set('sending');
     try {
-      const res = await fetch(`https://formsubmit.co/ajax/${SITE.enquiryEmail}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
+      await sendViaFormSubmit(
+        {
           Name: v.name,
-          Phone: v.phone,
+          Phone: formatPhone(v.country, v.phone),
           Email: v.email || '-',
           Location: v.city || '-',
           'Interested in': v.product || 'Not sure yet',
           ...(this.productName() ? { Product: this.productName() } : {}),
           Message: v.message || '-',
-          Page: window.location.href,
-          // FormSubmit options
-          _subject: `New website enquiry${topic ? ' – ' + topic : ''} (${v.name})`,
-          _template: 'table',
-          _captcha: 'false',
-          _honey: this.honey().nativeElement.value,
-          ...(v.email ? { _replyto: v.email } : {}),
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { success?: string | boolean };
-      if (!res.ok || String(data.success) !== 'true') throw new Error('FormSubmit rejected the request');
+        },
+        {
+          subject: `New website enquiry${topic ? ' – ' + topic : ''} (${v.name})`,
+          honey: this.honey().nativeElement.value,
+          replyTo: v.email,
+        },
+      );
       this.state.set('sent');
-      this.form.reset({ product: this.interest() });
+      // keep the chosen country for a follow-up enquiry
+      this.form.reset({ product: this.interest(), country: v.country });
     } catch {
       this.state.set('error');
     }

@@ -14,6 +14,22 @@ export const SITE = {
   whatsapp: '', // digits only with country code, e.g. '919876543210'
   address: '', // showroom / office address
   hours: 'Mon – Sat · 9:30 AM – 6:30 PM',
+  // Free site-visit booking form (/doors-windows/site-visit). Add towns to `areas` as service expands.
+  siteVisit: {
+    areas: ['Kothamangalam'],
+    slots: ['10:00 AM', '11:00 AM', '12:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'],
+    closedWeekdays: [0], // Sunday (0 = Sunday … 6 = Saturday)
+    maxDaysAhead: 60,
+    maxPersons: 10,
+  },
+  // Product brochure in public/brochure/; size is shown next to the download links.
+  brochure: {
+    url: 'brochure/Amsidel-Brochure.pdf',
+    file: 'Amsidel-Brochure.pdf',
+    cover: 'brochure/brochure-cover.webp',
+    size: '8.7 MB',
+    pages: 17,
+  },
   social: {
     facebook: '',
     instagram: '',

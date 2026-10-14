@@ -40,6 +40,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/projects/projects').then((m) => m.Projects),
       },
       {
+        path: 'site-visit',
+        title: 'Book a Free Site Visit · Amsidel Doors & Windows',
+        loadComponent: () => import('./pages/site-visit/site-visit').then((m) => m.SiteVisit),
+      },
+      {
         path: 'contact',
         title: 'Contact · Amsidel Doors & Windows',
         loadComponent: () => import('./pages/contact/contact').then((m) => m.Contact),
