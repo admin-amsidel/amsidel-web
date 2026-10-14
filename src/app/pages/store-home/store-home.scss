@@ -241,6 +241,10 @@
   transition: color 0.25s;
 }
 
+.range__short {
+  display: none;
+}
+
 .range__label {
   display: grid;
   min-width: 0;
@@ -453,35 +457,39 @@
     gap: 22px;
   }
 
-  /* menu becomes a swipeable row of pills */
+  /* menu becomes every family as a wrapping pill, grouped and short-named, so nothing hides off-screen
+     (a sideways-scrolling row gave no hint that more families were to the right) */
   .range__menu {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-    scroll-snap-type: x proximity;
+    display: grid;
+    gap: 14px;
 
     ul {
-      display: contents;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
   }
 
   .range__group {
-    display: none;
+    display: block;
+    margin: 0 0 -4px;
+    padding: 0;
+    border: 0;
   }
 
   .range__item {
     width: auto;
     flex: none;
     display: block;
-    padding: 10px 16px;
+    min-height: 40px;
+    padding: 9px 16px;
     border: 1px solid var(--line);
     border-radius: 40px;
     background: var(--bg);
-    scroll-snap-align: start;
 
     &::before,
     .range__num,
+    .range__label strong,
     .range__label small,
     .range__count {
       display: none;
@@ -497,8 +505,10 @@
     }
   }
 
-  .range__label strong {
+  .range__label .range__short {
+    display: block;
     font-size: 0.86rem;
+    font-weight: 600;
     white-space: nowrap;
   }
 
