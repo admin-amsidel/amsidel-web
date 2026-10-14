@@ -5,6 +5,10 @@
   "observability": {
     "enabled": true
   },
+  // dist/ is not in git, so build the Angular app before every `wrangler deploy` (Cloudflare's deploy command)
+  "build": {
+    "command": "npm run build"
+  },
   "assets": {
     "directory": "./dist/amsidel-web/browser",
     "not_found_handling": "single-page-application"
