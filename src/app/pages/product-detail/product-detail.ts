@@ -136,7 +136,7 @@ export class ProductDetail {
     return SITE.whatsapp && p ? whatsappHref(`Hello Amsidel, I'm interested in ${p.name}.`) : '';
   });
   protected readonly mail = computed(
-    () => `mailto:${SITE.email}?subject=${encodeURIComponent('Enquiry – ' + (this.product()?.name ?? ''))}`,
+    () => `mailto:${SITE.altEmail}?subject=${encodeURIComponent('Enquiry – ' + (this.product()?.name ?? ''))}`,
   );
 
   constructor() {

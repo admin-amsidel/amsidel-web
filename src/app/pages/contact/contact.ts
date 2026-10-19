@@ -28,7 +28,11 @@ import { QuoteForm } from '../../shared/quote-form';
               <span class="ic" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" /></svg>
               </span>
-              <div><strong>Email</strong><a [href]="'mailto:' + site.email">{{ site.email }}</a></div>
+              <div>
+                <strong>Email</strong>
+                <span>{{ site.email }}</span>
+                <a [href]="'mailto:' + site.altEmail">{{ site.altEmail }}</a>
+              </div>
             </li>
             @if (site.phone) {
               <li>

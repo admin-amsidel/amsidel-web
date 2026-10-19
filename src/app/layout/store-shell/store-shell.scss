@@ -34,9 +34,14 @@
 
 .topbar__links {
   display: flex;
+  align-items: center;
   gap: 22px;
 
-  a {
+  a,
+  .contact-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     text-decoration: none;
     color: #fff;
 
@@ -424,6 +429,11 @@
     display: none;
   }
 
+  /* not enough room on phones; both emails are still in the footer and on the contact page */
+  .topbar__alt {
+    display: none !important;
+  }
+
   .topbar__inner {
     justify-content: center;
   }
@@ -521,6 +531,21 @@
 
 .footer__contact li {
   overflow-wrap: anywhere;
+}
+
+.footer__contact a,
+.footer__contact .contact-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* phone / envelope symbols in front of contact details (top bar and footer) */
+.ico {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--gold-hi);
 }
 
 .footer__bottom {

@@ -120,7 +120,7 @@ function visitDateValidator(c: AbstractControl<string>): ValidationErrors | null
         @case ('error') {
           <p class="note note--err" role="alert">
             Sorry, we couldn't send your request just now. Please try again, or email us at
-            <a [href]="'mailto:' + site.email">{{ site.email }}</a>.
+            <a [href]="'mailto:' + site.altEmail">{{ site.altEmail }}</a>.
           </p>
         }
       }

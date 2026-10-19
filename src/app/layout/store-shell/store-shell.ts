@@ -4,12 +4,13 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 import { CATEGORIES } from '../../data/products';
 import { SITE, telHref, whatsappHref } from '../../data/site.config';
+import { AmiChat } from '../../shared/ami-chat/ami-chat';
 import { ScrollTo } from '../../shared/scroll-to';
 
 /** Header, footer and floating actions shared by every Doors & Windows page. */
 @Component({
   selector: 'app-store-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ScrollTo],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ScrollTo, AmiChat],
   templateUrl: './store-shell.html',
   styleUrl: './store-shell.scss',
   host: { '[style.--nav-top.px]': 'navTop()' },

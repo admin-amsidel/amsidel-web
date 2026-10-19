@@ -1,0 +1,133 @@
+@if (teaser() && !open()) {
+  <div class="teaser" role="status">
+    <button class="teaser__text" type="button" (click)="show()">{{ ami.teaser }}</button>
+    <button class="teaser__close" type="button" aria-label="Dismiss" (click)="teaser.set(false)">×</button>
+  </div>
+}
+
+<button
+  class="launcher"
+  type="button"
+  [class.launcher--open]="open()"
+  aria-controls="ami-panel"
+  [attr.aria-expanded]="open()"
+  [attr.aria-label]="open() ? 'Close chat with ' + ami.name : 'Chat with ' + ami.name"
+  (click)="toggle()"
+>
+  @if (open()) {
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+  } @else {
+    <ng-container *ngTemplateOutlet="avatar" />
+    <span class="launcher__dot" aria-hidden="true"></span>
+  }
+</button>
+
+<ng-template #avatar>
+  @if (ami.avatar) {
+    <img class="avatar" [src]="ami.avatar" alt="" width="40" height="40" />
+  } @else {
+    <!-- support agent with headset -->
+    <span class="avatar avatar--agent" aria-hidden="true">
+      <svg viewBox="0 0 48 48">
+        <path class="hair" d="M14.5 23c0-7.5 4.3-12 9.5-12s9.5 4.5 9.5 12v9.5c-1.6.9-3.4.9-4.5 0h-10c-1.1.9-2.9.9-4.5 0Z" />
+        <path class="shirt" d="M9 48c.8-8.5 7-13 15-13s14.2 4.5 15 13Z" />
+        <path class="collar" d="m20 35.5 4 4.5 4-4.5" />
+        <rect class="skin" x="21" y="28" width="6" height="7.5" rx="2" />
+        <ellipse class="skin" cx="24" cy="22" rx="6.6" ry="7.6" />
+        <path class="hair" d="M17.3 21c.6-5.6 3.6-8.4 6.9-8.4 3.4 0 6.3 2.6 6.6 7.4-3.4-.6-6.6-2.3-8.3-4.8-1 2.8-2.9 4.9-5.2 5.8Z" />
+        <path class="band" d="M15.2 22.5a8.8 8.8 0 0 1 17.6 0" />
+        <rect class="cup" x="13" y="20" width="4.4" height="7.4" rx="2.2" />
+        <rect class="cup" x="30.6" y="20" width="4.4" height="7.4" rx="2.2" />
+        <path class="boom" d="M15.6 27c.3 3.6 2.7 5.3 6 5.4" />
+        <circle class="mic" cx="22.6" cy="32.4" r="1.5" />
+      </svg>
+    </span>
+  }
+</ng-template>
+
+<section class="panel" id="ami-panel" [class.panel--open]="open()" [attr.aria-hidden]="!open()" [attr.inert]="open() ? null : ''" aria-label="Chat with AMI">
+  <header class="panel__head">
+    <ng-container *ngTemplateOutlet="avatar" />
+    <div class="panel__title">
+      <strong>{{ ami.name }}</strong>
+      <small><span class="online" aria-hidden="true"></span>{{ ami.role }} · Online</small>
+    </div>
+    <a class="icon-btn" [href]="supportTel" [title]="'Call support: ' + ami.supportPhone" [attr.aria-label]="'Call our support team on ' + ami.supportPhone">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
+    </a>
+    <button class="icon-btn" type="button" title="Start over" aria-label="Start the chat over" (click)="restart()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="1.8" /></svg>
+    </button>
+    <button class="icon-btn" type="button" aria-label="Close chat" (click)="close()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" /></svg>
+    </button>
+  </header>
+
+  <div class="log" #log aria-live="polite" (click)="$any($event.target).closest('a') && onLink()">
+    @for (m of messages(); track $index) {
+      <div class="msg" [class.msg--user]="m.from === 'user'">
+        <p class="bubble">{{ m.text }}</p>
+
+        @if (m.product; as p) {
+          <a class="product" [routerLink]="['/doors-windows/product', p.slug]">
+            <img [src]="p.image" alt="" width="72" height="72" loading="lazy" />
+            <span>
+              <strong>{{ p.name }}</strong>
+              <small>Model {{ p.model }} · View details →</small>
+            </span>
+          </a>
+        }
+
+        @if (m.summary; as rows) {
+          <dl class="summary">
+            @for (r of rows; track r[0]) {
+              <dt>{{ r[0] }}</dt>
+              <dd>{{ r[1] }}</dd>
+            }
+          </dl>
+        }
+
+        @if (m.links?.length) {
+          <div class="links">
+            @for (l of m.links; track l.label) {
+              @if (l.route) {
+                <a [routerLink]="l.route">{{ l.label }} →</a>
+              } @else {
+                <a [href]="l.href" [attr.download]="l.download ?? null" [attr.target]="l.download ? null : '_blank'" rel="noopener">{{ l.label }} →</a>
+              }
+            }
+          </div>
+        }
+      </div>
+    }
+    @if (typing()) {
+      <div class="msg">
+        <p class="bubble typing" aria-label="AMI is typing"><span></span><span></span><span></span></p>
+      </div>
+    }
+  </div>
+
+  @if (choices().length && !typing()) {
+    <div class="choices">
+      @for (c of choices(); track c.label) {
+        <button type="button" class="chip" (click)="pick(c)">{{ c.label }}</button>
+      }
+    </div>
+  }
+
+  <form class="compose" (submit)="submit($event)">
+    <input
+      #field
+      [value]="draft()"
+      (input)="draft.set($any($event.target).value)"
+      [placeholder]="placeholder()"
+      [attr.inputmode]="step() === 'phone' ? 'tel' : null"
+      [attr.autocomplete]="step() === 'name' ? 'name' : step() === 'phone' ? 'tel' : 'off'"
+      maxlength="600"
+      aria-label="Message AMI"
+    />
+    <button class="send" type="submit" aria-label="Send" [disabled]="!draft().trim()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7-7-1Z" fill="currentColor" /></svg>
+    </button>
+  </form>
+</section>

@@ -60,7 +60,7 @@ type SendState = 'idle' | 'sending' | 'sent' | 'error';
         @case ('error') {
           <p class="note note--err" role="alert">
             Sorry, we couldn't send your enquiry just now. Please try again, or email us at
-            <a [href]="'mailto:' + site.email">{{ site.email }}</a>.
+            <a [href]="'mailto:' + site.altEmail">{{ site.altEmail }}</a>.
           </p>
         }
       }

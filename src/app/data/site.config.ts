@@ -5,12 +5,15 @@ export const SITE = {
   shortName: 'Amsidel',
   brand: 'Amsidel Doors & Windows',
   website: 'www.amsidel.com',
+  // shown as plain text only (no mailto link); email links and buttons use `altEmail`
   email: 'info@amsidel.com',
+  // second address shown next to `email`, and the one every "email us" link opens
+  altEmail: 'info.amsidel@gmail.com',
   // Inbox that receives website enquiries (sent via formsubmit.co, see quote-form.ts).
   // After FormSubmit is activated you can replace this with the random alias it gives
   // you, so the real address is not visible in the page source.
   enquiryEmail: 'info.amsidel@gmail.com',
-  phone: '', // e.g. '+91 98765 43210'
+  phone: '+91 79072 31647', // company and support line (AMI chat uses it too)
   whatsapp: '', // digits only with country code, e.g. '919876543210'
   address: '', // showroom / office address
   hours: 'Mon – Sat · 9:30 AM – 6:30 PM',
