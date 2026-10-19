@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { CATEGORIES } from '../../data/products';
-import { SITE, telHref, whatsappHref } from '../../data/site.config';
+import { SITE, telHref } from '../../data/site.config';
 import { AmiChat } from '../../shared/ami-chat/ami-chat';
 import { ScrollTo } from '../../shared/scroll-to';
 
@@ -21,7 +21,6 @@ export class StoreShell {
   protected readonly systems = CATEGORIES.filter((c) => c.group === 'doors-windows');
   protected readonly doors = CATEGORIES.filter((c) => c.group === 'doors');
   protected readonly tel = SITE.phone ? telHref(SITE.phone) : '';
-  protected readonly wa = SITE.whatsapp ? whatsappHref('Hello Amsidel, I would like a quote.') : '';
 
   protected readonly scrolled = signal(false);
   protected readonly drawerOpen = signal(false);

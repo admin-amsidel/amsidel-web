@@ -1,10 +1,10 @@
-import { Component, ElementRef, HostListener, OnDestroy, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AMI, AmiFaq } from '../../data/ami';
 import { DEFAULT_DIAL, DIAL_CODES, isValidPhone } from '../../data/dial-codes';
 import { CATEGORIES, Category, Product, PRODUCTS, productsIn } from '../../data/products';
-import { SITE, telHref } from '../../data/site.config';
+import { SITE, telHref, whatsappHref } from '../../data/site.config';
 import { sendViaFormSubmit } from '../form-submit';
 import { formatPhone } from '../phone-field';
 
@@ -33,6 +33,9 @@ interface Choice {
 type Step = 'name' | 'phone' | 'browse' | 'query' | 'idle';
 
 const TYPING_MS = 550;
+
+/** Same breakpoint as the full-screen panel in ami-chat.scss. */
+const isPhone = () => window.matchMedia('(max-width: 560px)').matches;
 
 /** Extra words visitors use for a product type, on top of its slug and short name. */
 const CATEGORY_WORDS: Record<string, string[]> = {
@@ -63,6 +66,7 @@ export class AmiChat implements OnDestroy {
   protected readonly ami = AMI;
   protected readonly site = SITE;
   protected readonly supportTel = telHref(AMI.supportPhone);
+  protected readonly whatsapp = SITE.whatsapp ? whatsappHref(AMI.whatsappText) : '';
 
   protected readonly open = signal(false);
   protected readonly teaser = signal(false);
@@ -75,7 +79,9 @@ export class AmiChat implements OnDestroy {
   private readonly log = viewChild<ElementRef<HTMLElement>>('log');
   private readonly input = viewChild<ElementRef<HTMLInputElement>>('field');
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private started = false;
+  private phoneLayout = false;
   private busy = false;
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
 
@@ -101,6 +107,7 @@ export class AmiChat implements OnDestroy {
 
   ngOnDestroy(): void {
     this.timers.forEach(clearTimeout);
+    this.releasePhoneLayout();
   }
 
   // ---- panel ---------------------------------------------------------------------------------------
@@ -116,12 +123,48 @@ export class AmiChat implements OnDestroy {
       this.started = true;
       void this.start();
     }
-    this.later(() => this.input()?.nativeElement.focus(), 50);
+    if (isPhone()) {
+      // don't pop the keyboard straight away on phones, so the greeting stays readable
+      this.holdPhoneLayout();
+    } else {
+      this.later(() => this.input()?.nativeElement.focus(), 50);
+    }
   }
 
   protected close(): void {
     this.open.set(false);
+    this.releasePhoneLayout();
   }
+
+  /**
+   * Phones: stop the page scrolling behind the full-screen chat, and size the panel to the visible area,
+   * so the input stays above the on-screen keyboard (100dvh ignores the keyboard on iOS).
+   */
+  private holdPhoneLayout(): void {
+    if (this.phoneLayout) return;
+    this.phoneLayout = true;
+    document.body.style.overflow = 'hidden';
+    window.visualViewport?.addEventListener('resize', this.fitViewport);
+    window.visualViewport?.addEventListener('scroll', this.fitViewport);
+    this.fitViewport();
+  }
+
+  private releasePhoneLayout(): void {
+    if (!this.phoneLayout) return;
+    this.phoneLayout = false;
+    document.body.style.overflow = '';
+    window.visualViewport?.removeEventListener('resize', this.fitViewport);
+    window.visualViewport?.removeEventListener('scroll', this.fitViewport);
+  }
+
+  private readonly fitViewport = (): void => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const style = this.host.nativeElement.style;
+    style.setProperty('--ami-vh', `${vv.height}px`);
+    style.setProperty('--ami-top', `${vv.offsetTop}px`);
+    this.scrollDown();
+  };
 
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
@@ -130,7 +173,7 @@ export class AmiChat implements OnDestroy {
 
   /** On phones the panel covers the page, so following a link inside it closes the chat. */
   protected onLink(): void {
-    if (window.matchMedia('(max-width: 560px)').matches) this.close();
+    if (isPhone()) this.close();
   }
 
   protected restart(): void {

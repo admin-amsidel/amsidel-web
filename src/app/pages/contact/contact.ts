@@ -42,7 +42,7 @@ import { QuoteForm } from '../../shared/quote-form';
                 <div><strong>Phone</strong><a [href]="tel">{{ site.phone }}</a></div>
               </li>
             }
-            @if (site.whatsapp) {
+            @if (wa) {
               <li>
                 <span class="ic" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M4 20l1.3-4A8 8 0 1 1 8 19Z" fill="none" stroke="currentColor" stroke-width="1.8" /></svg>
@@ -101,5 +101,5 @@ import { QuoteForm } from '../../shared/quote-form';
 export class Contact {
   protected readonly site = SITE;
   protected readonly tel = SITE.phone ? telHref(SITE.phone) : '';
-  protected readonly wa = SITE.whatsapp ? whatsappHref('Hello Amsidel, I would like a quote.') : '';
+  protected readonly wa = SITE.whatsapp && SITE.whatsappActive ? whatsappHref('Hello Amsidel, I would like a quote.') : '';
 }

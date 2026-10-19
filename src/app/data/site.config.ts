@@ -14,7 +14,11 @@ export const SITE = {
   // you, so the real address is not visible in the page source.
   enquiryEmail: 'info.amsidel@gmail.com',
   phone: '+91 79072 31647', // company and support line (AMI chat uses it too)
-  whatsapp: '', // digits only with country code, e.g. '919876543210'
+  // WhatsApp Business number, digits only with country code. The WhatsApp button next to the AMI chat uses it.
+  whatsapp: '917907231647',
+  // Set to true once the WhatsApp Business account is live: also shows WhatsApp links on the
+  // contact page and product pages.
+  whatsappActive: false,
   address: '', // showroom / office address
   hours: 'Mon – Sat · 9:30 AM – 6:30 PM',
   // Free site-visit booking form (/doors-windows/site-visit). Add towns to `areas` as service expands.

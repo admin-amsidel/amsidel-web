@@ -133,7 +133,7 @@ export class ProductDetail {
   });
   protected readonly wa = computed(() => {
     const p = this.product();
-    return SITE.whatsapp && p ? whatsappHref(`Hello Amsidel, I'm interested in ${p.name}.`) : '';
+    return SITE.whatsapp && SITE.whatsappActive && p ? whatsappHref(`Hello Amsidel, I'm interested in ${p.name}.`) : '';
   });
   protected readonly mail = computed(
     () => `mailto:${SITE.altEmail}?subject=${encodeURIComponent('Enquiry – ' + (this.product()?.name ?? ''))}`,

@@ -38,6 +38,38 @@
   }
 }
 
+// WhatsApp Business button, centred above the AMI button
+.wa {
+  --wa-size: 46px;
+  position: fixed;
+  right: calc(var(--ami-right) + (56px - var(--wa-size)) / 2);
+  bottom: calc(var(--ami-bottom) + 66px);
+  z-index: 40;
+  width: var(--wa-size);
+  height: var(--wa-size);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(30, 30, 33, 0.25);
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: scale(1.06);
+  }
+
+  svg {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+// the open chat panel covers this spot on larger screens
+.wa--hidden {
+  display: none;
+}
+
 .launcher__dot {
   position: absolute;
   top: 4px;
@@ -399,7 +431,15 @@
     background 0.15s,
     color 0.15s;
 
-  &:hover {
+  // hover only on mouse devices; on touch screens it sticks after a tap
+  @media (hover: hover) {
+    &:hover {
+      background: var(--brass);
+      color: #fff;
+    }
+  }
+
+  &:active {
     background: var(--brass);
     color: #fff;
   }
@@ -442,7 +482,7 @@
   color: #fff;
   cursor: pointer;
 
-  &[disabled] {
+  &.send--idle {
     opacity: 0.45;
     cursor: default;
   }
@@ -474,14 +514,65 @@
   }
 }
 
-// phones: the panel takes the whole screen
+// phones: compact launcher, and the panel takes the whole (visible) screen
 @media (max-width: 560px) {
+  :host {
+    --ami-right: 16px;
+    --ami-bottom: 84px;
+  }
+
+  .launcher {
+    width: 52px;
+    height: 52px;
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  .wa {
+    --wa-size: 44px;
+    right: calc(var(--ami-right) + (52px - var(--wa-size)) / 2);
+    bottom: calc(var(--ami-bottom) + 62px);
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  .launcher__dot {
+    top: 2px;
+    right: 2px;
+    width: 11px;
+    height: 11px;
+  }
+
+  .teaser {
+    right: calc(var(--ami-right) + 62px);
+    bottom: calc(var(--ami-bottom) + 4px);
+    max-width: min(220px, calc(100vw - 110px));
+  }
+
+  .teaser__text {
+    padding: 9px 2px 9px 12px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .teaser__close {
+    padding: 4px 8px;
+  }
+
+  // follows the visible area above the on-screen keyboard (--ami-vh / --ami-top are set from visualViewport)
   .panel {
-    inset: 0;
+    inset: var(--ami-top, 0) 0 auto 0;
     width: auto;
-    height: 100dvh;
+    height: var(--ami-vh, 100dvh);
     border: 0;
     border-radius: 0;
+    transform-origin: bottom center;
   }
 
   .panel--open ~ .launcher,
@@ -489,7 +580,101 @@
     display: none;
   }
 
-  .teaser {
-    max-width: calc(100vw - 120px);
+  .panel__head {
+    gap: 10px;
+    padding: 8px 6px 8px 12px;
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+    }
+  }
+
+  .panel__title {
+    min-width: 0;
+
+    strong {
+      font-size: 1.05rem;
+    }
+
+    small {
+      font-size: 0.72rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .log {
+    padding: 12px 10px 6px;
+    gap: 8px;
+  }
+
+  .msg {
+    max-width: 90%;
+    gap: 5px;
+  }
+
+  .bubble {
+    padding: 7px 11px;
+    font-size: 0.86rem;
+    line-height: 1.42;
+  }
+
+  .typing {
+    padding: 11px 12px;
+  }
+
+  .product {
+    gap: 10px;
+    padding: 6px;
+
+    img {
+      width: 56px;
+      height: 56px;
+    }
+
+    span {
+      font-size: 0.82rem;
+    }
+  }
+
+  .summary {
+    padding: 8px 11px;
+    font-size: 0.8rem;
+  }
+
+  .links a {
+    font-size: 0.82rem;
+  }
+
+  .choices {
+    gap: 5px;
+    max-height: 104px; // about three rows; a partly visible row hints that it scrolls
+    padding: 8px 10px;
+  }
+
+  .chip {
+    padding: 5px 10px;
+    font-size: 0.76rem;
+  }
+
+  .compose {
+    gap: 6px;
+    padding: 8px 10px;
+
+    input {
+      padding: 8px 14px;
+    }
+  }
+
+  .send {
+    width: 40px;
+    height: 40px;
   }
 }

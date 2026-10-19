@@ -20,6 +20,8 @@ export const AMI = {
   teaser: "Hi, I'm AMI! Need help choosing doors or windows?",
   /** Support team number, shown in the chat header and as a tap-to-call link in support replies. Same as the company line. */
   supportPhone: SITE.phone as string,
+  /** Pre-filled message when a visitor taps the WhatsApp Business button above the chat button. */
+  whatsappText: 'Hello Amsidel, I would like to know more about your doors and windows.',
   /** Label of the quick reply that hands the visitor to the support team; always listed first. */
   supportChoice: 'Talk to our support team',
 

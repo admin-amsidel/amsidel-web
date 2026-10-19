@@ -11,8 +11,80 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="preload" as="image" href="brand/amsidel-mark.png">
+  <!-- Page loader: inline so it shows before the app downloads; App hides it (see app.ts). -->
+  <style>
+    #app-loader {
+      position: fixed; inset: 0; z-index: 1000;
+      display: grid; place-items: center; align-content: center; gap: 22px;
+      background: #fff;
+      transition: opacity .2s ease, visibility 0s;
+    }
+    #app-loader.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .45s ease, visibility 0s .45s; }
+    .ldr { position: relative; width: 156px; height: 156px; display: grid; place-items: center; }
+    /* soft gold glow that breathes behind the logo */
+    .ldr::before {
+      content: ""; position: absolute; inset: -18px; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(216, 182, 118, .45), rgba(216, 182, 118, 0));
+      animation: ldr-glow 2.4s ease-in-out infinite;
+    }
+    .ldr__disc {
+      position: relative; z-index: 1; width: 118px; height: 118px; border-radius: 50%;
+      display: grid; place-items: center; background: #fff;
+      box-shadow: 0 10px 30px rgba(30, 30, 33, .14), inset 0 0 0 1px #eee9e1;
+    }
+    .ldr__disc img { width: 72%; height: auto; }
+    /* aura rings: a gold arc sweeping forward then back, and a thin charcoal arc going the other way */
+    .ldr__aura {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(216, 182, 118, 0) 0 50%, rgba(216, 182, 118, .35) 70%, #d8b676 90%, #8f6d38 100%);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+      animation: ldr-sweep 1.6s cubic-bezier(.65, 0, .35, 1) infinite alternate;
+    }
+    .ldr__aura--back {
+      inset: 10px;
+      background: conic-gradient(from 180deg, rgba(30, 30, 33, 0) 0 60%, rgba(30, 30, 33, .25) 80%, #1e1e21 100%);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+      animation-name: ldr-sweep-back;
+    }
+    .ldr__name {
+      margin: 0; font-family: 'Marcellus', 'Times New Roman', serif; font-size: 15px;
+      letter-spacing: .42em; text-indent: .42em; color: #8f6d38;
+    }
+    @keyframes ldr-sweep { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+    @keyframes ldr-sweep-back { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+    @keyframes ldr-glow { 0%, 100% { opacity: .35; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.05); } }
+    /* phones: a smaller ring and logo */
+    @media (max-width: 560px) {
+      #app-loader { gap: 16px; }
+      .ldr { width: 124px; height: 124px; }
+      .ldr::before { inset: -14px; }
+      .ldr__disc { width: 94px; height: 94px; }
+      .ldr__aura { -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px)); mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px)); }
+      .ldr__aura--back { inset: 8px; -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); }
+      .ldr__name { font-size: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ldr__aura { animation-duration: 4s; }
+      .ldr::before { animation: none; opacity: .6; }
+    }
+  </style>
+  <noscript><style>#app-loader { display: none; }</style></noscript>
 </head>
 <body>
+  <div id="app-loader" role="status" aria-live="polite">
+    <div class="ldr">
+      <span class="ldr__aura"></span>
+      <span class="ldr__aura ldr__aura--back"></span>
+      <span class="ldr__disc"><img src="brand/amsidel-mark.png" alt="" width="360" height="160"></span>
+    </div>
+    <p class="ldr__name">AMSIDEL</p>
+    <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Loading…</span>
+  </div>
   <app-root></app-root>
+  <!-- safety net: never leave the loader up if the app fails to start -->
+  <script>setTimeout(function () { var l = document.getElementById('app-loader'); if (l) l.classList.add('is-hidden'); }, 15000);</script>
 </body>
 </html>
