@@ -25,6 +25,8 @@ export class App {
       if (e instanceof NavigationStart) {
         // links to a section of the page already open (e.g. #quote) don't count as a page change
         if (this.router.navigated && pathOf(e.url) === pathOf(this.router.url)) return;
+        // the destination decides the style: casement window for Doors & Windows, ring for the group page
+        this.loader!.classList.toggle('is-dw', /^\/doors-windows(\/|$)/.test(pathOf(e.url)));
         this.showLoader();
       } else if (e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError) {
         this.hideLoader();
@@ -36,6 +38,8 @@ export class App {
     clearTimeout(this.hideTimer);
     if (!this.loader!.classList.contains('is-hidden')) return;
     this.loader!.classList.remove('is-hidden');
+    // start the window (or ring) from the beginning each time, so it always opens rather than appearing mid-close
+    this.loader!.getAnimations({ subtree: true }).forEach((a) => (a.currentTime = 0));
     this.shownAt = performance.now();
   }
 
