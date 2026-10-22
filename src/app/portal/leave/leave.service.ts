@@ -2,16 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../portal.config';
-import {
-  LeaveAllocation,
-  LeaveBalance,
-  LeaveGrant,
-  LeaveRequest,
-  LeaveStatus,
-  LeaveType,
-  RestrictedHoliday,
-  TeamMember,
-} from './leave.models';
+import { HolidayKind, LeaveAllocation, LeaveBalance, LeaveGrant, LeaveRequest, LeaveStatus, LeaveType, RestrictedHoliday, TeamMember } from './leave.models';
 
 const LEAVE = `${API_BASE}/api/leave`;
 
@@ -29,16 +20,17 @@ export class LeaveService {
     return id ? this.http.put<LeaveType>(`${LEAVE}/types/${id}`, body) : this.http.post<LeaveType>(`${LEAVE}/types`, body);
   }
 
-  holidays(year: number): Observable<RestrictedHoliday[]> {
-    return this.http.get<RestrictedHoliday[]>(`${LEAVE}/restricted-holidays`, { params: { year } });
+  /** Restricted holidays (optional, taken as leave) or office holidays (closed for everyone). */
+  holidays(year: number, kind: HolidayKind = 'restricted'): Observable<RestrictedHoliday[]> {
+    return this.http.get<RestrictedHoliday[]>(`${LEAVE}/${kind}-holidays`, { params: { year } });
   }
 
-  addHoliday(body: { date: string; name: string; brandId: number | null }): Observable<RestrictedHoliday> {
-    return this.http.post<RestrictedHoliday>(`${LEAVE}/restricted-holidays`, body);
+  addHoliday(body: { date: string; name: string; brandId: number | null }, kind: HolidayKind = 'restricted'): Observable<RestrictedHoliday> {
+    return this.http.post<RestrictedHoliday>(`${LEAVE}/${kind}-holidays`, body);
   }
 
-  removeHoliday(id: number): Observable<void> {
-    return this.http.delete<void>(`${LEAVE}/restricted-holidays/${id}`);
+  removeHoliday(id: number, kind: HolidayKind = 'restricted'): Observable<void> {
+    return this.http.delete<void>(`${LEAVE}/${kind}-holidays/${id}`);
   }
 
   // my leave

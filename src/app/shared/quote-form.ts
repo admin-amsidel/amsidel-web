@@ -3,7 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DEFAULT_DIAL } from '../data/dial-codes';
 import { CATEGORIES } from '../data/products';
 import { SITE } from '../data/site.config';
-import { sendViaFormSubmit } from './form-submit';
+import { sendEnquiry, warmUpEnquiries } from './enquiry';
 import { formatPhone, PhoneField, phoneValidator } from './phone-field';
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
@@ -101,6 +101,7 @@ export class QuoteForm implements OnInit {
 
   ngOnInit(): void {
     if (this.interest()) this.form.controls.product.setValue(this.interest());
+    warmUpEnquiries();
   }
 
   protected showError(name: keyof typeof this.form.controls): boolean {
@@ -118,17 +119,31 @@ export class QuoteForm implements OnInit {
 
     this.state.set('sending');
     try {
-      await sendViaFormSubmit(
+      const phone = formatPhone(v.country, v.phone);
+      await sendEnquiry(
         {
-          Name: v.name,
-          Phone: formatPhone(v.country, v.phone),
-          Email: v.email || '-',
-          Location: v.city || '-',
-          'Interested in': v.product || 'Not sure yet',
-          ...(this.productName() ? { Product: this.productName() } : {}),
-          Message: v.message || '-',
+          kind: 'QUOTE',
+          headline: topic || 'General enquiry',
+          name: v.name,
+          phone,
+          email: v.email,
+          details: [
+            { label: 'Location', value: v.city },
+            { label: 'Interested in', value: v.product || 'Not sure yet' },
+            ...(this.productName() ? [{ label: 'Product', value: this.productName() }] : []),
+          ],
+          message: v.message,
         },
         {
+          fields: {
+            Name: v.name,
+            Phone: phone,
+            Email: v.email || '-',
+            Location: v.city || '-',
+            'Interested in': v.product || 'Not sure yet',
+            ...(this.productName() ? { Product: this.productName() } : {}),
+            Message: v.message || '-',
+          },
           subject: `New website enquiry${topic ? ' – ' + topic : ''} (${v.name})`,
           honey: this.honey().nativeElement.value,
           replyTo: v.email,

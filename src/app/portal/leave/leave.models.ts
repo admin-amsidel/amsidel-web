@@ -1,4 +1,4 @@
-import { Role } from '../portal.models';
+import { Role, toIsoDate } from '../portal.models';
 
 /** ANNUAL = days every year; GRANTED = days added per person (comp-off, paternity); UNLIMITED = no balance. */
 export type LeaveAllocation = 'ANNUAL' | 'GRANTED' | 'UNLIMITED';
@@ -91,6 +91,7 @@ export interface LeaveGrant {
   createdAt: string;
 }
 
+/** A listed holiday: a restricted holiday (optional, taken as leave) or an office holiday (closed for everyone). */
 export interface RestrictedHoliday {
   id: number;
   date: string;
@@ -98,6 +99,8 @@ export interface RestrictedHoliday {
   brandId: number | null;
   brandName: string | null;
 }
+
+export type HolidayKind = 'restricted' | 'office';
 
 export interface TeamMember {
   id: number;
@@ -133,14 +136,15 @@ export function days(n: number | null): string {
 }
 
 /** Working days between two "YYYY-MM-DD" dates, Sundays left out (same rule as the backend's weekly offs). */
-export function workingDays(from: string, to: string): number {
+export function workingDays(from: string, to: string, closed: ReadonlySet<string> = new Set()): number {
   if (!from || !to || to < from) return 0;
   const [fy, fm, fd] = from.split('-').map(Number);
   const [ty, tm, td] = to.split('-').map(Number);
   const end = new Date(ty, tm - 1, td);
   let count = 0;
   for (const d = new Date(fy, fm - 1, fd); d <= end; d.setDate(d.getDate() + 1)) {
-    if (d.getDay() !== 0) count++;
+    // Sundays and office holidays are not leave days
+    if (d.getDay() !== 0 && !closed.has(toIsoDate(d)!)) count++;
   }
   return count;
 }

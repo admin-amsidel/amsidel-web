@@ -48,6 +48,7 @@ export class MyLeave implements OnInit {
   protected readonly shortDate = shortDate;
 
   private readonly thisYear = new Date().getFullYear();
+  protected readonly todayIso = toIsoDate(new Date())!;
   protected readonly years = [this.thisYear, this.thisYear + 1].map((y) => ({ label: String(y), value: y }));
   protected readonly year = signal(this.thisYear);
 
@@ -55,6 +56,13 @@ export class MyLeave implements OnInit {
   protected readonly requests = signal<LeaveRequest[]>([]);
   protected readonly grants = signal<LeaveGrant[]>([]);
   private readonly holidays = signal<RestrictedHoliday[]>([]);
+  private readonly allOfficeHolidays = signal<RestrictedHoliday[]>([]);
+  /** Office holidays of this person's brand (or every brand): closed, not leave. */
+  protected readonly officeHolidays = computed(() => {
+    const brandId = this.auth.user()?.brandId;
+    return this.allOfficeHolidays().filter((h) => h.brandId == null || brandId == null || h.brandId === brandId);
+  });
+  private readonly closedDays = computed(() => new Set(this.officeHolidays().map((h) => h.date)));
   protected readonly loading = signal(true);
   protected readonly loadError = signal('');
 
@@ -100,7 +108,7 @@ export class MyLeave implements OnInit {
     if (!type) return 0;
     if (type.restrictedDatesOnly) return this.holidayDate() ? 1 : 0;
     if (this.halfDay() && this.canHalfDay()) return 0.5;
-    return workingDays(this.fromIso() ?? '', this.toIso() ?? '');
+    return workingDays(this.fromIso() ?? '', this.toIso() ?? '', this.closedDays());
   });
 
   ngOnInit(): void {
@@ -218,12 +226,14 @@ export class MyLeave implements OnInit {
       requests: this.leave.myRequests(year),
       grants: this.leave.myGrants(year),
       holidays: this.leave.holidays(year),
+      officeHolidays: this.leave.holidays(year, 'office'),
     }).subscribe({
       next: (r) => {
         this.balances.set(r.balances);
         this.requests.set(r.requests);
         this.grants.set(r.grants);
         this.holidays.set(r.holidays);
+        this.allOfficeHolidays.set(r.officeHolidays);
         this.loading.set(false);
       },
       error: (err) => {

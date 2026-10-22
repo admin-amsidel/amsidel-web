@@ -29,6 +29,7 @@
 .cell.out { background: #fcfbf9; }
 .cell.out .num, .cell.out .line, .cell.out .tot { opacity: .45; }
 .cell.off { background: repeating-linear-gradient(135deg, #faf8f4, #faf8f4 6px, #f4f1ec 6px, #f4f1ec 12px); }
+.cell.holiday { background: #f1f8f3; }
 .cell.full { box-shadow: inset 3px 0 0 #dc2626; }
 .cell.half { box-shadow: inset 3px 0 0 #d97706; }
 
@@ -59,6 +60,7 @@
 .flag.half { background: #fef3c7; color: #92400e; }
 .flag.pend { background: transparent; color: #b45309; padding-left: 0; text-transform: none; letter-spacing: 0; font-weight: 600; }
 .flag.leave { background: #e0f2fe; color: #075985; }
+.flag.holiday { background: #dcf1e3; color: #1f6b3e; max-width: 100%; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; }
 .flag.leave.pending { background: #f1f5f9; color: #475569; }
 
 .wk {

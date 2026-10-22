@@ -51,18 +51,20 @@
     @for (week of weeks(); track week.days[0].iso) {
       <div class="cal__row" role="row">
         @for (c of week.days; track c.iso) {
-          <button type="button" role="gridcell" class="cell" [class.out]="!c.inMonth" [class.off]="c.weeklyOff"
+          <button type="button" role="gridcell" class="cell" [class.out]="!c.inMonth" [class.off]="c.weeklyOff" [class.holiday]="!!c.holiday"
                   [class.today]="c.isToday" [class.future]="c.isFuture" [class.full]="c.warning === 'FULL'"
                   [class.half]="c.warning === 'HALF'" (click)="openDay(c)"
                   [attr.aria-label]="c.date.toDateString() + ', ' + hrs(c.total) + ' logged'">
             <span class="cell__head">
               <b class="num">{{ c.day }}</b>
-              @if (c.total || (!c.weeklyOff && !c.isFuture && !c.beforeJoining)) {
+              @if (c.total || (!c.weeklyOff && !c.holiday && !c.isFuture && !c.beforeJoining)) {
                 <span class="tot" [class.ok]="c.required > 0 && c.total >= c.required" [class.low]="c.total < c.required">
                   {{ hrs(c.total) }}@if (c.required) {<small> / {{ hrs(c.required) }}</small>}
                 </span>
               } @else if (c.weeklyOff) {
                 <span class="tot off">Off</span>
+              } @else if (c.holiday) {
+                <span class="tot off">Holiday</span>
               }
             </span>
             @for (e of c.entries | slice: 0 : 3; track e.id) {
@@ -72,6 +74,7 @@
               <span class="more" [pTooltip]="entriesLabel(c)">+{{ c.entries.length - 3 }} more</span>
             }
             <span class="flags">
+              @if (c.holiday) { <span class="flag holiday" [title]="c.holiday">{{ c.holiday }}</span> }
               @if (c.leave) {
                 <span class="flag leave" [class.pending]="c.leave.status === 'PENDING'">
                   {{ c.leave.typeCode }}{{ c.leave.halfDay ? ' ½' : '' }} {{ c.leave.status === 'PENDING' ? 'leave pending' : 'leave' }}
@@ -99,6 +102,7 @@
   <p class="legend">
     <span class="flag half">Half Day Leave</span> under {{ hrs(data()?.target?.halfDayBelow) }} on a past working day ·
     <span class="flag full">Full Day Leave</span> under {{ hrs(data()?.target?.fullDayBelow) }} · Sundays are weekly off ·
+    <span class="flag holiday">Office holidays</span> need no hours ·
     approved leave lowers the day's and week's minimum.
   </p>
 </section>
@@ -134,6 +138,7 @@
       <span>Logged <b>{{ hrs(c.total) }}</b>@if (c.required) { of {{ hrs(c.required) }} }</span>
       @if (c.pending) { <span class="warn"><b>{{ hrs(c.pending) }}</b> {{ c.isToday ? 'to go' : 'pending' }}</span> }
       @if (c.weeklyOff) { <p-tag severity="secondary" value="Weekly off" /> }
+      @if (c.holiday) { <p-tag severity="success" [value]="'Office holiday · ' + c.holiday" /> }
       @if (c.leave) {
         <p-tag [severity]="c.leave.status === 'APPROVED' ? 'info' : 'secondary'"
                [value]="c.leave.typeName + (c.leave.halfDay ? ' (half day)' : '') + (c.leave.status === 'PENDING' ? ' · waiting' : '')" />

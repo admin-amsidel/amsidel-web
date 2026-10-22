@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of, shareReplay } from 'rxjs';
+import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
 import { AttendanceDay, AttendanceDaySummary, AttendanceRecord, AttendanceToday, Fix, TeamMember, WorkMode } from './attendance.models';
 
@@ -66,7 +67,7 @@ export class AttendanceService {
   photoUrl(attendanceId: number): Observable<string | null> {
     let url$ = this.photos.get(attendanceId);
     if (!url$) {
-      url$ = this.http.get(`${this.base}/${attendanceId}/photo`, { responseType: 'blob' }).pipe(
+      url$ = this.http.get(`${this.base}/${attendanceId}/photo`, { responseType: 'blob', context: silent() }).pipe(
         map((blob) => URL.createObjectURL(blob)),
         catchError(() => of(null)),
         shareReplay(1),

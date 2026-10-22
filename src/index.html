@@ -20,6 +20,8 @@
       background: #fff;
       transition: opacity .2s ease, visibility 0s;
     }
+    /* during saves and refreshes inside a page: the page stays visible behind the logo */
+    #app-loader.is-busy { background: rgba(255, 255, 255, .72); cursor: progress; }
     #app-loader.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .45s ease, visibility 0s .45s; }
     .ldr { position: relative; width: 156px; height: 156px; display: grid; place-items: center; }
     /* soft gold glow that breathes behind the logo */

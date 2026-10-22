@@ -27,6 +27,30 @@
              [ngModel]="subject()" (ngModelChange)="subject.set($event)" />
     </div>
 
+    @if (byEmail()) {
+      <div class="pf copies">
+        @if (!showCopies()) {
+          <p-button label="Add CC / BCC" icon="pi pi-users" [text]="true" size="small" styleClass="add-copies" (onClick)="showCopies.set(true)" />
+        } @else {
+          <div class="copies__row">
+            <label for="m-cc">CC</label>
+            <input pInputText id="m-cc" maxlength="1000" autocomplete="off" inputmode="email" placeholder="e.g. hr@amsidel.com"
+                   [ngModel]="ccText()" (ngModelChange)="ccText.set($event)" />
+          </div>
+          <div class="copies__row">
+            <label for="m-bcc">BCC</label>
+            <input pInputText id="m-bcc" maxlength="1000" autocomplete="off" inputmode="email" placeholder="Hidden copies"
+                   [ngModel]="bccText()" (ngModelChange)="bccText.set($event)" />
+          </div>
+          @if (badAddresses().length) {
+            <small class="err">Not an email address: {{ badAddresses().join(', ') }}</small>
+          }
+          <small class="hint">Optional; separate addresses with commas. Every person's mail is copied to them, so they get one copy
+            per person. BCC addresses are hidden from everyone.</small>
+        }
+      </div>
+    }
+
     <div class="pf">
       <span class="pf-label" id="m-greet-lbl">Greeting</span>
       <p-selectbutton [options]="greetingOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
@@ -46,13 +70,78 @@
     <div class="pf">
       <div class="lbl-row">
         <label for="m-body">Message *</label>
-        <p-button label="Insert name" icon="pi pi-user-plus" [text]="true" size="small" (onClick)="insertName(bodyEl, 'body')" />
+        <span class="lbl-actions">
+          @if (byEmail()) {
+            <p-button label="Add picture" icon="pi pi-image" [text]="true" size="small" (onClick)="picIn.click()" />
+            <input #picIn type="file" hidden [accept]="pictureAccept" (change)="addPicture(picIn, bodyEl)" />
+          }
+          <p-button label="Insert name" icon="pi pi-user-plus" [text]="true" size="small" (onClick)="insertName(bodyEl, 'body')" />
+        </span>
       </div>
       <textarea #bodyEl pTextarea id="m-body" rows="9" maxlength="20000" [autoResize]="true"
                 placeholder="What everyone should know: a new process, a new client, a reminder…"
                 [ngModel]="body()" (ngModelChange)="body.set($event)"></textarea>
-      <small class="hint">{{ '{name}' }} becomes each person's name. "Regards" and your name are added at the end.</small>
+      <small class="hint">{{ '{name}' }} becomes each person's name. "Regards" and your name are added at the end.
+        @if (pictures().length) { Each picture shows where its [[image n]] is in the text. }</small>
+
+      @if (pictures().length) {
+        <ul class="pics" aria-label="Pictures in the message">
+          @for (p of pictures(); track p.key; let i = $index) {
+            <li class="pic" [class.failed]="p.state === 'failed'">
+              <img [src]="p.thumb" alt="" />
+              <div class="pic__body">
+                <span class="pic__name">
+                  <code>[[image {{ i + 1 }}]]</code> {{ p.name }}
+                  <small class="muted">
+                    @switch (p.state) {
+                      @case ('uploading') { · <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Uploading… }
+                      @case ('failed') { · <span class="bad">{{ p.error }}</span> }
+                      @default { · {{ size(p.size) }} }
+                    }
+                  </small>
+                </span>
+                <input pInputText maxlength="300" [attr.aria-label]="'Description under picture ' + (i + 1)"
+                       placeholder="Description shown under the picture (optional)"
+                       [ngModel]="p.caption" (ngModelChange)="setCaption(p, $event)" />
+              </div>
+              <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" size="small"
+                        [ariaLabel]="'Remove picture ' + (i + 1)" (onClick)="removePicture(p)" />
+            </li>
+          }
+        </ul>
+      }
     </div>
+
+    @if (byEmail()) {
+      <div class="pf">
+        <div class="lbl-row">
+          <span class="lbl">Attachments</span>
+          <p-button label="Attach files" icon="pi pi-paperclip" [text]="true" size="small" (onClick)="fileIn.click()" />
+          <input #fileIn type="file" multiple hidden [accept]="attachAccept" (change)="addAttachments(fileIn)" />
+        </div>
+        @if (attachments().length) {
+          <ul class="files" aria-label="Attachments">
+            @for (a of attachments(); track a.key) {
+              <li class="file" [class.failed]="a.state === 'failed'">
+                <i [class]="fileIcon(a.name)" aria-hidden="true"></i>
+                <span class="file__name">{{ a.name }}</span>
+                <small class="muted">
+                  @switch (a.state) {
+                    @case ('uploading') { <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Uploading… }
+                    @case ('failed') { <span class="bad">{{ a.error }}</span> }
+                    @default { {{ size(a.size) }} }
+                  }
+                </small>
+                <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" size="small"
+                          [ariaLabel]="'Remove ' + a.name" (onClick)="removeAttachment(a)" />
+              </li>
+            }
+          </ul>
+        }
+        <small class="hint">Pictures, PDF or Word (.doc, .docx): up to 10 MB each and 14 MB in all with the
+          pictures{{ totalSize() ? ' (' + size(totalSize()) + ' now)' : '' }}. Sent by email only, not on WhatsApp.</small>
+      </div>
+    }
   </section>
 
   <section class="p-card who">
@@ -104,11 +193,33 @@
     <div class="preview" aria-label="Preview">
       <div class="preview__bar"><span>Preview for {{ preview().name }}</span></div>
       <div class="preview__subj">{{ preview().subject }}</div>
+      @if (byEmail() && (cc().length || bcc().length)) {
+        <div class="preview__cc">
+          @if (cc().length) { <span>CC: {{ cc().join(', ') }}</span> }
+          @if (bcc().length) { <span>BCC: {{ bcc().join(', ') }}</span> }
+        </div>
+      }
       <div class="preview__body">
         <p>Dear {{ preview().greeting }},</p>
-        <p class="txt">{{ preview().body }}</p>
+        @for (part of previewParts(); track $index) {
+          @if (part.kind === 'text') {
+            <p class="txt">{{ part.text }}</p>
+          } @else if (byEmail()) {
+            <figure class="pv-pic">
+              <img [src]="part.pic.thumb" [alt]="part.pic.caption || 'Picture'" />
+              @if (part.pic.caption.trim()) { <figcaption>{{ part.pic.caption }}</figcaption> }
+            </figure>
+          }
+        }
         <p>Regards,<br /><b>{{ preview().signedBy }}</b></p>
       </div>
+      @if (byEmail() && attachments().length) {
+        <div class="preview__files">
+          @for (a of attachments(); track a.key) {
+            <span><i [class]="fileIcon(a.name)" aria-hidden="true"></i> {{ a.name }}</span>
+          }
+        </div>
+      }
     </div>
     @if (byWhatsApp()) {
       <p class="wa-hint">
@@ -121,7 +232,7 @@
     @if (formError()) { <p-message severity="error" styleClass="dlg-msg">{{ formError() }}</p-message> }
     <div class="p-actions">
       <p-button [label]="sendLabel()" [icon]="channel() === 'WHATSAPP' ? 'pi pi-whatsapp' : 'pi pi-send'"
-                [disabled]="running() || mailBlocked()" (onClick)="send()" />
+                [disabled]="running() || mailBlocked() || (byEmail() && uploading())" (onClick)="send()" />
       @if (setup(); as s) { @if (s.ready && byEmail()) { <small class="muted">From {{ s.fromName }} &lt;{{ s.from }}&gt;</small> } }
     </div>
   </section>

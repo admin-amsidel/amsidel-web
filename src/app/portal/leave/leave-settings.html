@@ -55,45 +55,10 @@
   </ul>
 </section>
 
-<section class="p-card">
-  <div class="head-row">
-    <h2>Restricted holidays</h2>
-    <p-select [options]="years" optionLabel="label" optionValue="value" [ngModel]="year()" (ngModelChange)="changeYear($event)"
-              ariaLabel="Year" />
-  </div>
-  <p class="p-intro">Optional festival days. People pick from this list, up to their Restricted Holiday allowance.</p>
+<app-holiday-editor kind="office" title="Office holidays"
+                    intro="Days the office is closed for everyone (Christmas, New Year, Onam…). Nobody applies for them: leave across them does not count them, and the work log expects no hours."
+                    placeholder="e.g. Christmas" />
 
-  @if (!holidays().length) {
-    <p class="p-empty">No restricted holidays for {{ year() }} yet.</p>
-  } @else {
-    <ul class="holidays">
-      @for (h of holidays(); track h.id) {
-        <li>
-          <span class="h-date">{{ date(h.date) }}</span>
-          <span class="h-name">{{ h.name }}</span>
-          <span class="muted">{{ h.brandName ?? 'All brands' }}</span>
-          <p-button label="Remove" size="small" [text]="true" severity="danger" (onClick)="removeHoliday(h)" />
-        </li>
-      }
-    </ul>
-  }
-
-  <form class="add-holiday" (ngSubmit)="addHoliday()" novalidate>
-    <div class="pf">
-      <label for="rh-date">Date</label>
-      <p-datepicker inputId="rh-date" name="date" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="Choose a date"
-                    appendTo="body" [ngModel]="newDate()" (ngModelChange)="newDate.set($event)" />
-    </div>
-    <div class="pf">
-      <label for="rh-name">Holiday</label>
-      <input pInputText id="rh-name" name="name" maxlength="100" placeholder="e.g. Holi" [ngModel]="newName()" (ngModelChange)="newName.set($event)" />
-    </div>
-    <div class="pf">
-      <label for="rh-brand">For</label>
-      <p-select inputId="rh-brand" name="brand" [options]="brandOptions()" optionLabel="label" optionValue="value"
-                [showClear]="true" placeholder="All brands" [ngModel]="newBrand()" (ngModelChange)="newBrand.set($event)" />
-    </div>
-    <p-button type="submit" label="Add" icon="pi pi-plus" [loading]="holidayBusy()" />
-  </form>
-  @if (holidayError()) { <p-message severity="error" styleClass="dlg-msg">{{ holidayError() }}</p-message> }
-</section>
+<app-holiday-editor kind="restricted" title="Restricted holidays"
+                    intro="Optional festival days. People pick from this list, up to their Restricted Holiday allowance."
+                    placeholder="e.g. Holi" />

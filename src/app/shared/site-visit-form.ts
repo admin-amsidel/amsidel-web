@@ -2,7 +2,7 @@ import { Component, ElementRef, inject, signal, viewChild } from '@angular/core'
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { DEFAULT_DIAL } from '../data/dial-codes';
 import { SITE } from '../data/site.config';
-import { sendViaFormSubmit } from './form-submit';
+import { sendEnquiry, warmUpEnquiries } from './enquiry';
 import { formatPhone, PhoneField, phoneValidator } from './phone-field';
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
@@ -155,6 +155,10 @@ export class SiteVisitForm {
   protected readonly sentFor = signal('');
   private readonly honey = viewChild.required<ElementRef<HTMLInputElement>>('honey');
 
+  constructor() {
+    warmUpEnquiries();
+  }
+
   protected readonly form = inject(FormBuilder).nonNullable.group({
     date: ['', [Validators.required, visitDateValidator]],
     time: ['', Validators.required],
@@ -182,17 +186,31 @@ export class SiteVisitForm {
 
     this.state.set('sending');
     try {
-      await sendViaFormSubmit(
+      const phone = formatPhone(v.country, v.phone);
+      await sendEnquiry(
         {
-          'Visit date': when,
-          'Visit time': v.time,
-          Name: v.name,
-          Phone: formatPhone(v.country, v.phone),
-          'Number of persons': String(v.persons),
-          Location: v.location,
-          Remarks: v.remarks || '-',
+          kind: 'SITE_VISIT',
+          headline: `${when}, ${v.time} – ${v.location}`,
+          name: v.name,
+          phone,
+          details: [
+            { label: 'Visit date', value: when },
+            { label: 'Visit time', value: v.time },
+            { label: 'Location', value: v.location },
+            { label: 'Number of persons', value: String(v.persons) },
+          ],
+          message: v.remarks,
         },
         {
+          fields: {
+            'Visit date': when,
+            'Visit time': v.time,
+            Name: v.name,
+            Phone: phone,
+            'Number of persons': String(v.persons),
+            Location: v.location,
+            Remarks: v.remarks || '-',
+          },
           subject: `Site visit request – ${when}, ${v.time} – ${v.location} (${v.name})`,
           honey: this.honey().nativeElement.value,
         },

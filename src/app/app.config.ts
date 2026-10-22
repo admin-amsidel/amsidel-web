@@ -4,6 +4,7 @@ import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from 
 
 import { routes } from './app.routes';
 import { authInterceptor } from './portal/auth.interceptor';
+import { busyInterceptor } from './portal/busy';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -13,7 +14,7 @@ export const appConfig: ApplicationConfig = {
       withComponentInputBinding(),
       withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }),
     ),
-    // backend calls from the staff portal; the interceptor adds the login token
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    // backend calls from the staff portal: the login token, and the loader while calls are in flight
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, busyInterceptor])),
   ],
 };

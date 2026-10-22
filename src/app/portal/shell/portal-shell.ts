@@ -11,6 +11,7 @@ import { Menu, MenuModule } from 'primeng/menu';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../auth.service';
+import { BusyService } from '../busy';
 import { Avatar } from '../avatar';
 import { PortalStyles } from '../portal-styles';
 import { ROLE_LABELS } from '../portal.models';
@@ -86,7 +87,7 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
           <ng-container *ngTemplateOutlet="tree; context: { mini: collapsed(), drawer: false }" />
         </aside>
       }
-      <main class="p-main">
+      <main class="p-main" [attr.aria-busy]="busy.active()">
         @if (denied(); as message) {
           <section class="p-card denied" role="alert">
             <i class="pi pi-lock" aria-hidden="true"></i>
@@ -196,6 +197,7 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
     /* sidebar beside the page */
     .p-layout { display: flex; align-items: flex-start; }
     .p-layout > .p-main { flex: 1 1 auto; min-width: 0; }
+
     .denied { max-width: 560px; margin: 40px auto; text-align: center; display: grid; justify-items: center; gap: 6px; }
     .denied > i { font-size: 2rem; color: var(--brass-dark); }
     .denied p { color: var(--muted); margin: 0; }
@@ -249,6 +251,7 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
 })
 export class PortalShell {
   protected readonly auth = inject(AuthService);
+  protected readonly busy = inject(BusyService);
   private readonly router = inject(Router);
   protected readonly roleLabels = ROLE_LABELS;
 

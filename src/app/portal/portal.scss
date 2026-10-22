@@ -30,7 +30,9 @@
 .p-head p { margin: 6px 0 0; color: var(--muted); }
 .p-head .back { display: inline-block; margin-bottom: 4px; font-size: .85rem; color: var(--brass-dark); text-decoration: none; letter-spacing: .06em; }
 .p-head .back:hover { color: var(--ink); }
-.head-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.head-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; min-width: 0; max-width: 100%; }
+.head-actions .p-select { max-width: 100%; }
+.head-actions .p-select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-card { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: clamp(18px, 3vw, 28px); }
 .p-card + .p-card, .p-card + .p-message, .p-message + .p-card { margin-top: 20px; }
 .p-card > h2 { font-size: 1.25rem; margin-bottom: 18px; }

@@ -53,13 +53,15 @@
 
 /* Settings: restricted holidays */
 .head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-.head-row h2 { margin: 0; }
+.head-row h2 { margin: 0; font-size: 1.25rem; }
 .holidays { list-style: none; margin: 0 0 20px; padding: 0; }
 .holidays li {
   display: grid; grid-template-columns: 150px 1fr auto auto; gap: 12px; align-items: center;
   padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .92rem;
 }
 .h-date { font-weight: 600; }
+.holidays.office li { grid-template-columns: 200px 1fr auto; }
+.holidays.office li.past { opacity: .55; }
 .add-holiday { display: grid; grid-template-columns: 220px 1fr 220px auto; gap: 12px; align-items: end; }
 
 .grants { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }

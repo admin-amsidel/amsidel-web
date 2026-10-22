@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { silent } from './busy';
 import { API_BASE } from './portal.config';
 
 /** One box in a reporting line or org chart (no personal details). */
@@ -29,11 +30,11 @@ export class PeopleService {
   private readonly http = inject(HttpClient);
 
   myLine(): Observable<ReportingLine> {
-    return this.http.get<ReportingLine>(`${API_BASE}/api/people/me/line`);
+    return this.http.get<ReportingLine>(`${API_BASE}/api/people/me/line`, { context: silent() });
   }
 
   lineOf(employeeId: number): Observable<ReportingLine> {
-    return this.http.get<ReportingLine>(`${API_BASE}/api/people/${employeeId}/line`);
+    return this.http.get<ReportingLine>(`${API_BASE}/api/people/${employeeId}/line`, { context: silent() });
   }
 
   orgChart(): Observable<OrgNode[]> {

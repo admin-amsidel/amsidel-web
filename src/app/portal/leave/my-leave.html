@@ -134,6 +134,24 @@
     </p-table>
   </section>
 
+  <section class="p-card">
+    <h2>Office holidays {{ year() }}</h2>
+    <p class="p-intro">The office is closed on these days. No need to apply; leave across them does not count them.</p>
+    @if (!officeHolidays().length) {
+      <p class="p-empty">No office holidays listed for {{ year() }} yet.</p>
+    } @else {
+      <ul class="holidays office">
+        @for (h of officeHolidays(); track h.id) {
+          <li [class.past]="h.date < todayIso">
+            <span class="h-date">{{ shortDate(h.date, true) }}</span>
+            <span class="h-name">{{ h.name }}</span>
+            @if (h.brandName) { <span class="muted">{{ h.brandName }}</span> }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
   @if (grants().length) {
     <section class="p-card">
       <h2>Days granted to you in {{ year() }}</h2>

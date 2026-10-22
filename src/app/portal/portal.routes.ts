@@ -104,6 +104,27 @@ export const PORTAL_ROUTES: Routes = [
         loadComponent: () => import('./org-chart/org-chart-page').then((m) => m.OrgChartPage),
       },
       {
+        path: 'performance',
+        title: 'My Performance · Amsidel Staff Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'PERF_MY' },
+        loadComponent: () => import('./performance/my-performance').then((m) => m.MyPerformance),
+      },
+      {
+        path: 'performance/team',
+        title: 'Team Performance · Amsidel Staff Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'PERF_TEAM' },
+        loadComponent: () => import('./performance/team-performance').then((m) => m.TeamPerformance),
+      },
+      {
+        path: 'performance/cycles',
+        title: 'Review Cycles · Amsidel Staff Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'PERF_CYCLES' },
+        loadComponent: () => import('./performance/review-cycles').then((m) => m.ReviewCycles),
+      },
+      {
         path: 'admin/menu-access',
         title: 'Menu Access · Amsidel Staff Portal',
         canActivate: [menuGuard],

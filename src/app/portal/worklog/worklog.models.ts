@@ -47,6 +47,8 @@ export interface WorkLogMonth {
   editable: boolean;
   entries: WorkLogEntry[];
   leave: LeaveSpan[];
+  /** Office holidays in the range (closed for everyone). */
+  holidays: { date: string; name: string }[];
 }
 
 export interface WorkHourRule {
@@ -70,11 +72,13 @@ export interface DayCell {
   isFuture: boolean;
   /** Sunday: not a working day. */
   weeklyOff: boolean;
+  /** Office holiday name (closed for everyone), or null. */
+  holiday: string | null;
   /** Before the person joined: nothing expected. */
   beforeJoining: boolean;
   entries: WorkLogEntry[];
   total: number;
-  /** Hours expected that day (0 on Sundays and approved full-day leave; half on approved half-day leave). */
+  /** Hours expected that day (0 on Sundays, office holidays and approved full-day leave; half on approved half-day leave). */
   required: number;
   /** Still to log; only for days that have started. */
   pending: number;
@@ -102,6 +106,7 @@ export function buildMonth(year: number, month0: number, data: WorkLogMonth | nu
   const today = data?.today ?? toIsoDate(new Date())!;
   const target = data?.target;
 
+  const holidays = new Map((data?.holidays ?? []).map((h) => [h.date, h.name]));
   const byDay = new Map<string, WorkLogEntry[]>();
   for (const e of data?.entries ?? []) {
     const list = byDay.get(e.workDate) ?? [];
@@ -118,18 +123,20 @@ export function buildMonth(year: number, month0: number, data: WorkLogMonth | nu
       const entries = (byDay.get(iso) ?? []).sort((a, b) => a.sequence - b.sequence);
       const total = round(entries.reduce((sum, e) => sum + Number(e.hours), 0));
       const weeklyOff = d.getDay() === WEEKLY_OFF;
+      const holiday = weeklyOff ? null : holidays.get(iso) ?? null;
+      const closed = weeklyOff || !!holiday;
       const beforeJoining = !!data?.joinedDate && iso < data.joinedDate;
-      const leave = weeklyOff ? null : (data?.leave ?? []).find((l) => l.fromDate <= iso && iso <= l.toDate) ?? null;
+      const leave = closed ? null : (data?.leave ?? []).find((l) => l.fromDate <= iso && iso <= l.toDate) ?? null;
       const daily = target ? Number(target.dailyMinHours) : 0;
-      // approved leave, or a working day before joining, lowers what the day and the week need
-      const leaveOff = weeklyOff ? 0 : beforeJoining ? daily : leave?.status === 'APPROVED' ? (leave.halfDay ? daily / 2 : daily) : 0;
-      const required = weeklyOff ? 0 : Math.max(0, daily - leaveOff);
+      // an office holiday, approved leave or a working day before joining lowers what the day and the week need
+      const leaveOff = weeklyOff ? 0 : holiday || beforeJoining ? daily : leave?.status === 'APPROVED' ? (leave.halfDay ? daily / 2 : daily) : 0;
+      const required = closed ? 0 : Math.max(0, daily - leaveOff);
       const inMonth = d.getMonth() === month0;
       const isFuture = iso > today;
       const finished = iso < today;
       let warning: DayWarning = null;
       // warnings only on the month's own days (the neighbouring days just fill the first and last weeks)
-      if (target && finished && inMonth && !weeklyOff && !beforeJoining && leave?.status !== 'APPROVED') {
+      if (target && finished && inMonth && !closed && !beforeJoining && leave?.status !== 'APPROVED') {
         if (total < Number(target.fullDayBelow)) warning = 'FULL';
         else if (total < Number(target.halfDayBelow)) warning = 'HALF';
       }
@@ -142,6 +149,7 @@ export function buildMonth(year: number, month0: number, data: WorkLogMonth | nu
         isToday: iso === today,
         isFuture,
         weeklyOff,
+        holiday,
         beforeJoining,
         entries,
         total,

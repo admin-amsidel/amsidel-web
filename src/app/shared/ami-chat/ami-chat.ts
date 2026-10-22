@@ -5,7 +5,7 @@ import { AMI, AmiFaq } from '../../data/ami';
 import { DEFAULT_DIAL, DIAL_CODES, isValidPhone } from '../../data/dial-codes';
 import { CATEGORIES, Category, Product, PRODUCTS, productsIn } from '../../data/products';
 import { SITE, telHref, whatsappHref } from '../../data/site.config';
-import { sendViaFormSubmit } from '../form-submit';
+import { sendEnquiry, warmUpEnquiries } from '../enquiry';
 import { formatPhone } from '../phone-field';
 
 interface ChatLink {
@@ -121,6 +121,7 @@ export class AmiChat implements OnDestroy {
     this.teaser.set(false);
     if (!this.started) {
       this.started = true;
+      warmUpEnquiries();
       void this.start();
     }
     if (isPhone()) {
@@ -513,14 +514,25 @@ export class AmiChat implements OnDestroy {
     this.typing.set(true);
     const l = this.lead;
     try {
-      await sendViaFormSubmit(
+      await sendEnquiry(
         {
-          ...Object.fromEntries(this.summary()),
-          'Chat transcript': this.messages()
-            .map((m) => `${m.from === 'ami' ? AMI.name : l.name || 'Visitor'}: ${m.text}`)
-            .join('\n'),
+          kind: 'CHAT',
+          name: l.name,
+          phone: l.phone,
+          // name and phone have their own rows in the mail
+          details: this.summary().filter(([k]) => k !== 'Name' && k !== 'Phone').map(([label, value]) => ({ label, value })),
+          transcript: this.messages().map((m) => ({ visitor: m.from !== 'ami', text: m.text })),
         },
-        { subject: `AMI chat – query from ${l.name}`, honey: '' },
+        {
+          fields: {
+            ...Object.fromEntries(this.summary()),
+            'Chat transcript': this.messages()
+              .map((m) => `${m.from === 'ami' ? AMI.name : l.name || 'Visitor'}: ${m.text}`)
+              .join('\n'),
+          },
+          subject: `AMI chat – query from ${l.name}`,
+          honey: '',
+        },
       );
       this.typing.set(false);
       this.busy = false;

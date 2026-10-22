@@ -4,7 +4,32 @@
 .compose > h2, .who > h2 { margin-bottom: 0; }
 .who > h2 { margin-bottom: 14px; }
 .lbl-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -6px 0 -4px; }
-.lbl-row label { font-size: .82rem; font-weight: 600; color: var(--pine); }
+.lbl-row label, .lbl-row .lbl { font-size: .82rem; font-weight: 600; color: var(--pine); }
+.lbl-actions { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; }
+
+/* CC / BCC */
+.copies { margin-top: -10px; }
+:host ::ng-deep .add-copies { padding-left: 0; }
+.copies__row { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 8px; }
+.copies__row label { font-size: .82rem; font-weight: 600; color: var(--pine); }
+.err { color: #b3261e; font-size: .8rem; }
+
+/* pictures in the message and attachments */
+.pics, .files { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; }
+.pic { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.pic img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; background: var(--soft); }
+.pic__body { display: grid; gap: 6px; min-width: 0; }
+.pic__name { font-size: .85rem; overflow-wrap: anywhere; }
+.pic__name code { font-size: .78rem; padding: 1px 6px; border-radius: 4px; background: #f3ead9; color: var(--brass-dark); }
+.pic__body input { width: 100%; }
+.file { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; font-size: .88rem; }
+.file > i { color: var(--brass-dark); }
+.file__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file small, .pic small { white-space: nowrap; }
+.pic.failed, .file.failed { border-color: #f0b8b3; background: #fdf3f2; }
+.file.failed small { white-space: normal; }
 .dear { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: .95rem; }
 .dear input { flex: 1 1 auto; max-width: 260px; }
 .dear__auto { padding: 6px 12px; border-radius: 6px; background: #f3ead9; color: var(--brass-dark); font-size: .88rem; }
@@ -38,6 +63,15 @@
 .preview__body { padding: 12px 14px; font-size: .88rem; line-height: 1.55; max-height: 260px; overflow-y: auto; }
 .preview__body p { margin: 0 0 10px; }
 .preview__body .txt { white-space: pre-line; overflow-wrap: anywhere; }
+.preview__cc { padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: .78rem; color: var(--muted);
+  display: grid; gap: 2px; overflow-wrap: anywhere; }
+.pv-pic { margin: 6px 0 12px; text-align: center; }
+.pv-pic img { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: 6px; }
+.pv-pic figcaption { margin-top: 4px; font-size: .78rem; color: var(--muted); }
+.preview__files { padding: 8px 14px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 14px;
+  font-size: .78rem; color: var(--muted); }
+.preview__files span { overflow-wrap: anywhere; }
+.preview__files i { color: var(--brass-dark); font-size: .8rem; }
 :host ::ng-deep .dlg-msg { margin-top: 14px; }
 .p-actions { margin-top: 18px; }
 

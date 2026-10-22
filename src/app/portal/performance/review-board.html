@@ -1,0 +1,334 @@
+@let r = review();
+
+<!-- totals -->
+<section class="p-card sum">
+  <div class="sum__who">
+    <app-avatar [name]="r.employee.name" [employeeId]="r.employee.id" [photoVersion]="r.employee.photoUpdatedAt"
+                [photoPath]="r.employee.photoPath" [size]="52" />
+    <span><b>{{ r.employee.name }}</b><small>{{ r.employee.empNumber }}{{ r.employee.designationName ? ' · ' + r.employee.designationName : '' }}</small>
+      <small>{{ r.cycle.name }} · {{ date(r.cycle.startDate) }} – {{ date(r.cycle.endDate) }}@if (r.cycle.closed) { · <b>closed</b> }</small></span>
+  </div>
+  <div class="sum__box">
+    <span class="lbl">Overall progress</span>
+    <b class="big">{{ r.totals.progress }}%</b>
+    <p-progressbar [value]="r.totals.progress" [showValue]="false" styleClass="bar" />
+  </div>
+  <div class="sum__box">
+    <span class="lbl">Goals weightage</span>
+    <b class="big" [class.warn]="r.totals.weightTotal !== 100">{{ r.totals.weightTotal }}%</b>
+    <small>of 100% · {{ r.totals.goals }} {{ r.totals.goals === 1 ? 'goal' : 'goals' }}</small>
+  </div>
+  <div class="sum__box">
+    <span class="lbl">Self rating</span>
+    <app-stars [value]="r.totals.selfRating" />
+    <small>{{ r.totals.selfRated }} of {{ r.totals.goals }} rated</small>
+  </div>
+  <div class="sum__box">
+    <span class="lbl">Manager rating</span>
+    <app-stars [value]="r.totals.managerRating" />
+    <small>{{ r.totals.managerRated }} of {{ r.totals.goals }} rated</small>
+  </div>
+</section>
+
+<p-tabs value="goals" styleClass="tabs">
+  <p-tablist>
+    <p-tab value="goals"><i class="pi pi-flag" aria-hidden="true"></i> Goals ({{ r.goals.length }})</p-tab>
+    <p-tab value="skills"><i class="pi pi-user" aria-hidden="true"></i> Skills &amp; intro ({{ r.skills.length }})</p-tab>
+    <p-tab value="achievements"><i class="pi pi-trophy" aria-hidden="true"></i> Achievements ({{ r.achievements.length }})</p-tab>
+  </p-tablist>
+  <p-tabpanels>
+    <!-- ================= goals ================= -->
+    <p-tabpanel value="goals">
+      @if (manager()) {
+        <div class="bar">
+          @if (r.totals.weightTotal < 100) {
+            <p-message severity="warn" styleClass="inline-msg">Goals add up to {{ r.totals.weightTotal }}%: {{ weightLeft() }}% still to set.</p-message>
+          } @else {
+            <span class="muted">Goals add up to 100%.</span>
+          }
+          <p-button label="New goal" icon="pi pi-plus" size="small" [disabled]="weightLeft() <= 0" (onClick)="newGoal()" />
+        </div>
+      }
+      @for (g of r.goals; track g.id) {
+        <article class="goal">
+          <header class="goal__head">
+            <div>
+              <h3>{{ g.title }}</h3>
+              <span class="muted">{{ date(g.startDate) }} – {{ date(g.endDate) }}</span>
+            </div>
+            <div class="goal__right">
+              <p-tag [value]="g.weightage + '%'" severity="secondary" />
+              @if (g.canEdit) {
+                <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Edit goal" (onClick)="editGoal(g)" />
+              }
+              @if (manager() && g.selfRating === null) {
+                <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove goal" (onClick)="removeGoal(g)" />
+              }
+            </div>
+          </header>
+          @if (g.description) { <p class="goal__desc">{{ g.description }}</p> }
+
+          <div class="goal__progress">
+            <span class="lbl">Goal progress</span>
+            <p-progressbar [value]="g.progress" [showValue]="false" styleClass="bar" />
+            <b>{{ g.progress }}%</b>
+          </div>
+
+          @if (g.tasks.length) {
+            <ul class="tasks">
+              @for (t of g.tasks; track t.id) {
+                <li>
+                  <span class="t-title"><b>{{ t.title }}</b><small class="muted">{{ t.weightage }}% · {{ date(t.startDate) }} – {{ date(t.endDate) }}</small></span>
+                  @if (canMove(g)) {
+                    <p-slider [ngModel]="t.progress" [step]="5" [min]="0" [max]="100" styleClass="slider"
+                              (onSlideEnd)="saveTask(g, t, $event.value)" [ariaLabel]="'Progress of ' + t.title" />
+                  } @else {
+                    <p-progressbar [value]="t.progress" [showValue]="false" styleClass="bar" />
+                  }
+                  <b class="pct">{{ t.progress }}%</b>
+                </li>
+              }
+            </ul>
+          } @else if (canMove(g)) {
+            <div class="tasks one">
+              <span class="muted">No sub-tasks: move the goal's own progress.</span>
+              <p-slider [ngModel]="g.progress" [step]="5" [min]="0" [max]="100" styleClass="slider"
+                        (onSlideEnd)="saveGoalProgress(g, $event.value)" ariaLabel="Goal progress" />
+            </div>
+          }
+
+          <div class="ratings">
+            <div class="rating">
+              <span class="lbl">Self rating</span>
+              @if (editingRating(g, 'self')) {
+                @let d = draft(g, 'self');
+                <app-star-input [(ngModel)]="d.rating" ariaLabel="Self rating" />
+                <textarea pTextarea rows="2" [autoResize]="true" maxlength="2000" placeholder="How did it go? (optional)" [(ngModel)]="d.comment"></textarea>
+                <span class="acts">
+                  <p-button [label]="g.selfRating ? 'Save change' : 'Save my rating'" size="small" (onClick)="rate(g, 'self')" />
+                  @if (g.selfRating) { <p-button label="Cancel" size="small" [text]="true" (onClick)="change(g, 'self', false)" /> }
+                </span>
+              } @else if (g.selfRating) {
+                <span class="given"><app-stars [value]="g.selfRating" [decimals]="0" />
+                  @if (g.canSelfRate) { <p-button label="Change" size="small" [text]="true" (onClick)="change(g, 'self', true)" /> }</span>
+                @if (g.selfComment) { <p class="cmt">“{{ g.selfComment }}”</p> }
+              } @else {
+                <span class="muted">{{ r.today < g.endDate ? 'Opens on ' + date(g.endDate) : 'Not rated yet' }}</span>
+              }
+            </div>
+            <div class="rating">
+              <span class="lbl">Manager rating</span>
+              @if (editingRating(g, 'manager')) {
+                @let m = draft(g, 'manager');
+                <app-star-input [(ngModel)]="m.rating" ariaLabel="Manager rating" />
+                <textarea pTextarea rows="2" [autoResize]="true" maxlength="2000" placeholder="Your feedback (required)" [(ngModel)]="m.comment"></textarea>
+                <span class="acts">
+                  <p-button [label]="g.managerRating ? 'Save change' : 'Save rating'" size="small" (onClick)="rate(g, 'manager')" />
+                  @if (g.managerRating) { <p-button label="Cancel" size="small" [text]="true" (onClick)="change(g, 'manager', false)" /> }
+                </span>
+              } @else if (g.managerRating) {
+                <span class="given"><app-stars [value]="g.managerRating" [decimals]="0" />
+                  @if (g.canManagerRate) { <p-button label="Change" size="small" [text]="true" (onClick)="change(g, 'manager', true)" /> }</span>
+                @if (g.managerComment) { <p class="cmt">“{{ g.managerComment }}”</p> }
+                <small class="muted">by {{ g.managerRatedBy }}</small>
+              } @else {
+                <span class="muted">After the self-rating</span>
+              }
+            </div>
+          </div>
+        </article>
+      } @empty {
+        <p class="p-empty">{{ manager() ? 'No goals yet. Set the first one with "New goal".' : 'No goals yet. Your manager sets them.' }}</p>
+      }
+    </p-tabpanel>
+
+    <!-- ================= skills & intro ================= -->
+    <p-tabpanel value="skills">
+      <div class="intro">
+        <h3>About me</h3>
+        @if (self()) {
+          <textarea pTextarea rows="4" [autoResize]="true" maxlength="4000" aria-label="Self introduction"
+                    placeholder="A short introduction: your role, experience, what you are good at and want to grow in"
+                    [ngModel]="introText()" (ngModelChange)="intro.set($event)"></textarea>
+          <p-button label="Save intro" icon="pi pi-check" size="small" [disabled]="intro() === null" (onClick)="saveIntro()" />
+        } @else {
+          <p class="intro__text">{{ r.selfIntro || 'No introduction yet.' }}</p>
+        }
+      </div>
+
+      @for (group of [{ label: 'Technical skills', value: 'TECHNICAL', list: technical() }, { label: 'Non-technical skills', value: 'NON_TECHNICAL', list: nonTechnical() }]; track group.value) {
+        <div class="skills">
+          <div class="bar">
+            <h3>{{ group.label }}</h3>
+            @if (self()) { <p-button label="Add" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="newSkill($any(group.value))" /> }
+            @if (manager()) { <p-button label="Add a skill" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="newSkill($any(group.value), 'manager')" /> }
+          </div>
+          @for (s of group.list; track s.id) {
+            <div class="skill">
+              <span class="s-name"><b>{{ s.name }}</b>@if (s.addedBy) { <small class="muted">Added by {{ s.addedBy }}</small> }</span>
+              <span class="s-col"><small class="muted">Self</small><app-stars [value]="s.selfLevel || null" [decimals]="0" empty="Not rated yet" /></span>
+              <span class="s-col"><small class="muted">Manager</small><app-stars [value]="s.managerLevel" [decimals]="0" empty="Not validated" /></span>
+              <span class="s-note">@if (s.managerNote) { “{{ s.managerNote }}” }@if (s.validatedBy) { <small class="muted"> · {{ s.validatedBy }}</small> }</span>
+              <span class="s-act">
+                @if (self()) {
+                  <p-button [icon]="s.selfLevel ? 'pi pi-pencil' : 'pi pi-star'" [label]="s.selfLevel ? '' : 'Rate yourself'" [text]="true"
+                            [rounded]="!!s.selfLevel" size="small" ariaLabel="Edit skill" (onClick)="editSkill(s)" />
+                  @if (!s.addedBy) {
+                    <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove skill" (onClick)="deleteSkill(s)" />
+                  }
+                }
+                @if (manager()) {
+                  <p-button [label]="s.managerLevel ? 'Re-validate' : 'Validate'" icon="pi pi-check-circle" size="small" [outlined]="true" (onClick)="openValidate(s)" />
+                  @if (s.addedBy) {
+                    <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove skill" (onClick)="deleteSkill(s)" />
+                  }
+                }
+              </span>
+            </div>
+          } @empty {
+            <p class="muted small">None listed.</p>
+          }
+        </div>
+      }
+    </p-tabpanel>
+
+    <!-- ================= achievements ================= -->
+    <p-tabpanel value="achievements">
+      @if (self() || manager()) {
+        <div class="bar">
+          <span class="muted">{{ manager() ? 'Recognise good work: it shows on their review.' : 'Add your own; achievements your manager gives show as issued.' }}</span>
+          <p-button [label]="manager() ? 'Give achievement' : 'Add achievement'" icon="pi pi-trophy" size="small" (onClick)="newAchievement()" />
+        </div>
+      }
+      <div class="achievements">
+        @for (a of r.achievements; track a.id) {
+          <div class="ach" [class.self]="a.selfReported">
+            <i class="pi pi-trophy" aria-hidden="true"></i>
+            <div class="ach__main">
+              <b>{{ a.title }}</b>
+              <small class="muted">{{ date(a.achievedOn) }}@if (a.category) { · {{ a.category }} } · {{ a.selfReported ? 'Self-reported' : 'Given by ' + a.issuedBy }}</small>
+              @if (a.details) { <p>{{ a.details }}</p> }
+            </div>
+            @if (canRemove(a)) {
+              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove achievement" (onClick)="removeAchievement(a)" />
+            }
+          </div>
+        } @empty {
+          <p class="p-empty">No achievements in this cycle yet.</p>
+        }
+      </div>
+    </p-tabpanel>
+  </p-tabpanels>
+</p-tabs>
+
+<!-- goal dialog (manager) -->
+<p-dialog [header]="goalId() ? 'Edit goal' : 'New goal for ' + r.employee.name" [modal]="true" [visible]="goalOpen()"
+          (visibleChange)="goalOpen.set($event)" [style]="{ width: '760px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }" [draggable]="false">
+  <div class="gform">
+    <div class="pf span">
+      <label for="g-title">Goal *</label>
+      <input pInputText id="g-title" maxlength="150" placeholder="e.g. Close 10 site projects on time" [ngModel]="gTitle()" (ngModelChange)="gTitle.set($event)" />
+    </div>
+    <div class="pf span">
+      <label for="g-desc">Description</label>
+      <textarea pTextarea id="g-desc" rows="2" [autoResize]="true" maxlength="2000" [ngModel]="gDescription()" (ngModelChange)="gDescription.set($event)"></textarea>
+    </div>
+    <div class="pf">
+      <label for="g-weight">Weightage *</label>
+      <p-inputnumber inputId="g-weight" [min]="1" [max]="100" suffix="%" [ngModel]="gWeight()" (ngModelChange)="gWeight.set($event)" />
+      <small class="hint">{{ weightLeft() + (goalId() ? (review().goals.find(x => x.id === goalId())?.weightage ?? 0) : 0) }}% available</small>
+    </div>
+    <div class="pf">
+      <label for="g-start">From *</label>
+      <p-datepicker inputId="g-start" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [minDate]="cycleMin()" [maxDate]="cycleMax()"
+                    [ngModel]="gStart()" (ngModelChange)="gStart.set($event)" />
+    </div>
+    <div class="pf">
+      <label for="g-end">To *</label>
+      <p-datepicker inputId="g-end" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [minDate]="gStart() ?? cycleMin()" [maxDate]="cycleMax()"
+                    [ngModel]="gEnd()" (ngModelChange)="gEnd.set($event)" />
+    </div>
+  </div>
+
+  <div class="bar sub">
+    <h4>Sub-tasks <small class="muted">({{ taskTotal() }}% of 100%)</small></h4>
+    <p-button label="Add sub-task" icon="pi pi-plus" size="small" [text]="true" (onClick)="addTask()" />
+  </div>
+  @for (t of gTasks(); track $index; let i = $index) {
+    <div class="trow">
+      <input pInputText maxlength="150" placeholder="Sub-task" [(ngModel)]="t.title" (ngModelChange)="touchTasks()" [attr.aria-label]="'Sub-task ' + (i + 1)" />
+      <p-inputnumber [min]="1" [max]="100" suffix="%" [(ngModel)]="t.weightage" (ngModelChange)="touchTasks()" [ariaLabel]="'Weightage of sub-task ' + (i + 1)" styleClass="w" />
+      <p-datepicker dateFormat="dd/mm/yy" appendTo="body" [minDate]="gStart()" [maxDate]="gEnd()" [(ngModel)]="t.start" placeholder="From" styleClass="d" />
+      <p-datepicker dateFormat="dd/mm/yy" appendTo="body" [minDate]="t.start ?? gStart()" [maxDate]="gEnd()" [(ngModel)]="t.end" placeholder="To" styleClass="d" />
+      <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" ariaLabel="Remove sub-task" (onClick)="removeTask(i)" />
+    </div>
+  } @empty {
+    <p class="muted small">No sub-tasks: the goal's own progress is used. With sub-tasks, their weights must add up to 100%.</p>
+  }
+  @if (gRated()) { <p-message severity="info" styleClass="dlg-msg">This goal is already rated. The ratings, comments and progress stay as they are.</p-message> }
+  @if (gError()) { <p-message severity="error" styleClass="dlg-msg">{{ gError() }}</p-message> }
+  <ng-template #footer>
+    <p-button label="Cancel" [text]="true" (onClick)="goalOpen.set(false)" />
+    <p-button [label]="goalId() ? 'Save goal' : 'Set goal'" icon="pi pi-check" [loading]="gBusy()" (onClick)="saveGoal()" />
+  </ng-template>
+</p-dialog>
+
+<!-- skill dialog (self) -->
+<p-dialog [header]="skillMode() === 'manager' ? 'Add a skill for ' + r.employee.name : skillId() ? 'Edit skill' : 'Add a skill'" [modal]="true" [visible]="skillOpen()" (visibleChange)="skillOpen.set($event)"
+          [style]="{ width: '460px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }" [draggable]="false">
+  <div class="gform one">
+    <div class="pf"><label for="s-name">Skill *</label>
+      <input pInputText id="s-name" maxlength="100" placeholder="e.g. AutoCAD, Client handling" [ngModel]="sName()" (ngModelChange)="sName.set($event)" /></div>
+    <div class="pf"><label for="s-cat">Type</label>
+      <p-select inputId="s-cat" [options]="categories" optionLabel="label" optionValue="value" appendTo="body" [ngModel]="sCategory()" (ngModelChange)="sCategory.set($event)" /></div>
+    <div class="pf"><span class="pf-label">{{ skillMode() === 'manager' ? 'Your level for ' + r.employee.name : 'My level' }} *</span>
+      <app-star-input [ngModel]="sLevel()" (ngModelChange)="sLevel.set($event)" ariaLabel="Level" /></div>
+    @if (skillMode() === 'manager') {
+      <div class="pf"><label for="s-note">Note</label>
+        <textarea pTextarea id="s-note" rows="2" [autoResize]="true" maxlength="500" [ngModel]="sNote()" (ngModelChange)="sNote.set($event)"></textarea>
+        <small class="hint">{{ r.employee.name }} sees it and adds their own level.</small></div>
+    } @else if (renaming()) {
+      <p-message severity="warn">Renaming it asks your manager to validate it again.</p-message>
+    }
+  </div>
+  <ng-template #footer>
+    <p-button label="Cancel" [text]="true" (onClick)="skillOpen.set(false)" />
+    <p-button label="Save" icon="pi pi-check" (onClick)="saveSkill()" />
+  </ng-template>
+</p-dialog>
+
+<!-- validate dialog (manager) -->
+<p-dialog [header]="'Validate: ' + (validating()?.name ?? '')" [modal]="true" [visible]="!!validating()" (visibleChange)="!$event && validating.set(null)"
+          [style]="{ width: '460px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }" [draggable]="false">
+  <div class="gform one">
+    <p class="muted">{{ r.employee.name }} rates themselves <app-stars [value]="validating()?.selfLevel" [decimals]="0" /></p>
+    <div class="pf"><span class="pf-label">Your level *</span>
+      <app-star-input [ngModel]="vLevel()" (ngModelChange)="vLevel.set($event)" ariaLabel="Your level" /></div>
+    <div class="pf"><label for="v-note">Note</label>
+      <textarea pTextarea id="v-note" rows="2" [autoResize]="true" maxlength="500" [ngModel]="vNote()" (ngModelChange)="vNote.set($event)"></textarea></div>
+  </div>
+  <ng-template #footer>
+    <p-button label="Cancel" [text]="true" (onClick)="validating.set(null)" />
+    <p-button label="Validate" icon="pi pi-check" (onClick)="saveValidation()" />
+  </ng-template>
+</p-dialog>
+
+<!-- achievement dialog -->
+<p-dialog [header]="manager() ? 'Give an achievement to ' + r.employee.name : 'Add an achievement'" [modal]="true" [visible]="achOpen()"
+          (visibleChange)="achOpen.set($event)" [style]="{ width: '520px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }" [draggable]="false">
+  <div class="gform">
+    <div class="pf span"><label for="a-title">Achievement *</label>
+      <input pInputText id="a-title" maxlength="120" placeholder="e.g. Team Champ of the quarter" [ngModel]="aTitle()" (ngModelChange)="aTitle.set($event)" /></div>
+    <div class="pf"><label for="a-kind">Kind</label>
+      <p-select inputId="a-kind" [options]="kinds" optionLabel="label" optionValue="value" [editable]="true" [showClear]="true" appendTo="body"
+                placeholder="Choose or type" [ngModel]="aKind()" (ngModelChange)="aKind.set($event)" /></div>
+    <div class="pf"><label for="a-date">Date *</label>
+      <p-datepicker inputId="a-date" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [ngModel]="aDate()" (ngModelChange)="aDate.set($event)" /></div>
+    <div class="pf span"><label for="a-details">Details</label>
+      <textarea pTextarea id="a-details" rows="3" [autoResize]="true" maxlength="2000" [ngModel]="aDetails()" (ngModelChange)="aDetails.set($event)"></textarea></div>
+  </div>
+  <ng-template #footer>
+    <p-button label="Cancel" [text]="true" (onClick)="achOpen.set(false)" />
+    <p-button [label]="manager() ? 'Give' : 'Add'" icon="pi pi-trophy" (onClick)="saveAchievement()" />
+  </ng-template>
+</p-dialog>

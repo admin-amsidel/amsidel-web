@@ -17,7 +17,7 @@ import { AuthService } from '../auth.service';
 import { Avatar } from '../avatar';
 import { apiProblem, Brand, Employee } from '../portal.models';
 import { StaffService } from '../staff.service';
-import { MailService, MailSetup } from './mail.service';
+import { MailBody, MailService, MailSetup } from './mail.service';
 
 /** Email delivery; 'off' when this send is WhatsApp only. */
 type Delivery = 'queued' | 'sending' | 'sent' | 'failed' | 'off';
@@ -42,13 +42,40 @@ interface Row {
   waLink: string | null;
 }
 
-interface Draft {
-  subject: string;
-  greeting: string;
-  body: string;
+/** Everything about the message except who gets it. */
+type Draft = Omit<MailBody, 'employeeId'>;
+
+/** A file added to the mail: uploading, ready (with its id on the server) or failed. */
+interface Upload {
+  key: number;
+  name: string;
+  size: number;
+  state: 'uploading' | 'ready' | 'failed';
+  error: string;
+  fileId: string | null;
 }
 
+/** A picture inside the message, at [[image n]] in the text. */
+interface Picture extends Upload {
+  /** Shown in the preview (a local object URL). */
+  thumb: string;
+  caption: string;
+}
+
+/** One piece of the preview: text, or a picture where [[image n]] is. */
+type PreviewPart = { kind: 'text'; text: string } | { kind: 'pic'; pic: Picture };
+
 const NAME = '{name}';
+const MARKER = /\[\[image (\d{1,2})]]/g;
+const MB = 1024 * 1024;
+/** Same limits as the server (MailFileStore). */
+const MAX_FILE = 10 * MB;
+const MAX_TOTAL = 14 * MB;
+const MAX_FILES = 10;
+const ATTACH_TYPES = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'webp'];
+/** Pictures mail apps show inside the message everywhere. */
+const PICTURE_TYPES = ['jpg', 'jpeg', 'png', 'gif'];
+const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 /** Mails in flight at once: quick for 100 people, gentle on the mail server. */
 const PARALLEL = 3;
 
@@ -58,6 +85,8 @@ const PARALLEL = 3;
  * sending, sent or failed (with the reason); failed ones can be sent again. Nothing is kept after leaving the page.
  * WhatsApp (free, from the sender's own WhatsApp): each person's message opens in WhatsApp ready to send with one
  * tap, through WhatsApp's click-to-chat link; the page cannot see whether it was then sent, so it shows "Opened".
+ * Email can also carry CC/BCC (copied on every person's mail), attachments (pictures, PDF, Word) and pictures with a
+ * caption inside the text; files are uploaded once, as they are added, and every mail refers to them.
  */
 @Component({
   selector: 'app-staff-mail',
@@ -136,6 +165,23 @@ export class StaffMail implements OnInit {
   ];
   protected readonly formError = signal('');
 
+  // copies and files (email only)
+  protected readonly showCopies = signal(false);
+  protected readonly ccText = signal('');
+  protected readonly bccText = signal('');
+  protected readonly cc = computed(() => addresses(this.ccText()));
+  protected readonly bcc = computed(() => addresses(this.bccText()));
+  protected readonly badAddresses = computed(() => [...this.cc(), ...this.bcc()].filter((a) => !EMAIL.test(a)));
+  protected readonly attachments = signal<Upload[]>([]);
+  protected readonly pictures = signal<Picture[]>([]);
+  protected readonly attachAccept = ATTACH_TYPES.map((t) => '.' + t).join(',');
+  protected readonly pictureAccept = PICTURE_TYPES.map((t) => '.' + t).join(',');
+  protected readonly totalSize = computed(() =>
+    [...this.attachments(), ...this.pictures()].filter((u) => u.state !== 'failed').reduce((s, u) => s + u.size, 0),
+  );
+  protected readonly uploading = computed(() => [...this.attachments(), ...this.pictures()].some((u) => u.state === 'uploading'));
+  private nextKey = 1;
+
   /** How the mail reads for the first person who will get it. */
   protected readonly preview = computed(() => {
     const name = (this.recipients().find((e) => e.companyEmail) ?? this.recipients()[0])?.name ?? 'Anu Thomas';
@@ -148,6 +194,26 @@ export class StaffMail implements OnInit {
       body: fill(this.body().trim()) || 'Your message…',
       signedBy: this.auth.user()?.name ?? '',
     };
+  });
+  /** The message with each [[image n]] shown as its picture; pictures not placed come after the text. */
+  protected readonly previewParts = computed<PreviewPart[]>(() => {
+    const pics = this.pictures();
+    const parts: PreviewPart[] = [];
+    const placed = new Set<number>();
+    const text = this.preview().body;
+    let last = 0;
+    for (const m of text.matchAll(MARKER)) {
+      const n = Number(m[1]);
+      parts.push({ kind: 'text', text: text.slice(last, m.index).replace(/^\n|\n$/g, '') });
+      if (pics[n - 1]) {
+        parts.push({ kind: 'pic', pic: pics[n - 1] });
+        placed.add(n);
+      }
+      last = m.index + m[0].length;
+    }
+    parts.push({ kind: 'text', text: text.slice(last).replace(/^\n/, '') });
+    pics.forEach((p, i) => { if (!placed.has(i + 1)) parts.push({ kind: 'pic', pic: p }); });
+    return parts.filter((p) => p.kind === 'pic' || p.text.trim());
   });
 
   // delivery
@@ -189,7 +255,10 @@ export class StaffMail implements OnInit {
 
   constructor() {
     // leaving the page stops what has not gone out yet
-    inject(DestroyRef).onDestroy(() => this.run?.unsubscribe());
+    inject(DestroyRef).onDestroy(() => {
+      this.run?.unsubscribe();
+      this.pictures().forEach((p) => URL.revokeObjectURL(p.thumb));
+    });
   }
 
   ngOnInit(): void {
@@ -220,11 +289,129 @@ export class StaffMail implements OnInit {
     });
   }
 
+  /** Uploads the chosen files as attachments. */
+  protected addAttachments(input: HTMLInputElement): void {
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    for (const file of files) {
+      if (this.attachments().length + this.pictures().length >= MAX_FILES * 2 || this.attachments().length >= MAX_FILES) {
+        this.toast.add({ severity: 'warn', summary: 'Too many files', detail: `At most ${MAX_FILES} attachments.` });
+        break;
+      }
+      const problem = this.check(file, ATTACH_TYPES, 'Attach pictures, PDF or Word files only.');
+      if (problem) {
+        this.toast.add({ severity: 'warn', summary: file.name, detail: problem });
+        continue;
+      }
+      const u: Upload = { key: this.nextKey++, name: file.name, size: file.size, state: 'uploading', error: '', fileId: null };
+      this.attachments.update((list) => [...list, u]);
+      this.upload(file, u.key, this.attachments);
+    }
+  }
+
+  protected removeAttachment(u: Upload): void {
+    this.attachments.update((list) => list.filter((x) => x.key !== u.key));
+    if (u.fileId) this.mail.remove(u.fileId).subscribe({ error: () => undefined });
+  }
+
+  /** Uploads a picture and puts [[image n]] on its own line where the cursor is in the message. */
+  protected addPicture(input: HTMLInputElement, field: HTMLTextAreaElement): void {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (this.pictures().length >= MAX_FILES) {
+      this.toast.add({ severity: 'warn', summary: 'Too many pictures', detail: `At most ${MAX_FILES} pictures in the message.` });
+      return;
+    }
+    const problem = this.check(file, PICTURE_TYPES, 'Pictures inside the message must be JPG, PNG or GIF.');
+    if (problem) {
+      this.toast.add({ severity: 'warn', summary: file.name, detail: problem });
+      return;
+    }
+    const p: Picture = {
+      key: this.nextKey++, name: file.name, size: file.size, state: 'uploading', error: '', fileId: null,
+      thumb: URL.createObjectURL(file), caption: '',
+    };
+    this.pictures.update((list) => [...list, p]);
+    const marker = `[[image ${this.pictures().length}]]`;
+    const value = this.body();
+    const start = field.selectionStart ?? value.length;
+    const end = field.selectionEnd ?? value.length;
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+    const insert = (before && !before.endsWith('\n') ? '\n' : '') + marker + (after.startsWith('\n') ? '' : '\n');
+    this.body.set(before + insert + after);
+    queueMicrotask(() => {
+      field.focus();
+      field.setSelectionRange(start + insert.length, start + insert.length);
+    });
+    this.upload(file, p.key, this.pictures);
+  }
+
+  /** Removes the picture and its [[image n]]; the pictures after it move up one number. */
+  protected removePicture(p: Picture): void {
+    const n = this.pictures().findIndex((x) => x.key === p.key) + 1;
+    if (!n) return;
+    const body = this.body()
+      .replace(new RegExp(`\\[\\[image ${n}]]\\n?`, 'g'), '')
+      .replace(MARKER, (m, k) => (Number(k) > n ? `[[image ${Number(k) - 1}]]` : m));
+    this.body.set(body);
+    this.pictures.update((list) => list.filter((x) => x.key !== p.key));
+    URL.revokeObjectURL(p.thumb);
+    if (p.fileId) this.mail.remove(p.fileId).subscribe({ error: () => undefined });
+  }
+
+  protected setCaption(p: Picture, caption: string): void {
+    this.pictures.update((list) => list.map((x) => (x.key === p.key ? { ...x, caption } : x)));
+  }
+
+  protected size(bytes: number): string {
+    return bytes >= MB ? `${(bytes / MB).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+
+  protected fileIcon(name: string): string {
+    const ext = extension(name);
+    if (ext === 'pdf') return 'pi pi-file-pdf';
+    if (ext === 'doc' || ext === 'docx') return 'pi pi-file-word';
+    return 'pi pi-image';
+  }
+
+  private check(file: File, types: string[], wrongType: string): string | null {
+    if (!types.includes(extension(file.name))) return wrongType;
+    if (file.size > MAX_FILE) return `${this.size(file.size)}: each file must be 10 MB or smaller.`;
+    if (this.totalSize() + file.size > MAX_TOTAL) return 'Attachments and pictures together must be 14 MB or smaller.';
+    return null;
+  }
+
+  private upload(file: File, key: number, list: typeof this.attachments | typeof this.pictures): void {
+    const patch = (change: Partial<Upload>) =>
+      (list as typeof this.attachments).update((items) => items.map((x) => (x.key === key ? { ...x, ...change } : x)));
+    this.mail.upload(file).subscribe({
+      next: (f) => {
+        // removed while it was uploading: drop it on the server too
+        if (!(list as typeof this.attachments)().some((x) => x.key === key)) {
+          this.mail.remove(f.id).subscribe({ error: () => undefined });
+          return;
+        }
+        patch({ state: 'ready', fileId: f.id, size: f.size });
+      },
+      error: (err) => patch({ state: 'failed', error: apiProblem(err).message }),
+    });
+  }
+
   protected send(): void {
     this.formError.set('');
     const people = this.recipients();
     if (!this.subject().trim()) return this.formError.set('Write a subject.');
     if (!this.body().trim()) return this.formError.set('Write the message.');
+    if (this.byEmail()) {
+      if (this.badAddresses().length) return this.formError.set(`Check the CC/BCC addresses: ${this.badAddresses().join(', ')}`);
+      if (this.cc().length > 10 || this.bcc().length > 10) return this.formError.set('At most 10 CC and 10 BCC addresses.');
+      if (this.uploading()) return this.formError.set('Wait for the files to finish uploading.');
+      if ([...this.attachments(), ...this.pictures()].some((u) => u.state === 'failed')) {
+        return this.formError.set('Remove the files that could not be uploaded, or add them again.');
+      }
+    }
     if (this.greetingMode() === 'CUSTOM' && !this.greetingText().trim()) return this.formError.set('Write the words after "Dear", e.g. All.');
     if (!people.length) return this.formError.set(this.mode() === 'PICK' ? 'Choose at least one person.' : 'Nobody to send to.');
     const channel = this.channel();
@@ -244,6 +431,10 @@ export class StaffMail implements OnInit {
       subject: this.subject().trim(),
       greeting: this.greetingMode() === 'NAME' ? '' : this.greetingText().trim(),
       body: this.body().trim(),
+      cc: this.cc(),
+      bcc: this.bcc(),
+      attachments: this.attachments().map((u) => u.fileId!),
+      images: this.pictures().map((p) => ({ fileId: p.fileId!, caption: p.caption.trim() })),
     };
     const begin = () => {
       this.draft = draft;
@@ -258,10 +449,14 @@ export class StaffMail implements OnInit {
     if (!byEmail) return begin();
 
     const skipped = this.noEmail() ? ` (${this.noEmail()} without an office email will be skipped)` : '';
+    const copies = draft.cc.length + draft.bcc.length;
+    const copied = copies
+      ? ` Each one is also copied to ${copies} CC/BCC ${copies === 1 ? 'address' : 'addresses'} (${mails * copies} copies in all).`
+      : '';
     this.confirm.confirm({
       header: byWhatsApp ? 'Send email and WhatsApp' : 'Send staff mail',
       message:
-        `Send ${mails} separate ${mails === 1 ? 'mail' : 'mails'}, each addressed to the person${skipped}?` +
+        `Send ${mails} separate ${mails === 1 ? 'mail' : 'mails'}, each addressed to the person${skipped}?${copied}` +
         (byWhatsApp ? ` Then open each of the ${chats} WhatsApp ${chats === 1 ? 'message' : 'messages'} from the list below.` : ''),
       icon: 'pi pi-send',
       acceptLabel: 'Send',
@@ -366,7 +561,19 @@ function toRow(e: Employee, byEmail: boolean, byWhatsApp: boolean, draft: Draft,
 function whatsappText(name: string, draft: Draft, sign: { by: string; company: string }): string {
   const fill = (s: string) => s.split(NAME).join(name);
   const greeting = draft.greeting ? fill(draft.greeting) : name;
-  return `*${fill(draft.subject)}*\n\nDear ${greeting},\n\n${fill(draft.body)}\n\nRegards,\n${sign.by}\n${sign.company}`;
+  // pictures and attachments go by email only
+  const body = fill(draft.body).replace(/\[\[image \d{1,2}]]\n?/g, '').trim();
+  return `*${fill(draft.subject)}*\n\nDear ${greeting},\n\n${body}\n\nRegards,\n${sign.by}\n${sign.company}`;
+}
+
+/** "a@x.com, b@x.com; c@x.com" -> each address, trimmed, without repeats. */
+function addresses(text: string): string[] {
+  const seen = new Set<string>();
+  return text.split(/[\s,;]+/).filter((a) => a && !seen.has(a.toLowerCase()) && seen.add(a.toLowerCase()));
+}
+
+function extension(name: string): string {
+  return name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toLowerCase() : '';
 }
 
 /**
