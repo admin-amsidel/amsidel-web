@@ -1,0 +1,172 @@
+import { HttpErrorResponse } from '@angular/common/http';
+
+export type Role = 'OWNER' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+
+export const ROLE_LABELS: Record<Role, string> = {
+  OWNER: 'Owner',
+  ADMIN: 'Admin',
+  MANAGER: 'Manager',
+  EMPLOYEE: 'Employee',
+};
+
+export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+/** Matches EmployeeResponse in amsidel-backend. Dates are "YYYY-MM-DD". */
+export interface Employee {
+  id: number;
+  empNumber: string;
+  userId: string;
+  name: string;
+  role: Role;
+  brandId: number | null;
+  brandCode: string | null;
+  brandName: string | null;
+  designationId: number | null;
+  designationName: string | null;
+  /** Rank, 1 = Trainee ... 10 = CEO; peers share it. */
+  levelNumber: number | null;
+  /** Shown level, e.g. "4" or "6.1". */
+  levelCode: string | null;
+  reportsToId: number | null;
+  reportsToName: string | null;
+  address: string | null;
+  phone: string | null;
+  photoPath: string | null;
+  /** Set when a photo was uploaded from the portal; it is shown instead of photoPath. */
+  photoUpdatedAt: string | null;
+  joinedDate: string | null;
+  dob: string | null;
+  bloodGroup: string | null;
+  personalEmail: string | null;
+  companyEmail: string | null;
+  emergencyContact: string | null;
+  active: boolean;
+  mustChangePassword: boolean;
+  locked: boolean;
+  lastLoginAt: string | null;
+}
+
+/** A portal menu with its sub-menus (from the menus table). */
+export interface MenuNode {
+  code: string;
+  name: string;
+  description: string | null;
+  /** e.g. 1002; giving a menu's checkpoint gives its sub-menus too. */
+  checkpoint: number;
+  /** Portal address; null for a menu that only holds sub-menus. */
+  path: string | null;
+  icon: string | null;
+  children: MenuNode[];
+}
+
+/** The menus the signed-in person may open. */
+export interface MyAccess {
+  /** Every menu ("*"). */
+  all: boolean;
+  codes: string[];
+  menus: MenuNode[];
+}
+
+/** Body of POST/PUT /api/employees (password only when creating). */
+export interface EmployeeRequest {
+  name: string;
+  empNumber: string;
+  userId: string;
+  password?: string;
+  role: Role;
+  brandId: number | null;
+  designationId: number | null;
+  reportsToId: number | null;
+  address: string;
+  phone: string;
+  photoPath: string;
+  joinedDate: string;
+  dob: string | null;
+  bloodGroup: string;
+  personalEmail: string;
+  companyEmail: string;
+  emergencyContact: string;
+  active: boolean;
+}
+
+export interface Brand {
+  id: number;
+  code: string;
+  name: string;
+  active: boolean;
+}
+
+/** Job title on the group's level ladder (Trainee = 1 ... CEO = 10). */
+export interface Designation {
+  id: number;
+  name: string;
+  levelNumber: number;
+  levelCode: string;
+  active: boolean;
+}
+
+/** "L4 · Team Lead" */
+export function designationLabel(d: { levelCode: string | null; designationName?: string | null; name?: string }): string {
+  const name = d.designationName ?? d.name ?? '';
+  return d.levelCode ? `L${d.levelCode} · ${name}` : name;
+}
+
+export interface LoginResponse {
+  token: string;
+  /** Scheme to send it with: "Authorization: asd <token>". */
+  tokenType: 'asd';
+  expiresAt: string;
+  user: Employee;
+}
+
+/** Error body from the backend: { error, details?: { field: message } }. */
+export interface ApiProblem {
+  message: string;
+  fields: Record<string, string>;
+}
+
+export function apiProblem(err: unknown): ApiProblem {
+  if (err instanceof HttpErrorResponse) {
+    if (err.status === 0) {
+      return { message: 'Cannot reach the server. Check your internet connection and try again.', fields: {} };
+    }
+    const body = err.error as { error?: string; details?: Record<string, string> } | null;
+    const fields = body?.details ?? {};
+    const message =
+      Object.keys(fields).length > 0 ? 'Please correct the highlighted fields.' : body?.error || 'Something went wrong.';
+    return { message, fields };
+  }
+  return { message: 'Something went wrong.', fields: {} };
+}
+
+/** PrimeNG tag colours. */
+export type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
+
+/** An employee's sign-in state as a label and tag colour. */
+export function accountStatus(e: { active: boolean; locked: boolean; mustChangePassword: boolean }): {
+  label: string;
+  severity: TagSeverity;
+} {
+  if (!e.active) return { label: 'Disabled', severity: 'secondary' };
+  if (e.locked) return { label: 'Locked', severity: 'danger' };
+  if (e.mustChangePassword) return { label: 'New PIN pending', severity: 'warn' };
+  return { label: 'Active', severity: 'success' };
+}
+
+/** Date pickers work with Date objects; the API with "YYYY-MM-DD" (no time zone shifts either way). */
+export function toIsoDate(d: Date | null | undefined): string | null {
+  if (!d) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function fromIsoDate(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** "Anu Thomas" -> "AT" for the photo placeholder. */
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase() || '?';
+}

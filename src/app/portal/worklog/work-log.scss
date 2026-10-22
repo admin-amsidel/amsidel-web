@@ -1,0 +1,114 @@
+/* Work log month calendar: 7 day columns (Monday first) + a week total column */
+
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.nav { display: flex; align-items: center; gap: 4px; }
+.nav h2 { margin: 0 0 0 8px; font-size: 1.35rem; }
+.who { min-width: 280px; }
+
+.sum { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; margin-bottom: 16px; font-size: .9rem; color: var(--muted); }
+.sum b { color: var(--ink); font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.sum .warn b { color: #b45309; }
+
+.cal { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; transition: opacity .2s; }
+.cal.is-loading { opacity: .55; }
+.cal__head, .cal__row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) 108px; }
+.cal__head span {
+  padding: 8px 10px; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 600;
+  color: var(--muted); background: var(--soft); border-bottom: 1px solid var(--line);
+}
+.cal__head .wkh { background: #f1ece2; }
+.cal__row + .cal__row { border-top: 1px solid var(--line); }
+
+.cell {
+  display: flex; flex-direction: column; gap: 3px; align-items: stretch; min-height: 118px; min-width: 0;
+  padding: 8px 8px 7px; border: 0; border-right: 1px solid var(--line); background: var(--bg);
+  font: inherit; color: var(--ink); text-align: left; cursor: pointer; transition: background .15s;
+}
+.cell:hover { background: #fbf8f2; }
+.cell:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+.cell.out { background: #fcfbf9; }
+.cell.out .num, .cell.out .line, .cell.out .tot { opacity: .45; }
+.cell.off { background: repeating-linear-gradient(135deg, #faf8f4, #faf8f4 6px, #f4f1ec 6px, #f4f1ec 12px); }
+.cell.full { box-shadow: inset 3px 0 0 #dc2626; }
+.cell.half { box-shadow: inset 3px 0 0 #d97706; }
+
+.cell__head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
+.num { font-size: .95rem; font-weight: 600; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+.today .num { background: var(--brass); color: #fff; }
+.tot { font-size: .78rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.tot small { font-weight: 500; }
+.tot.ok { color: #1f7a35; }
+.tot.low { color: #b45309; }
+.future .tot.low { color: var(--muted); }
+.tot.off { font-weight: 500; letter-spacing: .08em; text-transform: uppercase; font-size: .66rem; }
+
+.line {
+  display: flex; justify-content: space-between; gap: 6px; padding: 2px 6px; border-radius: 4px;
+  background: #f3ead9; border-left: 3px solid var(--brass); font-size: .74rem; line-height: 1.35;
+}
+.line b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.line em { font-style: normal; font-variant-numeric: tabular-nums; color: var(--brass-dark); flex: none; }
+.more { font-size: .72rem; color: var(--brass-dark); padding-left: 6px; }
+
+.flags { margin-top: auto; display: flex; flex-wrap: wrap; gap: 3px; }
+.flag {
+  display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: .66rem; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
+}
+.flag.full { background: #fee2e2; color: #991b1b; }
+.flag.half { background: #fef3c7; color: #92400e; }
+.flag.pend { background: transparent; color: #b45309; padding-left: 0; text-transform: none; letter-spacing: 0; font-weight: 600; }
+.flag.leave { background: #e0f2fe; color: #075985; }
+.flag.leave.pending { background: #f1f5f9; color: #475569; }
+
+.wk {
+  display: grid; align-content: center; justify-items: center; gap: 1px; padding: 8px 6px; text-align: center;
+  background: #f7f3eb; font-variant-numeric: tabular-nums;
+}
+.wk b { font-size: 1.05rem; }
+.wk small { font-size: .72rem; color: var(--muted); }
+.wk__label { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.wk__pend { margin-top: 4px; font-size: .72rem; font-weight: 600; color: #b45309; }
+.wk__ok { margin-top: 4px; font-size: .72rem; font-weight: 600; color: #1f7a35; }
+.wk__ok i { font-size: .65rem; }
+.wk.done { background: #eef6ee; }
+
+.legend { margin: 12px 2px 0; font-size: .8rem; color: var(--muted); line-height: 1.9; }
+
+.target__row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.target__row .pf { width: 170px; }
+
+/* day popup */
+.dsum { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: -4px 0 14px; color: var(--muted); }
+.dsum b { color: var(--ink); }
+.dsum .warn b { color: #b45309; }
+:host ::ng-deep .p-datatable .n { width: 36px; color: var(--muted); }
+:host ::ng-deep .p-datatable .task .ttl { display: block; font-size: .78rem; color: var(--muted); }
+:host ::ng-deep .entry .p-select { width: 100%; }
+:host ::ng-deep .p-datatable .desc { white-space: pre-line; }
+:host ::ng-deep .p-datatable .act { text-align: right; white-space: nowrap; width: 90px; }
+:host ::ng-deep .p-datatable tr.editing > td { background: #fbf7ef; }
+:host ::ng-deep .dlg-msg { margin-top: 12px; }
+.entry { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.entry h3 { font-size: 1.05rem; margin-bottom: 12px; }
+.entry__grid { display: grid; grid-template-columns: 1fr 180px; gap: 12px; }
+.entry__grid .span { grid-column: 1 / -1; }
+.entry .p-actions { margin-top: 14px; }
+
+/* phones: one day per row, the month's own days only, week totals as a bar */
+@media (max-width: 760px) {
+  .who { min-width: 0; width: 100%; }
+  .cal__head { display: none; }
+  .cal__row { grid-template-columns: 1fr; }
+  .cell { min-height: 0; border-right: 0; border-bottom: 1px solid var(--line); }
+  .cell.out { display: none; }
+  .wk { grid-auto-flow: column; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; }
+  .entry__grid { grid-template-columns: 1fr; }
+  /* the day's tasks: "1 · MSC-1030 · 4h" on one line, what was done below, edit/remove under it */
+  :host ::ng-deep .p-stack .p-datatable-tbody > tr { grid-template-columns: auto 1fr auto; gap: 4px 10px; }
+  :host ::ng-deep .p-stack td[data-label]::before { display: none; }
+  :host ::ng-deep .p-stack td.n { width: auto; }
+  :host ::ng-deep .p-stack td.desc { color: var(--muted); }
+  :host ::ng-deep .p-stack td.stack-end { justify-content: flex-end; margin-top: -4px; }
+  :host ::ng-deep .p-stack .p-datatable-tfoot > tr { grid-template-columns: 1fr auto; }
+}

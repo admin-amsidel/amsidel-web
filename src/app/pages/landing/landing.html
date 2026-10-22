@@ -188,6 +188,16 @@
   </footer>
 </div>
 
+<!-- Staff portal: round floating button in the corner, styled like the AMI chat button -->
+<a class="staff-fab" routerLink="/login" aria-label="Staff login">
+  <span class="staff-fab__label" aria-hidden="true">Staff login</span>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="5" y="10.5" width="14" height="10" rx="2" />
+    <path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" />
+    <circle cx="12" cy="15.5" r="1.3" />
+  </svg>
+</a>
+
 <!-- Right-side roadmap menu -->
 <nav #rail class="rail" id="rail" aria-label="Page sections" [class.open]="menuOpen()" (transitionend)="setFill()">
   <div class="rail-head">Explore Amsidel</div>

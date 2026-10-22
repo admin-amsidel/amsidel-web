@@ -1,0 +1,169 @@
+<div class="p-head">
+  <div>
+    <h1>Attendance</h1>
+    <p>Check in when you start work, wherever you are. Field visits are checked in and closed one by one.</p>
+  </div>
+</div>
+
+@if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
+
+@if (loading()) {
+  <section class="p-card"><p class="p-loading">Loading…</p></section>
+} @else {
+  @if (day(); as d) {
+    <!-- today so far -->
+    <section class="p-card status" [class.done]="!d.open">
+      <div class="status__main">
+        <p class="eyebrow">{{ d.workDate | date: 'EEEE, d MMMM' }}</p>
+        @if (openEntry(); as o) {
+          <h2>{{ o.workMode === 'FIELD' ? 'At ' + (o.place ?? 'a visit') : 'Working' }} since {{ o.checkIn.at | date: 'hh:mm a' : IST }}</h2>
+          <p class="times">
+            {{ worked(openFor()) }} {{ o.workMode === 'FIELD' ? 'at this visit' : 'so far' }}
+            @if (d.entries.length > 1) { · {{ worked(dayTotal()) }} today in {{ d.entries.length }} entries }
+          </p>
+        } @else {
+          <h2>Day ended · {{ worked(d.workedMinutes) }}</h2>
+          <p class="times">
+            {{ d.firstIn | date: 'hh:mm a' : IST }} – {{ d.lastOut | date: 'hh:mm a' : IST }}
+            @if (d.entries.length > 1) { · {{ d.entries.length }} entries }
+          </p>
+        }
+        <div class="chips">
+          @for (m of d.modes; track m) { <p-tag [value]="modeLabels[m]" severity="secondary" /> }
+          @for (f of d.flags; track f) { <p-tag [value]="flagLabel(f)" severity="warn" icon="pi pi-exclamation-triangle" /> }
+        </div>
+        <app-attendance-entries [entries]="d.entries" />
+      </div>
+
+      @if (openEntry(); as o) {
+        <div class="close">
+          <div class="pf">
+            <label for="a-note">{{ o.workMode === 'FIELD' ? 'Meeting status / notes' : 'Notes for today' }} <span class="opt">(optional)</span></label>
+            <textarea pTextarea id="a-note" rows="2" maxlength="500" [autoResize]="true"
+                      [placeholder]="o.workMode === 'FIELD' ? 'e.g. Measured 14 windows; quote to send by Friday' : 'e.g. Finished the Kumar quotation'"
+                      [ngModel]="note()" (ngModelChange)="note.set($event)"></textarea>
+          </div>
+          <div class="close__act">
+            <p-button [label]="o.workMode === 'FIELD' ? 'Close visit' : 'End work today'"
+                      [icon]="o.workMode === 'FIELD' ? 'pi pi-flag' : 'pi pi-sign-out'" severity="secondary"
+                      [loading]="busy()" (onClick)="close()" />
+            @if (step()) { <small class="muted">{{ step() }}</small> }
+          </div>
+        </div>
+      } @else if (!startingVisit()) {
+        <div class="close close--next">
+          <p class="muted">Visiting another site or client? Each visit is checked in with its own photo and location.</p>
+          <p-button label="Start a field visit" icon="pi pi-map-marker" [outlined]="true" (onClick)="startVisit()" />
+        </div>
+      }
+    </section>
+  }
+
+  @if (showStart()) {
+    <!-- check in: the day's first entry, or another field visit -->
+    <section class="p-card start">
+      <div class="start__head">
+        <h2>{{ day() ? 'New field visit' : 'Start work' }}</h2>
+        @if (startingVisit()) { <p-button label="Cancel" [text]="true" size="small" (onClick)="cancelVisit()" /> }
+      </div>
+      <div class="start__grid">
+        <div class="start__form">
+          @if (!day()) {
+            <div class="pf">
+              <span class="pf-label" id="a-mode-lbl">Where are you working today? *</span>
+              <p-selectbutton [options]="modes" optionLabel="label" optionValue="value" ariaLabelledBy="a-mode-lbl" styleClass="modes"
+                              [ngModel]="mode()" (ngModelChange)="mode.set($event)">
+                <ng-template #item let-o><i [class]="o.icon" aria-hidden="true"></i><span>{{ o.label }}</span></ng-template>
+              </p-selectbutton>
+            </div>
+          }
+          @if (mode() === 'FIELD') {
+            <div class="pf">
+              <label for="a-place">Place / client *</label>
+              <input pInputText id="a-place" maxlength="120" autocomplete="off" placeholder="e.g. Kumar residence, Kakkanad"
+                     [ngModel]="place()" (ngModelChange)="place.set($event)" />
+            </div>
+          }
+
+          <ul class="checks">
+            <li [class.ok]="!!mode()"><i [class]="mode() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i> Work mode</li>
+            @if (mode() === 'FIELD') {
+              <li [class.ok]="!!place().trim()"><i [class]="place().trim() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i> Place / client</li>
+            }
+            <li [class.ok]="!!photo()"><i [class]="photo() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i> Live photo</li>
+            <li [class.ok]="location() === 'granted'" [class.warn]="location() === 'denied'">
+              <i [class]="location() === 'granted' ? 'pi pi-check-circle' : location() === 'denied' ? 'pi pi-exclamation-triangle' : 'pi pi-map-marker'" aria-hidden="true"></i>
+              @switch (location()) {
+                @case ('granted') { Location allowed }
+                @case ('denied') { Location is blocked: you can still check in, but it will be flagged }
+                @default { Location is taken when you check in (allow it when asked) }
+              }
+            </li>
+          </ul>
+
+          @if (formError()) { <p-message severity="error" styleClass="dlg-msg">{{ formError() }}</p-message> }
+          <div class="p-actions">
+            <p-button [label]="day() ? 'Start visit' : 'Check in'" icon="pi pi-check"
+                      [disabled]="!mode() || !photo() || (mode() === 'FIELD' && !place().trim())" [loading]="busy()" (onClick)="checkIn()" />
+            @if (step()) { <small class="muted">{{ step() }}</small> }
+          </div>
+        </div>
+
+        <div class="cam" [class.live]="cameraOn()">
+          <video #video [class.mirror]="facing() === 'user'" [hidden]="!cameraOn()" aria-label="Camera preview"></video>
+          @if (photoUrl(); as url) {
+            <img [src]="url" alt="Your check-in photo" [class.mirror]="facing() === 'user'" />
+            <div class="cam__bar">
+              <p-button label="Retake" icon="pi pi-refresh" severity="secondary" size="small" (onClick)="retake()" />
+            </div>
+          } @else if (cameraOn()) {
+            <div class="cam__bar">
+              <p-button icon="pi pi-sync" [rounded]="true" severity="secondary" ariaLabel="Switch camera" (onClick)="switchCamera()" />
+              <p-button label="Take photo" icon="pi pi-camera" [rounded]="true" (onClick)="capture()" />
+            </div>
+          } @else {
+            <div class="cam__off">
+              <i class="pi pi-camera" aria-hidden="true"></i>
+              <p>A live photo is needed to check in. Photos from the gallery are not accepted.</p>
+              <p-button label="Open camera" icon="pi pi-video" [loading]="cameraBusy()" (onClick)="openCamera()" />
+              @if (cameraError()) { <p class="cam__err">{{ cameraError() }}</p> }
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+  }
+}
+
+<section class="p-card">
+  <h2>My last 30 days</h2>
+  <p-table [value]="history()" dataKey="workDate" styleClass="p-stack" [tableStyle]="{ 'min-width': '760px' }"
+           [paginator]="history().length > 15" [rows]="15">
+    <ng-template #header>
+      <tr><th class="exp"></th><th>Day</th><th>Mode</th><th>First in</th><th>Last out</th><th>Worked</th><th>Entries</th></tr>
+    </ng-template>
+    <ng-template #body let-d let-expanded="expanded">
+      <tr>
+        <td class="exp stack-end">
+          <p-button [pRowToggler]="d" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" [text]="true" [rounded]="true"
+                    size="small" [ariaLabel]="(expanded ? 'Hide' : 'Show') + ' entries'" />
+        </td>
+        <td data-label="Day" class="nowrap"><b>{{ d.workDate | date: 'EEE d MMM' }}</b></td>
+        <td data-label="Mode">
+          @for (m of d.modes; track m) { <span class="mode">{{ modeLabels[m] }}</span> }
+          @for (f of d.flags; track f) { <p-tag [value]="flagLabel(f)" severity="warn" styleClass="flag" /> }
+        </td>
+        <td data-label="First in" class="nowrap">{{ d.firstIn | date: 'hh:mm a' : IST }}</td>
+        <td data-label="Last out" class="nowrap">{{ d.lastOut ? (d.lastOut | date: 'hh:mm a' : IST) : (d.open ? 'Open' : '—') }}</td>
+        <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}</td>
+        <td data-label="Entries">{{ d.entries.length }}</td>
+      </tr>
+    </ng-template>
+    <ng-template #expandedrow let-d>
+      <tr class="expanded"><td colspan="7"><app-attendance-entries [entries]="d.entries" /></td></tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr><td colspan="7" class="p-empty">No check-ins in the last 30 days.</td></tr>
+    </ng-template>
+  </p-table>
+</section>

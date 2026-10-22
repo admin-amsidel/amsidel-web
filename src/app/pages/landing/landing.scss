@@ -303,6 +303,28 @@ footer {
   color: var(--brass-dark); text-decoration: none; padding: 10px 4px;
 }
 .store-link:hover { color: var(--ink); }
+/* Staff portal entry: floating round button in the bottom-right corner (same size and look as the AMI
+   chat launcher); its label slides out on hover or keyboard focus */
+.staff-fab {
+  position: fixed; right: 20px; bottom: 24px; z-index: 40;
+  width: 56px; height: 56px; border-radius: 50%;
+  display: grid; place-items: center; text-decoration: none;
+  background: var(--pine); color: var(--gold-hi);
+  box-shadow: 0 10px 26px rgba(30,30,33,.28);
+  transition: transform .2s;
+}
+.staff-fab:hover { transform: scale(1.06); }
+.staff-fab:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+.staff-fab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.staff-fab svg circle { fill: currentColor; stroke: none; }
+.staff-fab__label {
+  position: absolute; right: calc(100% + 12px); top: 50%; white-space: nowrap; pointer-events: none;
+  font: 600 .74rem/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--ink);
+  background: #fff; border: 1px solid var(--line); border-radius: 40px; padding: 9px 14px;
+  box-shadow: 0 8px 22px rgba(30,30,33,.12);
+  opacity: 0; transform: translate(6px, -50%); transition: opacity .2s, transform .2s;
+}
+.staff-fab:hover .staff-fab__label, .staff-fab:focus-visible .staff-fab__label { opacity: 1; transform: translate(0, -50%); }
 .chips { padding-top: 22px; }
 a.chip { text-decoration: none; }
 .partner-cta { margin-top: 24px; }
@@ -317,4 +339,5 @@ a.chip { text-decoration: none; }
   }
   .menu-btn { padding: 10px 12px; }
   .menu-btn span { display: none; }
+  .staff-fab { right: 16px; bottom: 20px; }
 }

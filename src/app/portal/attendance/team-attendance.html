@@ -1,0 +1,145 @@
+<div class="p-head">
+  <div>
+    <h1>Team attendance</h1>
+    <p>Who checked in, where they work from, and every field visit. Open a row to see each entry.</p>
+  </div>
+  <div class="head-actions">
+    <p-selectbutton [options]="viewOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
+                    [ngModel]="view()" (ngModelChange)="view.set($event)">
+      <ng-template #item let-o><i [class]="o.icon" aria-hidden="true"></i><span>{{ o.label }}</span></ng-template>
+    </p-selectbutton>
+  </div>
+</div>
+
+@if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
+
+@if (view() === 'DAY') {
+  <section class="p-card">
+    <div class="bar">
+      <div class="pf">
+        <label for="ta-date">Day</label>
+        <p-datepicker inputId="ta-date" dateFormat="dd/mm/yy" [showIcon]="true" [maxDate]="maxDate" [readonlyInput]="true"
+                      [ngModel]="date()" (ngModelChange)="setDate($event)" />
+      </div>
+      <div class="tally">
+        <span><b>{{ dayCounts().in }}</b> of {{ dayCounts().total }} checked in</span>
+        <span><i class="pi pi-building" aria-hidden="true"></i> Office {{ dayCounts().office }}</span>
+        <span><i class="pi pi-home" aria-hidden="true"></i> Home {{ dayCounts().wfh }}</span>
+        <span><i class="pi pi-map-marker" aria-hidden="true"></i> Field {{ dayCounts().field }} ({{ dayCounts().visits }} visits)</span>
+        @if (dayCounts().flagged) { <span class="warn"><i class="pi pi-exclamation-triangle" aria-hidden="true"></i> {{ dayCounts().flagged }} flagged</span> }
+      </div>
+    </div>
+    <p-selectbutton [options]="showOptions()" optionLabel="label" optionValue="value" [allowEmpty]="false" styleClass="show"
+                    [ngModel]="show()" (ngModelChange)="show.set($event)" />
+
+    <p-table [value]="rows()" dataKey="employeeId" [loading]="dayLoading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '980px' }"
+             [paginator]="rows().length > 25" [rows]="25">
+      <ng-template #header>
+        <tr><th class="exp"></th><th>Employee</th><th>Mode</th><th>First in</th><th>Last out</th><th>Worked</th><th>Entries</th><th>Photo</th></tr>
+      </ng-template>
+      <ng-template #body let-p let-expanded="expanded">
+        <tr [class.absent]="!p.day">
+          <td class="exp stack-end">
+            @if (p.day) {
+              <p-button [pRowToggler]="p" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" [text]="true" [rounded]="true"
+                        size="small" [ariaLabel]="(expanded ? 'Hide ' : 'Show ') + p.name + '\'s entries'" />
+            }
+          </td>
+          <td data-label="Employee" class="stack-full">
+            <button type="button" class="person link" (click)="openPerson(p)" [attr.aria-label]="'See ' + p.name + '\'s month'">
+              <app-avatar [name]="p.name" [employeeId]="p.employeeId" [photoVersion]="p.photoUpdatedAt" [photoPath]="p.photoPath" [size]="32" />
+              <span><b>{{ p.name }}</b><small class="muted">{{ p.empNumber }}{{ p.designationName ? ' · ' + p.designationName : '' }}</small></span>
+            </button>
+          </td>
+          @if (p.day; as d) {
+            <td data-label="Mode">
+              @for (m of d.modes; track m) { <p-tag [value]="modeLabels[m]" [severity]="m === 'OFFICE' ? 'secondary' : 'info'" styleClass="flag" /> }
+              @for (f of d.flags; track f) { <p-tag [value]="flagLabel(f)" severity="warn" styleClass="flag" /> }
+            </td>
+            <td data-label="First in" class="nowrap"><b>{{ d.firstIn | date: 'hh:mm a' : IST }}</b></td>
+            <td data-label="Last out" class="nowrap">
+              @if (d.lastOut) { {{ d.lastOut | date: 'hh:mm a' : IST }} }
+              @else { <span class="live">{{ openLabel(d) }}</span> }
+            </td>
+            <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}</td>
+            <td data-label="Entries">{{ d.entries.length }}</td>
+            <td data-label="Photo">
+              <app-attendance-photo [attendanceId]="d.entries[0].id" [name]="d.name" [when]="(d.firstIn | date: 'd MMM, hh:mm a' : IST) ?? ''" />
+            </td>
+          } @else {
+            <td data-label="Mode" class="stack-full"><p-tag value="Not checked in" severity="secondary" /></td>
+            <td class="stack-hide"></td><td class="stack-hide"></td><td class="stack-hide"></td><td class="stack-hide"></td><td class="stack-hide"></td>
+          }
+        </tr>
+      </ng-template>
+      <ng-template #expandedrow let-p>
+        <tr class="expanded"><td colspan="8"><app-attendance-entries [entries]="p.day.entries" /></td></tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr><td colspan="8" class="p-empty">{{ dayCounts().total ? 'Nobody here.' : 'Nobody reports to you yet.' }}</td></tr>
+      </ng-template>
+    </p-table>
+  </section>
+} @else {
+  <section class="p-card">
+    <div class="bar">
+      <div class="pf who">
+        <label for="ta-person">Employee</label>
+        <p-select inputId="ta-person" [options]="teamOptions()" optionLabel="label" optionValue="value" [filter]="true"
+                  filterPlaceholder="Search by name or number" placeholder="Choose a person"
+                  [ngModel]="personId()" (ngModelChange)="setPerson($event)" />
+      </div>
+      <div class="pf">
+        <label for="ta-month">Month</label>
+        <p-datepicker inputId="ta-month" view="month" dateFormat="MM yy" [showIcon]="true" [maxDate]="maxDate" [readonlyInput]="true"
+                      [ngModel]="month()" (ngModelChange)="setMonth($event)" />
+      </div>
+      @if (personId()) {
+        <div class="tally">
+          <span><b>{{ monthTotals().days }}</b> days checked in</span>
+          <span><b>{{ worked(monthTotals().minutes) }}</b> worked</span>
+          <span><i class="pi pi-map-marker" aria-hidden="true"></i> {{ monthTotals().visits }} field visits</span>
+          @if (monthTotals().flagged) { <span class="warn"><i class="pi pi-exclamation-triangle" aria-hidden="true"></i> {{ monthTotals().flagged }} flagged days</span> }
+        </div>
+      }
+    </div>
+
+    @if (personId()) {
+      <p-table [value]="days()" dataKey="workDate" [loading]="daysLoading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '900px' }">
+        <ng-template #header>
+          <tr><th class="exp"></th><th>Day</th><th>Mode</th><th>First in</th><th>Last out</th><th>Worked</th><th>Entries</th><th>Photo</th></tr>
+        </ng-template>
+        <ng-template #body let-d let-expanded="expanded">
+          <tr>
+            <td class="exp stack-end">
+              <p-button [pRowToggler]="d" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" [text]="true" [rounded]="true"
+                        size="small" [ariaLabel]="(expanded ? 'Hide' : 'Show') + ' entries'" />
+            </td>
+            <td data-label="Day" class="nowrap"><b>{{ d.workDate | date: 'EEE d MMM' }}</b></td>
+            <td data-label="Mode">
+              @for (m of d.modes; track m) { <p-tag [value]="modeLabels[m]" [severity]="m === 'OFFICE' ? 'secondary' : 'info'" styleClass="flag" /> }
+              @for (f of d.flags; track f) { <p-tag [value]="flagLabel(f)" severity="warn" styleClass="flag" /> }
+            </td>
+            <td data-label="First in" class="nowrap">{{ d.firstIn | date: 'hh:mm a' : IST }}</td>
+            <td data-label="Last out" class="nowrap">
+              @if (d.lastOut) { {{ d.lastOut | date: 'hh:mm a' : IST }} } @else { <span class="live">{{ openLabel(d) }}</span> }
+            </td>
+            <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}</td>
+            <td data-label="Entries">{{ d.entries.length }}</td>
+            <td data-label="Photo">
+              <app-attendance-photo [attendanceId]="d.entries[0].id" [name]="d.name" [when]="(d.firstIn | date: 'd MMM, hh:mm a' : IST) ?? ''" />
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template #expandedrow let-d>
+          <tr class="expanded"><td colspan="8"><app-attendance-entries [entries]="d.entries" /></td></tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr><td colspan="8" class="p-empty">No check-ins in this month.</td></tr>
+        </ng-template>
+      </p-table>
+    } @else {
+      <p class="p-empty">Choose a person to see their days.</p>
+    }
+  </section>
+}

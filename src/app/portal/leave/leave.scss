@@ -1,0 +1,76 @@
+/* Shared by the three leave pages (my leave, approvals, settings); controls are PrimeNG (see portal.scss) */
+
+.year { min-width: 130px; }
+
+/* Balance cards */
+.balances {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px;
+}
+.bal {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px;
+  display: grid; gap: 6px; align-content: start; border-top: 3px solid var(--brass);
+}
+.bal--empty { border-top-color: var(--line); }
+.bal header { display: grid; gap: 2px; }
+.bal h2 { font-size: 1.05rem; margin: 0; }
+.bal__code { font-size: .68rem; font-weight: 700; letter-spacing: .14em; color: var(--brass-dark); }
+/* body font for figures: the display face draws 0 like the letter O */
+.bal__big { margin: 4px 0 0; font: 600 1.9rem/1 var(--body); font-variant-numeric: tabular-nums; color: var(--ink); }
+.bal__big small { font: 500 .8rem/1 var(--body); color: var(--muted); }
+.bal--empty .bal__big { color: var(--muted); }
+.bal__none { margin: 6px 0 0; font-size: .95rem; font-weight: 600; color: var(--muted); }
+.bal__meta, .bal__hint { margin: 0; font-size: .8rem; color: var(--muted); }
+
+/* Forms */
+.apply { display: grid; gap: 16px; max-width: 560px; }
+.dates { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.summary { margin: 0; font-size: .92rem; color: var(--muted); }
+.summary b { color: var(--ink); }
+.apply .p-actions { margin-top: 0; }
+
+/* Tables */
+.note { max-width: 280px; }
+.act { text-align: right; white-space: nowrap; }
+.who b { display: block; }
+.who small { color: var(--muted); }
+.block { display: block; margin-top: 4px; }
+.block-line { display: block; }
+.block-line + .block-line { margin-top: 2px; }
+.err { color: #b3261e; }
+
+/* Approvals */
+:host ::ng-deep .filter { margin-bottom: 16px; }
+.dlg-sub { margin: 0 0 14px; color: var(--muted); font-size: .9rem; }
+:host ::ng-deep .dlg-msg { margin-top: 12px; }
+
+/* Settings: editable types table */
+:host ::ng-deep .types .p-inputtext:not(.code):not(.num) { width: 100%; }
+:host ::ng-deep .types .code { width: 76px; text-transform: uppercase; }
+:host ::ng-deep .types .num { width: 80px; }
+:host ::ng-deep .types tr.is-off > td { opacity: .6; }
+.legend { margin: 18px 0 0; padding-left: 18px; font-size: .84rem; color: var(--muted); display: grid; gap: 4px; }
+.legend b { color: var(--pine); }
+
+/* Settings: restricted holidays */
+.head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.head-row h2 { margin: 0; }
+.holidays { list-style: none; margin: 0 0 20px; padding: 0; }
+.holidays li {
+  display: grid; grid-template-columns: 150px 1fr auto auto; gap: 12px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .92rem;
+}
+.h-date { font-weight: 600; }
+.add-holiday { display: grid; grid-template-columns: 220px 1fr 220px auto; gap: 12px; align-items: end; }
+
+.grants { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.grants li { display: grid; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: .9rem; }
+.grants li:last-child { border-bottom: 0; padding-bottom: 0; }
+
+@media (max-width: 720px) {
+  .balances { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .bal { padding: 12px 14px; }
+  .bal__big { font-size: 1.6rem; }
+  .dates { grid-template-columns: 1fr; }
+  .add-holiday { grid-template-columns: 1fr; }
+  .holidays li { grid-template-columns: 1fr auto; }
+}

@@ -1,0 +1,151 @@
+<div class="p-head">
+  <div>
+    <h1>My leave</h1>
+    <p>Your balance for each type of leave, and everything you have applied for.</p>
+  </div>
+  <div class="pf year">
+    <label for="ml-year">Year</label>
+    <p-select inputId="ml-year" [options]="years" optionLabel="label" optionValue="value"
+              [ngModel]="year()" (ngModelChange)="changeYear($event)" />
+  </div>
+</div>
+
+@if (loadError()) { <p-message severity="error" styleClass="page-message">{{ loadError() }}</p-message> }
+
+@if (loading()) {
+  <p class="p-loading">Loading your leave…</p>
+} @else {
+  <section class="balances" aria-label="Leave balances">
+    @for (b of balances(); track b.leaveTypeId) {
+      <article class="bal" [class.bal--empty]="isEmpty(b)">
+        <header>
+          <span class="bal__code">{{ b.code }}</span>
+          <h2>{{ b.name }}</h2>
+        </header>
+        @if (b.allocation === 'UNLIMITED') {
+          <p class="bal__big">{{ days(b.used + b.pending) }}<small> taken</small></p>
+          <p class="bal__meta">No limit · unpaid</p>
+        } @else if (b.allocation === 'GRANTED' && !b.entitled) {
+          <p class="bal__none">None yet</p>
+          <p class="bal__hint">Given by your manager or admin when due.</p>
+        } @else {
+          <p class="bal__big">{{ days(b.available) }}<small> of {{ days(b.entitled) }} left</small></p>
+          <p class="bal__meta">
+            Used {{ days(b.used) }}@if (b.pending) { · {{ days(b.pending) }} waiting }@if (b.granted) { · {{ days(b.granted) }} granted }
+          </p>
+        }
+      </article>
+    }
+  </section>
+
+  <section class="p-card">
+    <h2>Apply for leave</h2>
+    <form class="apply" (ngSubmit)="submit()" novalidate>
+      <div class="pf">
+        <label for="ml-type">Type of leave</label>
+        <p-select inputId="ml-type" name="type" [options]="typeOptions()" optionLabel="label" optionValue="value"
+                  optionDisabled="disabled" placeholder="Choose…" [ngModel]="typeId()" (ngModelChange)="pickType($event)" />
+      </div>
+
+      @if (selected(); as type) {
+        @if (type.restrictedDatesOnly) {
+          <div class="pf">
+            <label for="ml-rh">Holiday</label>
+            <p-select inputId="ml-rh" name="rh" [options]="holidayOptions()" optionLabel="label" optionValue="value"
+                      placeholder="Choose a date from the list…" emptyMessage="No restricted holidays listed yet"
+                      [ngModel]="holidayDate()" (ngModelChange)="holidayDate.set($event)" />
+          </div>
+        } @else {
+          <div class="dates">
+            <div class="pf">
+              <label for="ml-from">From</label>
+              <p-datepicker inputId="ml-from" name="from" dateFormat="dd/mm/yy" [showIcon]="true" [minDate]="minDate()"
+                            [maxDate]="maxDate()" [disabledDays]="[0]" placeholder="dd/mm/yyyy" appendTo="body"
+                            [ngModel]="from()" (ngModelChange)="setFrom($event)" />
+            </div>
+            <div class="pf">
+              <label for="ml-to">To</label>
+              <p-datepicker inputId="ml-to" name="to" dateFormat="dd/mm/yy" [showIcon]="true" [minDate]="from() ?? minDate()"
+                            [maxDate]="maxDate()" [disabledDays]="[0]" placeholder="dd/mm/yyyy" appendTo="body"
+                            [ngModel]="to()" (ngModelChange)="setTo($event)" />
+            </div>
+          </div>
+          @if (canHalfDay()) {
+            <label class="check" for="ml-half">
+              <p-checkbox inputId="ml-half" name="half" [binary]="true" [ngModel]="halfDay()" (ngModelChange)="halfDay.set($event)" />
+              Half day
+            </label>
+          }
+        }
+
+        <div class="pf">
+          <label for="ml-reason">Reason <span class="opt">(optional)</span></label>
+          <textarea pTextarea id="ml-reason" name="reason" rows="2" maxlength="500" [autoResize]="true"
+                    [ngModel]="reason()" (ngModelChange)="reason.set($event)"></textarea>
+        </div>
+
+        <p class="summary">
+          @if (preview()) {
+            <b>{{ days(preview()) }} day(s)</b> of {{ type.name }}
+            @if (type.allocation !== 'UNLIMITED') { · {{ days(type.available) }} left before this }
+          } @else {
+            Sundays are not counted.
+          }
+        </p>
+      }
+
+      @if (formError()) { <p-message severity="error">{{ formError() }}</p-message> }
+
+      <div class="p-actions">
+        <p-button type="submit" icon="pi pi-send" [label]="busy() ? 'Sending…' : 'Apply'" [loading]="busy()" [disabled]="!selected()" />
+      </div>
+    </form>
+  </section>
+
+  <section class="p-card">
+    <h2>My requests in {{ year() }}</h2>
+    <p-table [value]="requests()" [tableStyle]="{ 'min-width': '640px' }" dataKey="id" styleClass="p-stack">
+      <ng-template #header>
+        <tr><th>Dates</th><th>Type</th><th>Days</th><th>Status</th><th>Note</th><th></th></tr>
+      </ng-template>
+      <ng-template #body let-r>
+        <tr>
+          <td data-label="Dates" class="nowrap stack-full">{{ dateRange(r) }}</td>
+          <td data-label="Type">{{ r.leaveTypeName }}</td>
+          <td data-label="Days">{{ days(r.days) }}</td>
+          <td data-label="Status"><p-tag [value]="statusLabel(r.status)" [severity]="statusSeverity(r.status)" /></td>
+          <td data-label="Note" class="note stack-full">
+            @if (r.reason) { <span class="block-line">{{ r.reason }}</span> }
+            @if (r.decisionNote) { <span class="block-line">“{{ r.decisionNote }}”</span> }
+            @if (r.decidedByName && r.status !== 'PENDING' && r.status !== 'CANCELLED') {
+              <small class="block-line muted">{{ statusLabel(r.status) }} by {{ r.decidedByName }}</small>
+            }
+          </td>
+          <td class="act stack-end">
+            @if (canCancel(r)) {
+              <p-button label="Cancel" size="small" [text]="true" severity="danger" (onClick)="cancel(r)" />
+            }
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr><td colspan="6" class="p-empty">No leave applied for in {{ year() }}.</td></tr>
+      </ng-template>
+    </p-table>
+  </section>
+
+  @if (grants().length) {
+    <section class="p-card">
+      <h2>Days granted to you in {{ year() }}</h2>
+      <ul class="grants">
+        @for (g of grants(); track g.id) {
+          <li>
+            <b>+{{ days(g.days) }} {{ g.leaveTypeName }}</b>
+            <span>{{ g.reason }}@if (g.workedOn) { · worked {{ shortDate(g.workedOn) }} }</span>
+            <small class="muted">by {{ g.grantedByName }}</small>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}

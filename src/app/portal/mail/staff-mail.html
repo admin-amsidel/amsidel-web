@@ -1,0 +1,221 @@
+<div class="p-head">
+  <div>
+    <h1>Staff mail</h1>
+    <p>Write once; each employee gets it personally, by office email, WhatsApp or both.</p>
+  </div>
+</div>
+
+@if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
+@if (setup(); as s) {
+  @if (!s.ready && byEmail()) {
+    <p-message severity="warn" styleClass="page-message">
+      Mail is not set up on the server yet, so nothing can be sent. The backend needs the mail service key (MAIL_PASSWORD) for
+      {{ s.from || 'the sending account' }}.
+    </p-message>
+  }
+}
+
+<div class="mail-grid">
+  <section class="p-card compose">
+    <h2>Message</h2>
+    <div class="pf">
+      <div class="lbl-row">
+        <label for="m-subject">Subject *</label>
+        <p-button label="Insert name" icon="pi pi-user-plus" [text]="true" size="small" (onClick)="insertName(subjectEl, 'subject')" />
+      </div>
+      <input #subjectEl pInputText id="m-subject" maxlength="200" autocomplete="off" placeholder="e.g. New client: Kumar residence"
+             [ngModel]="subject()" (ngModelChange)="subject.set($event)" />
+    </div>
+
+    <div class="pf">
+      <span class="pf-label" id="m-greet-lbl">Greeting</span>
+      <p-selectbutton [options]="greetingOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
+                      ariaLabelledBy="m-greet-lbl" [ngModel]="greetingMode()" (ngModelChange)="greetingMode.set($event)" />
+      <div class="dear">
+        <span>Dear</span>
+        @if (greetingMode() === 'NAME') {
+          <span class="dear__auto"><i class="pi pi-user" aria-hidden="true"></i> employee's name</span>
+        } @else {
+          <input pInputText id="m-greet" maxlength="100" aria-label="Words after Dear" placeholder="All"
+                 [ngModel]="greetingText()" (ngModelChange)="greetingText.set($event)" />
+        }
+        <span>,</span>
+      </div>
+    </div>
+
+    <div class="pf">
+      <div class="lbl-row">
+        <label for="m-body">Message *</label>
+        <p-button label="Insert name" icon="pi pi-user-plus" [text]="true" size="small" (onClick)="insertName(bodyEl, 'body')" />
+      </div>
+      <textarea #bodyEl pTextarea id="m-body" rows="9" maxlength="20000" [autoResize]="true"
+                placeholder="What everyone should know: a new process, a new client, a reminder…"
+                [ngModel]="body()" (ngModelChange)="body.set($event)"></textarea>
+      <small class="hint">{{ '{name}' }} becomes each person's name. "Regards" and your name are added at the end.</small>
+    </div>
+  </section>
+
+  <section class="p-card who">
+    <h2>Send to</h2>
+    <div class="pf by">
+      <span class="pf-label" id="m-by-lbl">Send by</span>
+      <p-selectbutton [options]="channelOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
+                      ariaLabelledBy="m-by-lbl" [ngModel]="channel()" (ngModelChange)="channel.set($event)">
+        <ng-template #item let-o><i [class]="o.icon" aria-hidden="true"></i><span>{{ o.label }}</span></ng-template>
+      </p-selectbutton>
+    </div>
+    <p-selectbutton [options]="modeOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
+                    [ngModel]="mode()" (ngModelChange)="mode.set($event)" />
+    @if (mode() === 'ALL') {
+      @if (brands().length > 1) {
+        <div class="pf mt">
+          <label for="m-brand">Brand</label>
+          <p-select inputId="m-brand" [options]="brandOptions()" optionLabel="label" optionValue="value"
+                    [ngModel]="brandId()" (ngModelChange)="brandId.set($event)" />
+        </div>
+      }
+    } @else {
+      <div class="pf mt">
+        <label for="m-people">People</label>
+        <p-multiselect inputId="m-people" [options]="peopleOptions()" optionLabel="label" optionValue="value" [filter]="true"
+                       filterPlaceholder="Search by name or number" placeholder="Choose people" display="chip"
+                       [maxSelectedLabels]="4" selectedItemsLabel="{0} people" appendTo="body" [loading]="loading()"
+                       [ngModel]="picked()" (ngModelChange)="picked.set($event)" />
+      </div>
+    }
+    <p class="count">
+      @if (loading()) { Loading employees… }
+      @else {
+        @if (byEmail()) {
+          <span class="line"><i class="pi pi-envelope" aria-hidden="true"></i>
+            <b>{{ recipients().length - noEmail() }}</b> by email
+            @if (noEmail()) { <span class="warn">· {{ noEmail() }} without an office email</span> }
+          </span>
+        }
+        @if (byWhatsApp()) {
+          <span class="line"><i class="pi pi-whatsapp" aria-hidden="true"></i>
+            <b>{{ recipients().length - noPhone() }}</b> on WhatsApp
+            @if (noPhone()) { <span class="warn">· {{ noPhone() }} without a usable phone number</span> }
+          </span>
+        }
+      }
+    </p>
+
+    <div class="preview" aria-label="Preview">
+      <div class="preview__bar"><span>Preview for {{ preview().name }}</span></div>
+      <div class="preview__subj">{{ preview().subject }}</div>
+      <div class="preview__body">
+        <p>Dear {{ preview().greeting }},</p>
+        <p class="txt">{{ preview().body }}</p>
+        <p>Regards,<br /><b>{{ preview().signedBy }}</b></p>
+      </div>
+    </div>
+    @if (byWhatsApp()) {
+      <p class="wa-hint">
+        <i class="pi pi-info-circle" aria-hidden="true"></i>
+        WhatsApp goes from your own WhatsApp: after you press the button, each person's message opens in WhatsApp
+        ready to send, one tap each. The subject comes first, in bold.
+      </p>
+    }
+
+    @if (formError()) { <p-message severity="error" styleClass="dlg-msg">{{ formError() }}</p-message> }
+    <div class="p-actions">
+      <p-button [label]="sendLabel()" [icon]="channel() === 'WHATSAPP' ? 'pi pi-whatsapp' : 'pi pi-send'"
+                [disabled]="running() || mailBlocked()" (onClick)="send()" />
+      @if (setup(); as s) { @if (s.ready && byEmail()) { <small class="muted">From {{ s.fromName }} &lt;{{ s.from }}&gt;</small> } }
+    </div>
+  </section>
+</div>
+
+@if (rows().length) {
+  <section class="p-card delivery">
+    <div class="del-head">
+      <h2>Delivery</h2>
+      <div class="head-actions">
+        @if (waCounts().ready) {
+          <p-button [label]="'Open next on WhatsApp (' + waCounts().ready + ' left)'" icon="pi pi-whatsapp" size="small"
+                    styleClass="wa-btn" (onClick)="openNextWhatsApp()" />
+        }
+        @if (running()) {
+          <p-button label="Stop" icon="pi pi-stop-circle" severity="secondary" [outlined]="true" size="small" (onClick)="stop()" />
+        } @else {
+          @if (retryable()) {
+            <p-button [label]="'Send ' + retryable() + ' failed again'" icon="pi pi-refresh" size="small" (onClick)="retryFailed()" />
+          }
+          <p-button label="Clear" [text]="true" size="small" (onClick)="clear()" />
+        }
+      </div>
+    </div>
+    @if (sentVia() !== 'WHATSAPP') {
+      <div class="del-sum">
+        <i class="pi pi-envelope" aria-hidden="true"></i>
+        <p-progressbar [value]="progress()" [showValue]="false" styleClass="bar" />
+        <span><b class="ok">{{ counts().sent }}</b> sent · <b class="bad">{{ counts().failed }}</b> failed ·
+          {{ counts().total - counts().done }} to go</span>
+      </div>
+    }
+    @if (sentVia() !== 'EMAIL') {
+      <div class="del-sum">
+        <i class="pi pi-whatsapp wa" aria-hidden="true"></i>
+        <p-progressbar [value]="waCounts().total ? (waCounts().opened * 100) / waCounts().total : 0" [showValue]="false" styleClass="bar wa" />
+        <span><b>{{ waCounts().opened }}</b> of {{ waCounts().total }} opened in WhatsApp
+          @if (waCounts().nophone) { · <b class="bad">{{ waCounts().nophone }}</b> without a phone }</span>
+      </div>
+    }
+    @if (sentVia() !== 'WHATSAPP') {
+      <p-selectbutton [options]="showOptions()" optionLabel="label" optionValue="value" [allowEmpty]="false" styleClass="show"
+                      [ngModel]="show()" (ngModelChange)="show.set($event)" />
+    }
+
+    <p-table [value]="shownRows()" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '720px' }"
+             [paginator]="shownRows().length > 25" [rows]="25">
+      <ng-template #header>
+        <tr>
+          <th>Employee</th>
+          @if (sentVia() !== 'WHATSAPP') { <th>Office email</th><th>Email status</th><th>Details</th> }
+          @if (sentVia() !== 'EMAIL') { <th>WhatsApp</th> }
+        </tr>
+      </ng-template>
+      <ng-template #body let-r>
+        <tr>
+          <td data-label="Employee" class="stack-full">
+            <span class="person">
+              <app-avatar [name]="r.name" [employeeId]="r.id" [photoVersion]="r.photoUpdatedAt" [photoPath]="r.photoPath" [size]="30" />
+              <span><b>{{ r.name }}</b><small class="muted">{{ r.empNumber }}</small></span>
+            </span>
+          </td>
+          @if (sentVia() !== 'WHATSAPP') {
+            <td data-label="Office email">{{ r.email ?? '—' }}</td>
+            <td data-label="Email status">
+              <p-tag [value]="tag(r).value" [severity]="tag(r).severity" [icon]="r.status === 'sending' ? 'pi pi-spin pi-spinner' : ''" />
+            </td>
+            <td data-label="Details" class="stack-full" [class.bad]="r.status === 'failed'">
+              {{ r.status === 'sent' && r.at ? 'Sent ' + (r.at | date: 'shortTime') : r.note }}
+            </td>
+          }
+          @if (sentVia() !== 'EMAIL') {
+            <td data-label="WhatsApp" class="wa-cell">
+              @if (r.waLink) {
+                <a class="wa-link" [class.done]="r.waState === 'opened'" [href]="r.waLink" target="_blank" rel="noopener"
+                   [attr.aria-label]="'Open WhatsApp message to ' + r.name" (click)="openedWhatsApp(r)">
+                  <i [class]="r.waState === 'opened' ? 'pi pi-check' : 'pi pi-whatsapp'" aria-hidden="true"></i>
+                  {{ r.waState === 'opened' ? 'Opened · open again' : 'Open in WhatsApp' }}
+                </a>
+                <small class="muted block">+{{ r.wa }}</small>
+              } @else {
+                <span class="bad">No usable phone number</span>
+              }
+            </td>
+          }
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr><td colspan="5" class="p-empty">Nothing here.</td></tr>
+      </ng-template>
+    </p-table>
+    <p class="note">
+      This list is not saved. It clears when you leave the page; leaving while mails are sending stops the rest.
+      @if (sentVia() !== 'EMAIL') { "Opened" means the message was opened in WhatsApp; check there that you pressed send. }
+    </p>
+  </section>
+}

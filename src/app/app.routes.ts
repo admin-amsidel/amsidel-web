@@ -51,5 +51,8 @@ export const routes: Routes = [
       },
     ],
   },
+  // Staff portal (employees and owners of every brand); its own chunks, so the public site never loads it
+  { path: 'login', loadChildren: () => import('./portal/portal.routes').then((m) => m.LOGIN_ROUTES) },
+  { path: 'portal', loadChildren: () => import('./portal/portal.routes').then((m) => m.PORTAL_ROUTES) },
   { path: '**', redirectTo: '' },
 ];

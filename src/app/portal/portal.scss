@@ -1,0 +1,92 @@
+/* Staff portal look, shared by every portal page (loaded with the portal only, never on the public site).
+   PrimeNG supplies the components in Amsidel colours (portal-ui.ts); these rules add the brand details
+   and the page layout. */
+
+/* ---- PrimeNG in the Amsidel style ---- */
+.p-component { font-family: var(--body); }
+.p-button .p-button-label { font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: .78rem; }
+.p-button.p-button-sm .p-button-label { font-size: .72rem; }
+.p-button-link .p-button-label, .p-button-text .p-button-label { letter-spacing: .1em; }
+/* the public site's focus outline is for links and native controls; PrimeNG draws its own focus ring */
+.p-inputtext:focus-visible, .p-textarea:focus-visible, .p-checkbox-input:focus-visible,
+.p-select:focus-visible, .p-datepicker-input:focus-visible { outline: none; }
+.p-tag { letter-spacing: .06em; text-transform: uppercase; font-size: .68rem; white-space: nowrap; }
+/* a long choice (e.g. "Lakshmi Pillai · L4 · Team Lead") is cut with "…" instead of widening the field */
+.pf .p-select { min-width: 0; max-width: 100%; }
+.pf .p-select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* toasts sit below the portal's top bar */
+.p-toast.p-toast-top-right { top: 76px; }
+.p-datatable .p-datatable-thead > tr > th {
+  font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600;
+  background: transparent;
+}
+.p-datatable .p-datatable-tbody > tr.row-link { cursor: pointer; }
+.p-toast { max-width: calc(100vw - 32px); }
+
+/* ---- page layout ---- */
+.p-main { max-width: 1240px; margin: 0 auto; padding: 32px 20px 64px; }
+.p-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.p-head h1 { font-size: clamp(1.6rem, 3.5vw, 2.2rem); }
+.p-head p { margin: 6px 0 0; color: var(--muted); }
+.p-head .back { display: inline-block; margin-bottom: 4px; font-size: .85rem; color: var(--brass-dark); text-decoration: none; letter-spacing: .06em; }
+.p-head .back:hover { color: var(--ink); }
+.head-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.p-card { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: clamp(18px, 3vw, 28px); }
+.p-card + .p-card, .p-card + .p-message, .p-message + .p-card { margin-top: 20px; }
+.p-card > h2 { font-size: 1.25rem; margin-bottom: 18px; }
+.p-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; align-items: start; }
+.p-grid .span-all { grid-column: 1 / -1; }
+.p-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; align-items: center; }
+.p-empty { text-align: center; color: var(--muted); padding: 40px 12px; }
+.p-loading { color: var(--muted); padding: 24px 0; }
+.p-intro { margin: -8px 0 18px; color: var(--muted); font-size: .92rem; }
+.page-message { margin-bottom: 18px; }
+
+/* a labelled form field: label, PrimeNG control, then a hint or an error */
+.pf { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.pf > label, .pf > .pf-label { font-size: .82rem; font-weight: 600; color: var(--pine); }
+.pf .p-inputtext, .pf .p-select, .pf .p-datepicker, .pf .p-password, .pf .p-inputnumber, .pf .p-textarea { width: 100%; }
+.pf .hint { font-size: .76rem; color: var(--muted); }
+.pf .error { font-size: .78rem; color: #b3261e; }
+.pf .opt { font-weight: 400; color: var(--muted); }
+.check { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: .9rem; cursor: pointer; }
+
+/* PIN rule checklist */
+.rules { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: .8rem; color: var(--muted); }
+.rules li.ok { color: #1f5f2a; }
+.rules i { font-size: .7rem; margin-right: 4px; }
+
+/* level badge, e.g. "L4" */
+.lvl {
+  display: inline-block; min-width: 34px; text-align: center; padding: 2px 6px; border-radius: 4px;
+  font-size: .72rem; font-weight: 700; background: var(--pine); color: var(--gold-hi); letter-spacing: .02em;
+}
+.muted { color: var(--muted); }
+.nowrap { white-space: nowrap; }
+
+/* ---- phones: PrimeNG tables marked styleClass="p-stack" show each row as a card ----
+   cells carry data-label="Column"; stack-full spans the card, stack-end is the action row */
+@media (max-width: 760px) {
+  .p-main { padding: 20px 12px 48px; }
+  .p-card { padding: 16px 14px; border-radius: 8px; }
+  .p-stack .p-datatable-table { min-width: 0 !important; }
+  .p-stack .p-datatable-table-container { overflow: visible; }
+  .p-stack .p-datatable-thead { display: none; }
+  .p-stack .p-datatable-tbody > tr,
+  .p-stack .p-datatable-tfoot > tr {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; padding: 12px 2px; border-bottom: 1px solid var(--line);
+  }
+  .p-stack .p-datatable-tbody > tr > td,
+  .p-stack .p-datatable-tfoot > tr > td { display: block; border: 0; padding: 0; max-width: none; text-align: left; }
+  .p-stack td[data-label]::before {
+    content: attr(data-label); display: block; margin-bottom: 2px;
+    font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600;
+  }
+  .p-stack td.stack-full, .p-stack td[colspan] { grid-column: 1 / -1; }
+  .p-stack td.stack-end { grid-column: 1 / -1; display: flex !important; gap: 6px; flex-wrap: wrap; justify-content: flex-start; }
+  .p-stack td.stack-end:empty { display: none !important; }
+  .p-stack td.stack-hide { display: none !important; }
+  .p-stack .p-inputtext, .p-stack .p-select, .p-stack .p-inputnumber { width: 100%; }
+  .p-head { margin-bottom: 16px; }
+  .p-head .head-actions { width: 100%; }
+}

@@ -1,0 +1,134 @@
+import { Component, inject, input, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
+import { PasswordModule } from 'primeng/password';
+import { AuthService } from '../auth.service';
+import { PortalStyles } from '../portal-styles';
+import { apiProblem } from '../portal.models';
+
+/** Staff sign-in with user ID + PIN, opened from the group landing page. */
+@Component({
+  selector: 'app-login',
+  imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, PasswordModule, MessageModule, PortalStyles],
+  template: `
+    <app-portal-styles />
+    <main class="login">
+      <section class="panel panel--brand">
+        <a class="back" routerLink="/"><span aria-hidden="true">←</span> Amsidel home</a>
+        <div class="brand">
+          <img src="brand/amsidel-mark.png" alt="" width="180" height="84" />
+          <p class="kicker">Amsidel Group</p>
+          <h1>Staff Portal</h1>
+          <p class="lede">For employees and owners of every Amsidel brand.</p>
+        </div>
+        <p class="foot">Amsidel Doors &amp; Windows</p>
+      </section>
+
+      <section class="panel panel--form">
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <h2>Sign in</h2>
+          <p class="sub">Use the user ID and PIN given to you by your admin.</p>
+
+          @if (reason() === 'expired') {
+            <p-message severity="info">Your session has ended. Please sign in again.</p-message>
+          }
+
+          <div class="pf">
+            <label for="l-user">User ID</label>
+            <input pInputText id="l-user" formControlName="userId" autocomplete="username" autocapitalize="none"
+                   spellcheck="false" [invalid]="show('userId')" />
+            @if (show('userId')) { <small class="error">Enter your user ID.</small> }
+          </div>
+
+          <div class="pf">
+            <label for="l-pin">PIN</label>
+            <p-password inputId="l-pin" formControlName="password" [feedback]="false" [toggleMask]="true"
+                        autocomplete="current-password" [invalid]="show('password')" [fluid]="true" />
+            @if (show('password')) { <small class="error">Enter your PIN.</small> }
+          </div>
+
+          @if (error()) {
+            <p-message severity="error">{{ error() }}</p-message>
+          }
+
+          <p-button type="submit" [label]="busy() ? 'Signing in…' : 'Sign in'" [loading]="busy()" [fluid]="true" />
+
+          <p class="help">Forgot your PIN or locked out? Ask your admin to reset it.</p>
+        </form>
+      </section>
+    </main>
+  `,
+  styles: `
+    :host { display: block; background: var(--bg); }
+    .login { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
+    .panel { padding: 40px clamp(20px, 5vw, 64px); display: flex; flex-direction: column; }
+    .panel--brand {
+      background: radial-gradient(120% 80% at 20% 0%, #2f2f34 0%, var(--dark) 70%); color: #fff;
+      justify-content: space-between; gap: 32px;
+    }
+    .back { color: #d9d4ca; text-decoration: none; font-size: .85rem; letter-spacing: .08em; align-self: flex-start; }
+    .back:hover { color: var(--gold-hi); }
+    .brand img { width: 120px; height: auto; margin-bottom: 28px; filter: brightness(0) invert(1); }
+    .brand .kicker { color: var(--gold-hi); }
+    h1 { font-size: clamp(2.2rem, 4.5vw, 3.2rem); }
+    .lede { color: #cfc9be; max-width: 34ch; margin: 14px 0 0; }
+    .foot { margin: 0; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: #8d877c; }
+    .panel--form { justify-content: center; align-items: center; }
+    form { width: 100%; max-width: 380px; display: grid; gap: 18px; }
+    h2 { font-size: 2rem; }
+    .sub { margin: -10px 0 6px; color: var(--muted); font-size: .95rem; }
+    .help { margin: 0; font-size: .85rem; color: var(--muted); text-align: center; }
+    @media (max-width: 820px) {
+      .login { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .panel--brand { padding-block: 20px 28px; gap: 18px; }
+      .brand img { width: 84px; margin-bottom: 14px; }
+      .lede, .foot { display: none; }
+      .panel--form { justify-content: flex-start; padding-top: 32px; }
+    }
+  `,
+})
+export class Login {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  /** Query params (?next=/portal/...&reason=expired), bound by withComponentInputBinding. */
+  readonly next = input<string>();
+  readonly reason = input<string>();
+
+  protected readonly form = inject(FormBuilder).nonNullable.group({
+    userId: ['', Validators.required],
+    password: ['', Validators.required],
+  });
+  protected readonly busy = signal(false);
+  protected readonly submitted = signal(false);
+  protected readonly error = signal('');
+
+  protected show(name: 'userId' | 'password'): boolean {
+    const c = this.form.controls[name];
+    return c.invalid && (c.touched || this.submitted());
+  }
+
+  protected submit(): void {
+    this.submitted.set(true);
+    this.error.set('');
+    if (this.form.invalid) return;
+
+    this.busy.set(true);
+    const { userId, password } = this.form.getRawValue();
+    this.auth.login(userId.trim(), password).subscribe({
+      next: (user) => {
+        // only return to portal pages, never to an address passed in from outside
+        const back = this.next()?.startsWith('/portal') ? this.next()! : '/portal';
+        this.router.navigateByUrl(user.mustChangePassword ? '/portal/change-pin' : back);
+      },
+      error: (err) => {
+        this.error.set(apiProblem(err).message);
+        this.form.controls.password.reset();
+        this.busy.set(false);
+      },
+    });
+  }
+}

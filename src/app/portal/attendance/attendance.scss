@@ -1,0 +1,81 @@
+/* Attendance pages: my check-in (camera, status) and team attendance */
+
+.p-card > h2 { margin-bottom: 16px; }
+.muted { color: var(--muted); }
+.block { display: block; }
+.warn { color: #b45309; }
+:host ::ng-deep .dlg-msg { margin-top: 12px; }
+:host ::ng-deep .flag { margin: 2px 4px 2px 0; }
+:host ::ng-deep .p-togglebutton-content { gap: 6px; }
+
+/* status (today so far) */
+.status { display: grid; gap: 18px; border-left: 4px solid #1f8f4e; }
+.status.done { border-left-color: var(--brass); }
+.status__main { min-width: 0; }
+.status__main app-attendance-entries { display: block; margin-top: 12px; }
+.close { display: flex; align-items: flex-end; gap: 12px 18px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--line); }
+.close .pf { flex: 1 1 320px; }
+.close__act { display: grid; gap: 6px; justify-items: start; }
+.close--next { align-items: center; justify-content: space-between; }
+.close--next p { margin: 0; font-size: .88rem; }
+.start__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.start__head h2 { margin: 0; }
+.status + .start, .start + .p-card { margin-top: 20px; }
+.mode { display: inline-block; margin-right: 6px; }
+.live { color: #1f7a35; font-weight: 600; }
+th.exp, td.exp { width: 44px; }
+:host ::ng-deep tr.expanded > td { background: var(--soft); padding: 10px 14px 14px !important; }
+.status__main h2 { margin: 2px 0 2px; font-size: 1.35rem; }
+.eyebrow { margin: 0; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.times { margin: 0 0 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.where { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .88rem; }
+.where a { color: var(--brass-dark); text-decoration: none; font-weight: 600; }
+.where a:hover { text-decoration: underline; }
+
+/* start work */
+.start__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 24px; align-items: start; }
+.start__form { display: grid; gap: 18px; align-content: start; }
+:host ::ng-deep .modes { display: flex; flex-wrap: wrap; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .88rem; color: var(--muted); }
+.checks i { margin-right: 6px; }
+.checks li.ok { color: #1f6b3e; }
+.checks li.warn { color: #b45309; }
+.start .p-actions { margin-top: 0; }
+
+.cam {
+  position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #1c1b19;
+  display: grid; place-items: center;
+}
+.cam video, .cam img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.cam video[hidden] { display: none; }
+.cam .mirror { transform: scaleX(-1); }
+.cam__bar {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 14px; display: flex; justify-content: center; gap: 12px;
+  background: linear-gradient(transparent, rgba(0,0,0,.55));
+}
+.cam__off { position: relative; display: grid; justify-items: center; gap: 12px; padding: 24px; text-align: center; color: #cfc9be; }
+.cam__off > i { font-size: 2.2rem; color: var(--gold-hi); }
+.cam__off p { margin: 0; font-size: .88rem; max-width: 300px; }
+.cam__err { color: #fca5a5 !important; }
+
+/* team */
+.bar { display: flex; align-items: flex-end; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 14px; }
+.bar .who { min-width: min(320px, 100%); }
+.tally { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font-size: .9rem; color: var(--muted); padding-bottom: 8px; }
+.tally b { color: var(--ink); font-size: 1.05rem; }
+.tally i { font-size: .82rem; margin-right: 3px; }
+:host ::ng-deep .show { margin-bottom: 12px; }
+.person { display: inline-flex; align-items: center; gap: 10px; text-align: left; }
+.person > span { display: grid; line-height: 1.25; }
+.person small { font-size: .76rem; }
+.person.link { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.person.link:hover b { color: var(--brass-dark); text-decoration: underline; }
+td a { color: var(--brass-dark); text-decoration: none; font-weight: 600; }
+:host ::ng-deep tr.absent > td { background: #fbfaf7; }
+
+@media (max-width: 860px) {
+  .start__grid { grid-template-columns: 1fr; }
+  .cam { order: -1; }
+  .close__act { width: 100%; }
+}

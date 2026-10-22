@@ -1,0 +1,209 @@
+<div class="p-head">
+  <div>
+    <h1>Work log</h1>
+    @if (data(); as m) {
+      <p>
+        @if (m.editable) { Log the tasks you work on each day. } @else { Work log of <b>{{ m.employeeName }}</b> ({{ m.empNumber }}), view only. }
+        Minimum <b>{{ hrs(m.target.dailyMinHours) }}</b> a day · <b>{{ hrs(m.target.weeklyMinHours) }}</b> a week
+        <span class="muted">({{ m.target.source }})</span>
+      </p>
+    }
+  </div>
+  @if (canRules()) {
+    <div class="head-actions">
+      <p-button label="Work hour rules" icon="pi pi-sliders-h" [outlined]="true" size="small" routerLink="/portal/worklog/rules" />
+    </div>
+  }
+</div>
+
+@if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
+
+<section class="p-card">
+  <div class="bar">
+    <div class="nav">
+      <p-button label="Today" icon="pi pi-calendar" [outlined]="true" size="small" (onClick)="goToday()" />
+      <p-button icon="pi pi-chevron-left" [text]="true" [rounded]="true" ariaLabel="Previous month" (onClick)="move(-1)" />
+      <p-button icon="pi pi-chevron-right" [text]="true" [rounded]="true" ariaLabel="Next month" (onClick)="move(1)" />
+      <h2>{{ monthLabel() }}</h2>
+    </div>
+    @if (team().length) {
+      <div class="pf who">
+        <label for="wl-who" class="visually-hidden">Whose work log</label>
+        <p-select inputId="wl-who" [options]="personOptions()" optionLabel="label" optionValue="value" [filter]="true"
+                  filterPlaceholder="Search people" [ngModel]="viewing()" (ngModelChange)="view($event)" />
+      </div>
+    }
+  </div>
+
+  <div class="sum">
+    <span><b>{{ hrs(summary().logged) }}</b> logged this month</span>
+    <span><b>{{ hrs(summary().required) }}</b> required so far</span>
+    <span [class.warn]="summary().pending"><b>{{ hrs(summary().pending) }}</b> pending</span>
+    @if (summary().half) { <p-tag severity="warn" [value]="summary().half + ' × Half Day Leave'" /> }
+    @if (summary().full) { <p-tag severity="danger" [value]="summary().full + ' × Full Day Leave'" /> }
+  </div>
+
+  <div class="cal" [class.is-loading]="loading()" role="grid" [attr.aria-label]="'Work log ' + monthLabel()">
+    <div class="cal__head" role="row">
+      @for (w of weekdays; track w) { <span role="columnheader">{{ w }}</span> }
+      <span role="columnheader" class="wkh">Week</span>
+    </div>
+    @for (week of weeks(); track week.days[0].iso) {
+      <div class="cal__row" role="row">
+        @for (c of week.days; track c.iso) {
+          <button type="button" role="gridcell" class="cell" [class.out]="!c.inMonth" [class.off]="c.weeklyOff"
+                  [class.today]="c.isToday" [class.future]="c.isFuture" [class.full]="c.warning === 'FULL'"
+                  [class.half]="c.warning === 'HALF'" (click)="openDay(c)"
+                  [attr.aria-label]="c.date.toDateString() + ', ' + hrs(c.total) + ' logged'">
+            <span class="cell__head">
+              <b class="num">{{ c.day }}</b>
+              @if (c.total || (!c.weeklyOff && !c.isFuture && !c.beforeJoining)) {
+                <span class="tot" [class.ok]="c.required > 0 && c.total >= c.required" [class.low]="c.total < c.required">
+                  {{ hrs(c.total) }}@if (c.required) {<small> / {{ hrs(c.required) }}</small>}
+                </span>
+              } @else if (c.weeklyOff) {
+                <span class="tot off">Off</span>
+              }
+            </span>
+            @for (e of c.entries | slice: 0 : 3; track e.id) {
+              <span class="line"><b>{{ e.taskId }}</b><em>{{ hrs(e.hours) }}</em></span>
+            }
+            @if (c.entries.length > 3) {
+              <span class="more" [pTooltip]="entriesLabel(c)">+{{ c.entries.length - 3 }} more</span>
+            }
+            <span class="flags">
+              @if (c.leave) {
+                <span class="flag leave" [class.pending]="c.leave.status === 'PENDING'">
+                  {{ c.leave.typeCode }}{{ c.leave.halfDay ? ' ½' : '' }} {{ c.leave.status === 'PENDING' ? 'leave pending' : 'leave' }}
+                </span>
+              }
+              @if (c.warning === 'FULL') { <span class="flag full">Full Day Leave</span> }
+              @else if (c.warning === 'HALF') { <span class="flag half">Half Day Leave</span> }
+              @else if (c.pending && !c.isToday && !c.leave && c.inMonth) { <span class="flag pend">{{ hrs(c.pending) }} short</span> }
+              @else if (c.pending && c.isToday) { <span class="flag pend">{{ hrs(c.pending) }} to go</span> }
+            </span>
+          </button>
+        }
+        <div class="wk" role="gridcell" [class.done]="week.started && !week.pending && week.required > 0">
+          <span class="wk__label">Week</span>
+          <b>{{ hrs(week.total) }}</b>
+          <small>of {{ hrs(week.required) }}</small>
+          @if (week.started && week.required) {
+            @if (week.pending) { <span class="wk__pend">{{ hrs(week.pending) }} pending</span> }
+            @else { <span class="wk__ok"><i class="pi pi-check" aria-hidden="true"></i> complete</span> }
+          }
+        </div>
+      </div>
+    }
+  </div>
+  <p class="legend">
+    <span class="flag half">Half Day Leave</span> under {{ hrs(data()?.target?.halfDayBelow) }} on a past working day ·
+    <span class="flag full">Full Day Leave</span> under {{ hrs(data()?.target?.fullDayBelow) }} · Sundays are weekly off ·
+    approved leave lowers the day's and week's minimum.
+  </p>
+</section>
+
+@if (viewing() && data(); as m) {
+  <section class="p-card target">
+    <h2>Minimum hours for {{ m.employeeName }}</h2>
+    <p class="p-intro">Now {{ hrs(m.target.dailyMinHours) }} a day and {{ hrs(m.target.weeklyMinHours) }} a week ({{ m.target.source }}).
+      A personal target replaces the level rule for this person only.</p>
+    <div class="target__row">
+      <div class="pf">
+        <label for="t-day">Hours a day</label>
+        <p-inputnumber inputId="t-day" [min]="0" [max]="24" [step]="0.5" [minFractionDigits]="0" [maxFractionDigits]="2"
+                       [showButtons]="true" [ngModel]="targetDaily()" (ngModelChange)="targetDaily.set($event)" />
+      </div>
+      <div class="pf">
+        <label for="t-week">Hours a week</label>
+        <p-inputnumber inputId="t-week" [min]="0" [max]="168" [step]="1" [minFractionDigits]="0" [maxFractionDigits]="2"
+                       [showButtons]="true" [ngModel]="targetWeekly()" (ngModelChange)="targetWeekly.set($event)" />
+      </div>
+      <p-button label="Save" [loading]="targetBusy()" (onClick)="saveTarget()" />
+      @if (m.target.source === 'Personal target') {
+        <p-button label="Use level rule" [text]="true" (onClick)="saveTarget(true)" />
+      }
+    </div>
+  </section>
+}
+
+<p-dialog [header]="dialogTitle()" [modal]="true" [visible]="!!selected()" (visibleChange)="!$event && closeDay()"
+          [style]="{ width: '760px' }" [breakpoints]="{ '800px': 'calc(100vw - 16px)' }" [draggable]="false" [dismissableMask]="true">
+  @if (selected(); as c) {
+    <div class="dsum">
+      <span>Logged <b>{{ hrs(c.total) }}</b>@if (c.required) { of {{ hrs(c.required) }} }</span>
+      @if (c.pending) { <span class="warn"><b>{{ hrs(c.pending) }}</b> {{ c.isToday ? 'to go' : 'pending' }}</span> }
+      @if (c.weeklyOff) { <p-tag severity="secondary" value="Weekly off" /> }
+      @if (c.leave) {
+        <p-tag [severity]="c.leave.status === 'APPROVED' ? 'info' : 'secondary'"
+               [value]="c.leave.typeName + (c.leave.halfDay ? ' (half day)' : '') + (c.leave.status === 'PENDING' ? ' · waiting' : '')" />
+      }
+      @if (c.warning === 'FULL') { <p-tag severity="danger" value="Full Day Leave" /> }
+      @if (c.warning === 'HALF') { <p-tag severity="warn" value="Half Day Leave" /> }
+    </div>
+
+    <p-table [value]="c.entries" dataKey="id" styleClass="p-datatable-sm p-stack" [tableStyle]="{ 'min-width': '560px' }">
+      <ng-template #header>
+        <tr><th class="n">#</th><th>Task ID</th><th>Hours</th><th>What was done</th>@if (data()?.editable) { <th></th> }</tr>
+      </ng-template>
+      <ng-template #body let-e let-i="rowIndex">
+        <tr [class.editing]="editingId() === e.id">
+          <td data-label="#" class="n">{{ i + 1 }}</td>
+          <td data-label="Task ID" class="task"><b>{{ e.taskId }}</b>@if (e.taskTitle) {<small class="ttl">{{ e.taskTitle }}</small>}</td>
+          <td data-label="Hours">{{ hrs(e.hours) }}</td>
+          <td data-label="What was done" class="desc stack-full">{{ e.description }}</td>
+          @if (data()?.editable) {
+            <td class="act stack-end">
+              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Edit" (onClick)="edit(e)" />
+              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove" (onClick)="remove(e)" />
+            </td>
+          }
+        </tr>
+      </ng-template>
+      <ng-template #footer>
+        @if (c.entries.length) {
+          <tr><td class="stack-hide"></td><td>Total</td><td><b>{{ hrs(c.total) }}</b></td><td class="stack-hide" colspan="2"></td></tr>
+        }
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr><td colspan="5" class="p-empty">Nothing logged on this day.</td></tr>
+      </ng-template>
+    </p-table>
+
+    @if (data()?.editable) {
+      @if (c.isFuture) {
+        <p-message severity="info" styleClass="dlg-msg">Hours can be logged on or before today.</p-message>
+      } @else {
+        <form class="entry" (ngSubmit)="save()" novalidate>
+          <h3>{{ editingId() ? 'Edit task' : 'Add a task' }}</h3>
+          <div class="entry__grid">
+            <div class="pf">
+              <label for="e-task">Task ID *</label>
+              <p-select inputId="e-task" name="task" [options]="taskOptions()" optionLabel="label" optionValue="value"
+                        [filter]="true" filterPlaceholder="Search your tasks" placeholder="Choose a task assigned to you"
+                        emptyMessage="No open tasks are assigned to you yet; ask your admin" appendTo="body"
+                        [ngModel]="taskId()" (ngModelChange)="taskId.set($event)" />
+            </div>
+            <div class="pf">
+              <label for="e-hours">Hours</label>
+              <p-inputnumber inputId="e-hours" name="hours" [min]="0.25" [max]="24" [step]="0.25" [showButtons]="true"
+                             [minFractionDigits]="0" [maxFractionDigits]="2" placeholder="e.g. 2.5"
+                             [ngModel]="hours()" (ngModelChange)="hours.set($event)" />
+            </div>
+            <div class="pf span">
+              <label for="e-desc">What was done</label>
+              <textarea pTextarea id="e-desc" name="desc" rows="2" maxlength="1000" [autoResize]="true"
+                        [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+            </div>
+          </div>
+          @if (formError()) { <p-message severity="error" styleClass="dlg-msg">{{ formError() }}</p-message> }
+          <div class="p-actions">
+            <p-button type="submit" [icon]="editingId() ? 'pi pi-check' : 'pi pi-plus'"
+                      [label]="editingId() ? 'Save changes' : 'Add task'" [loading]="busy()" />
+            @if (editingId()) { <p-button label="Cancel" [text]="true" (onClick)="resetForm()" /> }
+          </div>
+        </form>
+      }
+    }
+  }
+</p-dialog>
