@@ -1,8 +1,8 @@
 import { Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { DEFAULT_DIAL } from '../data/dial-codes';
-import { SITE } from '../data/site.config';
-import { sendEnquiry, warmUpEnquiries } from './enquiry';
+import { SITE, telHref, whatsappHref } from '../data/site.config';
+import { EnquiryError, sendEnquiry, SLOW_AFTER_MS, warmUpEnquiries } from './enquiry';
 import { formatPhone, PhoneField, phoneValidator } from './phone-field';
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
@@ -33,7 +33,7 @@ function visitDateValidator(c: AbstractControl<string>): ValidationErrors | null
   return null;
 }
 
-/** Free site-visit request, emailed to SITE.enquiryEmail (see form-submit.ts). */
+/** Free site-visit request, mailed to the team through the backend (see enquiry.ts). */
 @Component({
   selector: 'app-site-visit-form',
   imports: [ReactiveFormsModule, PhoneField],
@@ -111,6 +111,10 @@ function visitDateValidator(c: AbstractControl<string>): ValidationErrors | null
         {{ state() === 'sending' ? 'Sending…' : 'Request site visit' }}
       </button>
 
+      @if (state() === 'sending' && slow()) {
+        <p class="note note--wait" role="status">Still sending… the server is waking up, this can take up to a minute.
+          Please keep this page open.</p>
+      }
       @switch (state()) {
         @case ('sent') {
           <p class="note note--ok" role="status">
@@ -119,8 +123,13 @@ function visitDateValidator(c: AbstractControl<string>): ValidationErrors | null
         }
         @case ('error') {
           <p class="note note--err" role="alert">
-            Sorry, we couldn't send your request just now. Please try again, or email us at
-            <a [href]="'mailto:' + site.altEmail">{{ site.altEmail }}</a>.
+            @if (busy()) { You've sent several requests just now; please wait a few minutes or reach us directly: }
+            @else { Sorry, we couldn't send your request just now. Please try again, or reach us directly: }
+            <span class="reach">
+              <a [href]="tel">Call {{ site.phone }}</a>
+              <a [href]="wa" target="_blank" rel="noopener">WhatsApp</a>
+              <a [href]="'mailto:' + site.altEmail">{{ site.altEmail }}</a>
+            </span>
           </p>
         }
       }
@@ -136,6 +145,9 @@ function visitDateValidator(c: AbstractControl<string>): ValidationErrors | null
     .note { margin: 0; font-size: .92rem; padding: 12px 16px; border-radius: var(--radius); }
     .note--ok { background: #eef6ee; color: #1f5f2a; border: 1px solid #cfe5d1; }
     .note--err { background: #fbeeed; color: #8a1f17; border: 1px solid #f0cfcb; }
+    .note--wait { background: #f6f1e6; color: #6b5420; border: 1px solid #e6d8b8; }
+    .reach { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
+    .reach a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
     /* iOS gives empty date inputs no height of their own */
     input[type='date'] { min-height: 48px; -webkit-appearance: none; appearance: none; }
     @media (max-width: 560px) { .row { grid-template-columns: 1fr; } .btn { justify-self: stretch; } }
@@ -152,6 +164,12 @@ export class SiteVisitForm {
   protected readonly minDate = isoDate(addDays(1));
   protected readonly maxDate = isoDate(addDays(CFG.maxDaysAhead));
   protected readonly state = signal<SendState>('idle');
+  /** Sending for a while: the server was asleep. */
+  protected readonly slow = signal(false);
+  /** Too many enquiries from this visitor just now. */
+  protected readonly busy = signal(false);
+  protected readonly tel = telHref(SITE.phone);
+  protected readonly wa = whatsappHref();
   protected readonly sentFor = signal('');
   private readonly honey = viewChild.required<ElementRef<HTMLInputElement>>('honey');
 
@@ -185,41 +203,32 @@ export class SiteVisitForm {
     const when = new Date(y, m - 1, d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
     this.state.set('sending');
+    this.busy.set(false);
+    const slow = setTimeout(() => this.slow.set(true), SLOW_AFTER_MS);
     try {
-      const phone = formatPhone(v.country, v.phone);
-      await sendEnquiry(
-        {
-          kind: 'SITE_VISIT',
-          headline: `${when}, ${v.time} – ${v.location}`,
-          name: v.name,
-          phone,
-          details: [
-            { label: 'Visit date', value: when },
-            { label: 'Visit time', value: v.time },
-            { label: 'Location', value: v.location },
-            { label: 'Number of persons', value: String(v.persons) },
-          ],
-          message: v.remarks,
-        },
-        {
-          fields: {
-            'Visit date': when,
-            'Visit time': v.time,
-            Name: v.name,
-            Phone: phone,
-            'Number of persons': String(v.persons),
-            Location: v.location,
-            Remarks: v.remarks || '-',
-          },
-          subject: `Site visit request – ${when}, ${v.time} – ${v.location} (${v.name})`,
-          honey: this.honey().nativeElement.value,
-        },
-      );
+      await sendEnquiry({
+        kind: 'SITE_VISIT',
+        headline: `${when}, ${v.time} – ${v.location}`,
+        name: v.name,
+        phone: formatPhone(v.country, v.phone),
+        details: [
+          { label: 'Visit date', value: when },
+          { label: 'Visit time', value: v.time },
+          { label: 'Location', value: v.location },
+          { label: 'Number of persons', value: String(v.persons) },
+        ],
+        message: v.remarks,
+        honey: this.honey().nativeElement.value,
+      });
       this.sentFor.set(`${when} at ${v.time}`);
       this.state.set('sent');
       this.form.reset({ country: v.country, persons: 1, location: CFG.areas[0] });
-    } catch {
+    } catch (e) {
+      this.busy.set(e instanceof EnquiryError && e.reason === 'busy');
       this.state.set('error');
+    } finally {
+      clearTimeout(slow);
+      this.slow.set(false);
     }
   }
 }

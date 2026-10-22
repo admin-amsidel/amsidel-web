@@ -1,5 +1,4 @@
 import { API_BASE } from '../portal/portal.config';
-import { sendViaFormSubmit } from './form-submit';
 
 /** An enquiry as the backend lays it out in its mail (see EnquiryService in amsidel-backend). */
 export interface Enquiry {
@@ -13,13 +12,24 @@ export interface Enquiry {
   details: { label: string; value: string }[];
   message?: string;
   transcript?: { visitor: boolean; text: string }[];
+  /** Hidden form field: people leave it empty, bots fill it in. */
+  honey?: string;
+}
+
+/** Why an enquiry did not go: 'busy' = too many from this visitor just now; 'failed' = anything else. */
+export class EnquiryError extends Error {
+  constructor(readonly reason: 'busy' | 'failed') {
+    super(reason);
+  }
 }
 
 /**
- * The backend can sleep when idle (free hosting) and handing the mail to the mail server takes a few seconds more;
- * after this long the form gives up on it and sends through FormSubmit.
+ * The backend answers as soon as it has checked the enquiry (the mail goes out in the background), so this only
+ * runs long when the backend was asleep (free hosting wakes up in up to about a minute).
  */
-const BACKEND_TIMEOUT_MS = 40000;
+const TIMEOUT_MS = 90000;
+/** After this long the forms say the server is waking up and to keep the page open. */
+export const SLOW_AFTER_MS = 6000;
 let warmed = false;
 
 /**
@@ -33,32 +43,24 @@ export function warmUpEnquiries(): void {
   fetch(`${API_BASE}/actuator/health`, { mode: 'no-cors' }).catch(() => undefined);
 }
 
-/**
- * Emails the enquiry: as a designed mail through the backend, or, when the backend cannot send it (asleep too long,
- * mail not set up, down), through FormSubmit as before. Throws only when both fail.
- * `fallback` is the FormSubmit version: the same rows as a plain table.
- */
-export async function sendEnquiry(
-  enquiry: Enquiry,
-  fallback: { fields: Record<string, string>; subject: string; honey: string; replyTo?: string },
-): Promise<void> {
+/** Emails the enquiry to the team as a designed mail, through the backend (Brevo). Throws EnquiryError. */
+export async function sendEnquiry(enquiry: Enquiry): Promise<void> {
+  const { honey, ...rest } = enquiry;
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+  let res: Response;
   try {
-    const abort = new AbortController();
-    const timer = setTimeout(() => abort.abort(), BACKEND_TIMEOUT_MS);
-    const res = await fetch(`${API_BASE}/api/public/enquiry`, {
+    res = await fetch(`${API_BASE}/api/public/enquiry`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        ...enquiry,
-        email: enquiry.email?.trim() || undefined,
-        page: window.location.href,
-        website: fallback.honey,
-      }),
+      body: JSON.stringify({ ...rest, email: rest.email?.trim() || undefined, page: window.location.href, website: honey }),
       signal: abort.signal,
-    }).finally(() => clearTimeout(timer));
-    if (res.ok) return;
+    });
   } catch {
-    // network error or timeout: send it the other way
+    throw new EnquiryError('failed');
+  } finally {
+    clearTimeout(timer);
   }
-  await sendViaFormSubmit(fallback.fields, { subject: fallback.subject, honey: fallback.honey, replyTo: fallback.replyTo });
+  if (res.status === 429) throw new EnquiryError('busy');
+  if (!res.ok) throw new EnquiryError('failed');
 }

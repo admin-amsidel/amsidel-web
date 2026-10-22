@@ -9,10 +9,8 @@ export const SITE = {
   email: 'info@amsidel.com',
   // second address shown next to `email`, and the one every "email us" link opens
   altEmail: 'info.amsidel@gmail.com',
-  // Inbox that receives website enquiries (sent via formsubmit.co, see quote-form.ts).
-  // After FormSubmit is activated you can replace this with the random alias it gives
-  // you, so the real address is not visible in the page source.
-  enquiryEmail: 'info.amsidel@gmail.com',
+  // Website enquiries (quote, site visit, AMI chat) are mailed by amsidel-backend through Brevo; the inbox they go to
+  // is set on the backend (ENQUIRY_TO), so it is not visible in the page source. See shared/enquiry.ts.
   phone: '+91 79072 31647', // company and support line (AMI chat uses it too)
   // WhatsApp Business number, digits only with country code. The WhatsApp button next to the AMI chat uses it.
   whatsapp: '917907231647',

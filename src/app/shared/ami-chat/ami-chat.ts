@@ -53,7 +53,7 @@ const PREFIX_CATEGORY = new Map(PRODUCTS.map((p) => [p.model.split('-')[0], p.ca
 
 /**
  * AMI, a scripted chat assistant: collects name and phone, walks through product types and designs,
- * offers the brochure, and emails a visitor's question with the chat details to SITE.enquiryEmail.
+ * offers the brochure, and emails a visitor's question with the chat details to the team (see enquiry.ts).
  * All wording lives in data/ami.ts.
  */
 @Component({
@@ -514,26 +514,14 @@ export class AmiChat implements OnDestroy {
     this.typing.set(true);
     const l = this.lead;
     try {
-      await sendEnquiry(
-        {
-          kind: 'CHAT',
-          name: l.name,
-          phone: l.phone,
-          // name and phone have their own rows in the mail
-          details: this.summary().filter(([k]) => k !== 'Name' && k !== 'Phone').map(([label, value]) => ({ label, value })),
-          transcript: this.messages().map((m) => ({ visitor: m.from !== 'ami', text: m.text })),
-        },
-        {
-          fields: {
-            ...Object.fromEntries(this.summary()),
-            'Chat transcript': this.messages()
-              .map((m) => `${m.from === 'ami' ? AMI.name : l.name || 'Visitor'}: ${m.text}`)
-              .join('\n'),
-          },
-          subject: `AMI chat – query from ${l.name}`,
-          honey: '',
-        },
-      );
+      await sendEnquiry({
+        kind: 'CHAT',
+        name: l.name,
+        phone: l.phone,
+        // name and phone have their own rows in the mail
+        details: this.summary().filter(([k]) => k !== 'Name' && k !== 'Phone').map(([label, value]) => ({ label, value })),
+        transcript: this.messages().map((m) => ({ visitor: m.from !== 'ami', text: m.text })),
+      });
       this.typing.set(false);
       this.busy = false;
       await this.say({ text: AMI.sent(l.phone) });

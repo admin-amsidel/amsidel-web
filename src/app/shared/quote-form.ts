@@ -2,13 +2,13 @@ import { Component, ElementRef, inject, input, OnInit, signal, viewChild } from 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DEFAULT_DIAL } from '../data/dial-codes';
 import { CATEGORIES } from '../data/products';
-import { SITE } from '../data/site.config';
-import { sendEnquiry, warmUpEnquiries } from './enquiry';
+import { SITE, telHref, whatsappHref } from '../data/site.config';
+import { EnquiryError, sendEnquiry, SLOW_AFTER_MS, warmUpEnquiries } from './enquiry';
 import { formatPhone, PhoneField, phoneValidator } from './phone-field';
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
 
-/** Enquiry form, emailed to SITE.enquiryEmail (see form-submit.ts). */
+/** Enquiry form, mailed to the team through the backend (see enquiry.ts). */
 @Component({
   selector: 'app-quote-form',
   imports: [ReactiveFormsModule, PhoneField],
@@ -46,21 +46,30 @@ type SendState = 'idle' | 'sending' | 'sent' | 'error';
         <label for="q-msg">Tell us about your project</label>
         <textarea id="q-msg" formControlName="message" placeholder="Number of doors/windows, sizes, new build or renovation, timeline…"></textarea>
       </div>
-      <!-- honeypot: hidden from people, bots fill it in and FormSubmit then drops the message -->
+      <!-- honeypot: hidden from people, bots fill it in and the backend then drops the message -->
       <input class="hp" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" #honey />
 
       <button class="btn btn--gold" type="submit" [disabled]="state() === 'sending'">
         {{ state() === 'sending' ? 'Sending…' : 'Send enquiry' }}
       </button>
 
+      @if (state() === 'sending' && slow()) {
+        <p class="note note--wait" role="status">Still sending… the server is waking up, this can take up to a minute.
+          Please keep this page open.</p>
+      }
       @switch (state()) {
         @case ('sent') {
           <p class="note note--ok" role="status">Thank you! Your enquiry has been sent. Our team will contact you shortly.</p>
         }
         @case ('error') {
           <p class="note note--err" role="alert">
-            Sorry, we couldn't send your enquiry just now. Please try again, or email us at
-            <a [href]="'mailto:' + site.altEmail">{{ site.altEmail }}</a>.
+            @if (busy()) { You've sent several enquirys just now; please wait a few minutes or reach us directly: }
+            @else { Sorry, we couldn't send your enquiry just now. Please try again, or reach us directly: }
+            <span class="reach">
+              <a [href]="tel">Call {{ site.phone }}</a>
+              <a [href]="wa" target="_blank" rel="noopener">WhatsApp</a>
+              <a [href]="'mailto:' + site.altEmail">{{ site.altEmail }}</a>
+            </span>
           </p>
         }
       }
@@ -75,6 +84,9 @@ type SendState = 'idle' | 'sending' | 'sent' | 'error';
     .note { margin: 0; font-size: .92rem; padding: 12px 16px; border-radius: var(--radius); }
     .note--ok { background: #eef6ee; color: #1f5f2a; border: 1px solid #cfe5d1; }
     .note--err { background: #fbeeed; color: #8a1f17; border: 1px solid #f0cfcb; }
+    .note--wait { background: #f6f1e6; color: #6b5420; border: 1px solid #e6d8b8; }
+    .reach { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
+    .reach a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
     @media (max-width: 560px) { .row { grid-template-columns: 1fr; } .btn { justify-self: stretch; } }
   `,
 })
@@ -87,6 +99,12 @@ export class QuoteForm implements OnInit {
   protected readonly site = SITE;
   protected readonly categories = CATEGORIES;
   protected readonly state = signal<SendState>('idle');
+  /** Sending for a while: the server was asleep. */
+  protected readonly slow = signal(false);
+  /** Too many enquiries from this visitor just now. */
+  protected readonly busy = signal(false);
+  protected readonly tel = telHref(SITE.phone);
+  protected readonly wa = whatsappHref();
   private readonly honey = viewChild.required<ElementRef<HTMLInputElement>>('honey');
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
@@ -118,42 +136,32 @@ export class QuoteForm implements OnInit {
     const topic = this.productName() || v.product;
 
     this.state.set('sending');
+    this.busy.set(false);
+    const slow = setTimeout(() => this.slow.set(true), SLOW_AFTER_MS);
     try {
-      const phone = formatPhone(v.country, v.phone);
-      await sendEnquiry(
-        {
-          kind: 'QUOTE',
-          headline: topic || 'General enquiry',
-          name: v.name,
-          phone,
-          email: v.email,
-          details: [
-            { label: 'Location', value: v.city },
-            { label: 'Interested in', value: v.product || 'Not sure yet' },
-            ...(this.productName() ? [{ label: 'Product', value: this.productName() }] : []),
-          ],
-          message: v.message,
-        },
-        {
-          fields: {
-            Name: v.name,
-            Phone: phone,
-            Email: v.email || '-',
-            Location: v.city || '-',
-            'Interested in': v.product || 'Not sure yet',
-            ...(this.productName() ? { Product: this.productName() } : {}),
-            Message: v.message || '-',
-          },
-          subject: `New website enquiry${topic ? ' – ' + topic : ''} (${v.name})`,
-          honey: this.honey().nativeElement.value,
-          replyTo: v.email,
-        },
-      );
+      await sendEnquiry({
+        kind: 'QUOTE',
+        headline: topic || 'General enquiry',
+        name: v.name,
+        phone: formatPhone(v.country, v.phone),
+        email: v.email,
+        details: [
+          { label: 'Location', value: v.city },
+          { label: 'Interested in', value: v.product || 'Not sure yet' },
+          ...(this.productName() ? [{ label: 'Product', value: this.productName() }] : []),
+        ],
+        message: v.message,
+        honey: this.honey().nativeElement.value,
+      });
       this.state.set('sent');
       // keep the chosen country for a follow-up enquiry
       this.form.reset({ product: this.interest(), country: v.country });
-    } catch {
+    } catch (e) {
+      this.busy.set(e instanceof EnquiryError && e.reason === 'busy');
       this.state.set('error');
+    } finally {
+      clearTimeout(slow);
+      this.slow.set(false);
     }
   }
 }
