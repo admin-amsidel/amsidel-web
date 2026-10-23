@@ -159,7 +159,7 @@ const ALL = '*';
       border: 1px solid transparent; border-radius: 8px; background: none; cursor: pointer; font: inherit; color: inherit; text-align: left;
     }
     .subj:hover { background: var(--soft); }
-    .subj.on { background: #f3ead9; border-color: #e3d2b0; }
+    .subj.on { background: var(--accent-soft); border-color: var(--accent-line); }
     .subj span { display: grid; line-height: 1.25; min-width: 0; }
     .subj small { color: var(--muted); font-size: .76rem; }
     .subj em { font-style: normal; font-size: .75rem; white-space: nowrap; color: var(--brass-dark); font-weight: 600; }

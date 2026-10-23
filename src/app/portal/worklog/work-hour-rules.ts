@@ -77,7 +77,7 @@ interface RuleRow {
   `,
   styles: `
     :host ::ng-deep .rules .num { width: 110px; }
-    :host ::ng-deep .rules tr.default > td { background: #faf6ef; font-weight: 600; }
+    :host ::ng-deep .rules tr.default > td { background: var(--accent-softer); font-weight: 600; }
     .lvlcell { display: flex; align-items: center; gap: 8px; }
     .act { text-align: right; }
     .note { margin: 16px 0 0; font-size: .84rem; color: var(--muted); max-width: 75ch; }

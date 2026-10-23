@@ -27,7 +27,7 @@ import { starColour } from './stars';
     .stars:focus-visible { outline: 2px solid var(--brass); }
     .stars.disabled { cursor: default; opacity: .6; }
     .row { white-space: nowrap; }
-    .back { color: #e5e0d6; }
+    .back { color: #dfe6ee; }
     .fill { position: absolute; left: 0; top: 0; overflow: hidden; color: var(--c); pointer-events: none; }
     .num { min-width: 2.2em; font-variant-numeric: tabular-nums; font-size: .95rem; }
   `,

@@ -14,8 +14,10 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
+import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../auth.service';
 import { Avatar } from '../avatar';
+import { TapTooltip } from '../tap-tooltip';
 import { apiProblem, Brand, designationLabel, Employee } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { TaskService } from './task.service';
@@ -26,7 +28,7 @@ import { hrs, TaskStatus, WorkTask } from './worklog.models';
   selector: 'app-tasks',
   imports: [
     FormsModule, Avatar, ButtonModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
-    MultiSelectModule, SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
+    MultiSelectModule, SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule, TooltipModule, TapTooltip,
   ],
   template: `
     <div class="p-head">
@@ -73,11 +75,20 @@ import { hrs, TaskStatus, WorkTask } from './worklog.models';
             </td>
             <td data-label="Assigned to" class="stack-full">
               @if (t.assignees.length) {
-                <span class="people">
-                  @for (a of t.assignees.slice(0, 4); track a.id) {
-                    <app-avatar [name]="a.name" [employeeId]="a.id" [photoVersion]="a.photoUpdatedAt" [photoPath]="a.photoPath" [size]="28" />
+                <!-- photos only; the name shows on hover, or for a moment when tapped on a phone -->
+                <span class="people" [attr.aria-label]="'Assigned to ' + allNames(t)">
+                  @for (a of t.assignees.slice(0, SHOWN); track a.id) {
+                    <span class="person" tabindex="0" [pTooltip]="a.name + ' · ' + a.empNumber" tooltipPosition="top" tapTooltip
+                          [attr.aria-label]="a.name">
+                      <app-avatar [name]="a.name" [employeeId]="a.id" [photoVersion]="a.photoUpdatedAt" [photoPath]="a.photoPath" [size]="30" />
+                    </span>
                   }
-                  <span class="names">{{ names(t) }}</span>
+                  @if (t.assignees.length > SHOWN) {
+                    <span class="person more" tabindex="0" [pTooltip]="moreNames(t)" tooltipPosition="top" tapTooltip
+                          [attr.aria-label]="(t.assignees.length - SHOWN) + ' more: ' + moreNames(t)">
+                      +{{ t.assignees.length - SHOWN }}
+                    </span>
+                  }
                 </span>
               } @else { <span class="muted">Nobody yet</span> }
             </td>
@@ -146,8 +157,19 @@ import { hrs, TaskStatus, WorkTask } from './worklog.models';
     .filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
     .search { min-width: min(320px, 100%); }
     .search input { width: 100%; }
-    .people { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-    .names { margin-left: 6px; font-size: .85rem; color: var(--muted); }
+    /* overlapping photos; the one pointed at comes to the front */
+    .people { display: inline-flex; align-items: center; padding-left: 4px; }
+    .person {
+      display: inline-flex; margin-left: -4px; border-radius: 50%; background: var(--bg); padding: 2px; cursor: default;
+      transition: transform .15s ease; position: relative;
+    }
+    .person:hover, .person:focus-visible { transform: translateY(-2px); z-index: 1; outline: none; }
+    .person:focus-visible { box-shadow: 0 0 0 2px var(--brass); }
+    .more {
+      width: 34px; height: 34px; align-items: center; justify-content: center; background: var(--accent-soft);
+      border: 2px solid var(--bg);
+      color: var(--brass-dark); font-size: .72rem; font-weight: 700;
+    }
     .block { display: block; }
     .act { text-align: right; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -230,9 +252,15 @@ export class Tasks implements OnInit {
     this.load();
   }
 
-  protected names(t: WorkTask): string {
-    const first = t.assignees.slice(0, 2).map((a) => a.name.split(' ')[0]).join(', ');
-    return t.assignees.length > 2 ? `${first} +${t.assignees.length - 2}` : first;
+  /** Photos shown in a row; the rest are behind "+N". */
+  protected readonly SHOWN = 5;
+
+  protected allNames(t: WorkTask): string {
+    return t.assignees.map((a) => a.name).join(', ');
+  }
+
+  protected moreNames(t: WorkTask): string {
+    return t.assignees.slice(this.SHOWN).map((a) => a.name).join(', ');
   }
 
   protected openNew(): void {

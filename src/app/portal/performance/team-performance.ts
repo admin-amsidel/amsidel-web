@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { ProgressTone } from '../progress-tone';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -20,7 +21,7 @@ import { Stars } from './stars';
  */
 @Component({
   selector: 'app-team-performance',
-  imports: [FormsModule, Avatar, Stars, ButtonModule, MessageModule, ProgressBarModule, SelectModule, TableModule, TagModule, ReviewBoard],
+  imports: [FormsModule, Avatar, Stars, ButtonModule, MessageModule, ProgressBarModule, ProgressTone, SelectModule, TableModule, TagModule, ReviewBoard],
   template: `
     <div class="p-head">
       <div>

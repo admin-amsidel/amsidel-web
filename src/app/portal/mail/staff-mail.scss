@@ -21,7 +21,7 @@
 .pic img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; background: var(--soft); }
 .pic__body { display: grid; gap: 6px; min-width: 0; }
 .pic__name { font-size: .85rem; overflow-wrap: anywhere; }
-.pic__name code { font-size: .78rem; padding: 1px 6px; border-radius: 4px; background: #f3ead9; color: var(--brass-dark); }
+.pic__name code { font-size: .78rem; padding: 1px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--brass-dark); }
 .pic__body input { width: 100%; }
 .file { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border: 1px solid var(--line);
   border-radius: 8px; background: #fff; font-size: .88rem; }
@@ -32,7 +32,7 @@
 .file.failed small { white-space: normal; }
 .dear { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: .95rem; }
 .dear input { flex: 1 1 auto; max-width: 260px; }
-.dear__auto { padding: 6px 12px; border-radius: 6px; background: #f3ead9; color: var(--brass-dark); font-size: .88rem; }
+.dear__auto { padding: 6px 12px; border-radius: 6px; background: var(--accent-soft); color: var(--brass-dark); font-size: .88rem; }
 .dear__auto i { font-size: .8rem; margin-right: 4px; }
 .mt { margin-top: 14px; }
 .by { margin-bottom: 16px; }
@@ -53,12 +53,11 @@
 :host ::ng-deep .wa-btn:not(:disabled):hover,
 :host ::ng-deep .wa-btn:not(:disabled):active { background: #1f8f4e; border-color: #1f8f4e; color: #fff; }
 :host ::ng-deep .wa-btn:not(:disabled):hover { background: #18723e; border-color: #18723e; }
-:host ::ng-deep .del-sum .bar.wa .p-progressbar-value { background: #1f8f4e; }
 .count b { color: var(--ink); font-size: 1.05rem; }
 .count .warn { color: #b45309; }
 
 .preview { margin-top: 18px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
-.preview__bar { padding: 7px 12px; background: var(--dark); color: #cfc9be; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
+.preview__bar { padding: 7px 12px; background: var(--dark); color: #c4d6ea; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
 .preview__subj { padding: 10px 14px; font-weight: 600; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .preview__body { padding: 12px 14px; font-size: .88rem; line-height: 1.55; max-height: 260px; overflow-y: auto; }
 .preview__body p { margin: 0 0 10px; }

@@ -5,39 +5,39 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { PrimeNG } from 'primeng/config';
 
 /**
- * PrimeNG in Amsidel colours: brushed gold (#B08A4E, from the logo) as the primary colour, warm greys for
- * surfaces and charcoal for text, pill-shaped buttons like the public website. Light mode only, as the site.
+ * PrimeNG in the staff portal's colours: blue shades on white (primary #2F80D6), cool blue-greys for surfaces and
+ * dark grey / near-black for text, pill-shaped buttons. Light mode only. The public website keeps its gold.
  */
 export const AmsidelPreset = definePreset(Aura, {
   semantic: {
     primary: {
-      50: '#faf6ef',
-      100: '#f3ead9',
-      200: '#e7d4b3',
-      300: '#d8b676',
-      400: '#c49f62',
-      500: '#b08a4e',
-      600: '#8f6d38',
-      700: '#74582e',
-      800: '#5c4626',
-      900: '#4a3920',
-      950: '#2a2012',
+      50: '#eef6fe',
+      100: '#d9eafc',
+      200: '#b9d8f8',
+      300: '#8cbff2',
+      400: '#5aa0e8',
+      500: '#2f80d6',
+      600: '#2166b5',
+      700: '#1c5292',
+      800: '#1b4577',
+      900: '#1a3a63',
+      950: '#12253f',
     },
     colorScheme: {
       light: {
         surface: {
           0: '#ffffff',
-          50: '#f8f6f2',
-          100: '#f1eee8',
-          200: '#e8e5e0',
-          300: '#d6d1c9',
-          400: '#b3ada4',
-          500: '#8c867d',
-          600: '#66625c',
-          700: '#4b4843',
-          800: '#2a2a2e',
-          900: '#1e1e21',
-          950: '#161618',
+          50: '#f5f9fd',
+          100: '#edf3f9',
+          200: '#dfe8f1',
+          300: '#c9d5e2',
+          400: '#9aa9ba',
+          500: '#6f7e90',
+          600: '#536172',
+          700: '#3e4a58',
+          800: '#2b3440',
+          900: '#1f2630',
+          950: '#141a22',
         },
         primary: {
           color: '{primary.500}',

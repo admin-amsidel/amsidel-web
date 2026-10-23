@@ -21,7 +21,7 @@ import { Component, computed, input } from '@angular/core';
     :host { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
     .stars { position: relative; display: inline-block; font-size: var(--size, 1.05rem); line-height: 1; letter-spacing: 1px; }
     .row { white-space: nowrap; }
-    .back { color: #e5e0d6; }
+    .back { color: #dfe6ee; }
     .fill { position: absolute; left: 0; top: 0; overflow: hidden; color: var(--c); }
     .num { font-size: .85rem; font-variant-numeric: tabular-nums; }
     .none { font-size: .8rem; color: var(--muted); }

@@ -21,7 +21,7 @@ import { initials } from './portal.models';
     :host { display: inline-flex; flex: none; width: var(--size); height: var(--size); }
     :host ::ng-deep .am-avatar {
       width: var(--size); height: var(--size); border: 1.5px solid var(--brass); overflow: hidden;
-      background: radial-gradient(circle at 32% 28%, #fff 0%, var(--soft) 60%, #ece6db 100%);
+      background: radial-gradient(circle at 32% 28%, #fff 0%, var(--soft) 60%, #dbe9f7 100%);
     }
     :host ::ng-deep .am-avatar img { width: 100%; height: 100%; object-fit: cover; }
     :host ::ng-deep .am-avatar--initials .p-avatar-label {

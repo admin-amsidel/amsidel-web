@@ -66,16 +66,16 @@ import { apiProblem } from '../portal.models';
     .login { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
     .panel { padding: 40px clamp(20px, 5vw, 64px); display: flex; flex-direction: column; }
     .panel--brand {
-      background: radial-gradient(120% 80% at 20% 0%, #2f2f34 0%, var(--dark) 70%); color: #fff;
+      background: radial-gradient(120% 80% at 20% 0%, #2f80d6 0%, var(--dark) 72%); color: #fff;
       justify-content: space-between; gap: 32px;
     }
-    .back { color: #d9d4ca; text-decoration: none; font-size: .85rem; letter-spacing: .08em; align-self: flex-start; }
+    .back { color: #d6e6f7; text-decoration: none; font-size: .85rem; letter-spacing: .08em; align-self: flex-start; }
     .back:hover { color: var(--gold-hi); }
     .brand img { width: 120px; height: auto; margin-bottom: 28px; filter: brightness(0) invert(1); }
     .brand .kicker { color: var(--gold-hi); }
-    h1 { font-size: clamp(2.2rem, 4.5vw, 3.2rem); }
-    .lede { color: #cfc9be; max-width: 34ch; margin: 14px 0 0; }
-    .foot { margin: 0; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: #8d877c; }
+    h1 { font-size: clamp(2.2rem, 4.5vw, 3.2rem); color: #fff; }
+    .lede { color: #d6e6f7; max-width: 34ch; margin: 14px 0 0; }
+    .foot { margin: 0; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: #9fbcdb; }
     .panel--form { justify-content: center; align-items: center; }
     form { width: 100%; max-width: 380px; display: grid; gap: 18px; }
     h2 { font-size: 2rem; }

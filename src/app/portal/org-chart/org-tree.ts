@@ -81,7 +81,7 @@ const STEP = 0.1;
     :host ::ng-deep .p-organizationchart-connector-down { background: var(--brass); }
     .box {
       display: grid; justify-items: center; gap: 4px; width: 176px; padding: 14px 10px 12px;
-      background: var(--bg); border: 1px solid var(--line); border-top: 3px solid var(--pine); border-radius: 10px;
+      background: var(--bg); border: 1px solid var(--line); border-top: 3px solid var(--brass); border-radius: 10px;
       font: inherit; color: var(--ink); text-align: center;
     }
     .box b { font-size: .9rem; line-height: 1.25; }
@@ -90,9 +90,9 @@ const STEP = 0.1;
     .box small.empno { margin-top: -3px; letter-spacing: .08em; font-variant-numeric: tabular-nums; }
     .box small.via { letter-spacing: 0; font-size: .72rem; color: var(--brass-dark); }
     .box--link { cursor: pointer; transition: border-color .2s, box-shadow .2s; }
-    .box--link:hover { border-color: var(--brass); box-shadow: 0 6px 16px rgba(30,30,33,.1); }
+    .box--link:hover { border-color: var(--brass); box-shadow: 0 6px 16px rgba(23,59,99,.12); }
     .box:disabled { cursor: default; }
-    .box--me { border: 2px solid var(--brass); border-top-width: 3px; background: #fbf7ef; box-shadow: 0 6px 18px rgba(176,138,78,.25); }
+    .box--me { border: 2px solid var(--brass); border-top-width: 3px; background: var(--accent-softer); box-shadow: 0 6px 18px rgba(47,128,214,.22); }
     .box--group { border-top-color: var(--brass); background: var(--dark); color: #fff; }
     .box--group img { height: 22px; width: auto; filter: brightness(0) invert(1); }
     /* phones: narrower boxes, so more of the line fits before scrolling sideways */

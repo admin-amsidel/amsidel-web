@@ -2,6 +2,40 @@
    PrimeNG supplies the components in Amsidel colours (portal-ui.ts); these rules add the brand details
    and the page layout. */
 
+/* ---- portal colours: blue shades on white, dark grey / black text ----
+   This stylesheet is on the page only while the portal (or its sign-in) is open, so these replace the public site's
+   gold tokens for the portal alone. Components keep using the same names (--brass = the accent colour). */
+:root {
+  --bg: #ffffff;
+  --ink: #1f2630;          /* body text: near black */
+  --pine: #2b3440;         /* headings and labels: dark grey */
+  --muted: #5b6878;
+  --line: #dce7f2;
+  --soft: #f3f8fd;         /* page background */
+  --dark: #173b63;         /* deep blue for dark surfaces */
+  --brass: #2f80d6;        /* accent: buttons, links, active menu */
+  --brass-dark: #2166b5;
+  --gold-hi: #9fcbf5;      /* light accent on dark surfaces */
+  --accent-soft: #e3effc;  /* tinted chips and the active menu item */
+  --accent-softer: #f1f7fe;
+  --accent-line: #b9d8f8;
+  --display: var(--body);  /* clean sans-serif headings in the portal */
+  --shadow: 0 10px 28px rgba(23, 59, 99, 0.08);
+  /* progress: under 50% yellow, from 50% light green, done green */
+  --progress-low: #f2c94c;
+  --progress-mid: #7fd18b;
+  --progress-done: #2fa84f;
+  --progress-track: #e6eef7;
+}
+
+h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; color: var(--pine); }
+
+/* ---- progress bars (colour follows the value, see progress-tone.ts) ---- */
+.p-progressbar { background: var(--progress-track); border-radius: 99px; }
+.p-progressbar .p-progressbar-value { background: var(--progress-low); border-radius: 99px; transition: width .4s ease, background-color .3s; }
+p-progressbar.tone-mid .p-progressbar-value { background: var(--progress-mid); }
+p-progressbar.tone-done .p-progressbar-value { background: var(--progress-done); }
+
 /* ---- PrimeNG in the Amsidel style ---- */
 .p-component { font-family: var(--body); }
 .p-button .p-button-label { font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: .78rem; }
@@ -33,7 +67,10 @@
 .head-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; min-width: 0; max-width: 100%; }
 .head-actions .p-select { max-width: 100%; }
 .head-actions .p-select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.p-card { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: clamp(18px, 3vw, 28px); }
+.p-card {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: clamp(18px, 3vw, 28px);
+  box-shadow: var(--shadow);
+}
 .p-card + .p-card, .p-card + .p-message, .p-message + .p-card { margin-top: 20px; }
 .p-card > h2 { font-size: 1.25rem; margin-bottom: 18px; }
 .p-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; align-items: start; }
@@ -61,7 +98,7 @@
 /* level badge, e.g. "L4" */
 .lvl {
   display: inline-block; min-width: 34px; text-align: center; padding: 2px 6px; border-radius: 4px;
-  font-size: .72rem; font-weight: 700; background: var(--pine); color: var(--gold-hi); letter-spacing: .02em;
+  font-size: .72rem; font-weight: 700; background: var(--accent-soft); color: var(--brass-dark); letter-spacing: .02em;
 }
 .muted { color: var(--muted); }
 .nowrap { white-space: nowrap; }

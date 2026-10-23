@@ -170,28 +170,45 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
     <p-confirmdialog [style]="{ width: '440px' }" [breakpoints]="{ '760px': 'calc(100vw - 24px)' }" />
   `,
   styles: `
-    app-portal-shell { display: block; min-height: 100dvh; background: var(--soft); }
+    /* soft blue waves on the left and right corners, white in the middle */
+    app-portal-shell { display: block; min-height: 100dvh; position: relative; isolation: isolate; background: var(--soft); }
+    /* a layer pinned to the screen (a fixed background does not work on iPhones), behind everything */
+    app-portal-shell::before {
+      content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(60% 55% at 0% 0%, #d6e9fb 0 38%, transparent 38.5%),
+        radial-gradient(85% 75% at 0% 0%, #e7f2fd 0 48%, transparent 48.5%),
+        radial-gradient(55% 60% at 100% 0%, #d9eafc 0 34%, transparent 34.5%),
+        radial-gradient(80% 85% at 100% 0%, #eaf4fe 0 46%, transparent 46.5%),
+        linear-gradient(180deg, #f7fbff 0%, var(--soft) 100%);
+    }
 
-    /* top bar */
+    /* top bar: white, blue underline */
     .p-top {
       position: sticky; top: 0; z-index: 30; height: 60px; padding: 0 16px 0 12px;
-      display: flex; align-items: center; gap: 8px; background: var(--dark); color: #fff;
+      display: flex; align-items: center; gap: 8px; color: var(--ink);
+      background: rgba(255,255,255,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line); box-shadow: 0 2px 12px rgba(23,59,99,.06);
     }
-    .p-top .p-burger, .p-top .p-collapse { color: #fff; }
-    .p-top .p-burger:hover, .p-top .p-collapse:hover { background: rgba(255,255,255,.08); color: var(--gold-hi); }
+    .p-top::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+      background: linear-gradient(90deg, var(--brass), #7db8f0 60%, transparent);
+    }
+    .p-top .p-burger, .p-top .p-collapse { color: var(--pine); }
+    .p-top .p-burger:hover, .p-top .p-collapse:hover { background: var(--accent-soft); color: var(--brass-dark); }
     .p-top .p-burger { display: none; }
-    .p-mark { display: flex; align-items: center; gap: 12px; color: #fff; text-decoration: none; margin-right: auto; padding-left: 4px; }
-    .p-mark img { height: 24px; width: auto; filter: brightness(0) invert(1); }
-    .p-mark span { font-family: var(--display); font-size: 1.05rem; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+    .p-mark { display: flex; align-items: center; gap: 12px; color: var(--pine); text-decoration: none; margin-right: auto; padding-left: 4px; }
+    .p-mark img { height: 24px; width: auto; }
+    .p-mark span { font-family: var(--body); font-weight: 600; font-size: .95rem; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
     .p-me {
       display: flex; align-items: center; gap: 10px; color: inherit; cursor: pointer; text-align: left;
       background: none; border: 0; padding: 4px 8px 4px 4px; border-radius: 40px; font: inherit;
     }
-    .p-me:hover { background: rgba(255,255,255,.06); }
+    .p-me:hover { background: var(--accent-soft); }
     .p-me__text { display: grid; line-height: 1.2; }
     .p-me__text b { font-size: .88rem; font-weight: 600; }
-    .p-me__text small { font-size: .75rem; color: #a9a397; }
-    .p-me__caret { font-size: .8rem; color: #a9a397; }
+    .p-me__text small { font-size: .75rem; color: var(--muted); }
+    .p-me__caret { font-size: .8rem; color: var(--muted); }
     .p-popup-menu { min-width: 210px; }
 
     /* sidebar beside the page */
@@ -204,7 +221,7 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
     .denied .p-actions { justify-content: center; }
     .p-side {
       position: sticky; top: 60px; flex: none; width: 252px; height: calc(100dvh - 60px); overflow-y: auto;
-      padding: 14px 10px; background: var(--bg); border-right: 1px solid var(--line); transition: width .2s ease;
+      padding: 14px 10px; background: rgba(255,255,255,.88); border-right: 1px solid var(--line); transition: width .2s ease;
     }
     .p-side.mini { width: 68px; }
 
@@ -216,9 +233,9 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
       font: 500 .92rem/1.2 var(--body); color: var(--ink); text-decoration: none; text-align: left;
     }
     .nav__item > .pi:first-child { width: 20px; text-align: center; color: var(--brass-dark); font-size: 1rem; flex: none; }
-    .nav__item:hover { background: var(--soft); }
+    .nav__item:hover { background: var(--accent-softer); }
     .nav__item:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
-    .nav__item.is-active { background: #f3ead9; color: var(--brass-dark); font-weight: 600; }
+    .nav__item.is-active { background: var(--accent-soft); color: var(--brass-dark); font-weight: 600; }
     .nav__item.is-active::before {
       content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: var(--brass);
     }

@@ -8,6 +8,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { ProgressTone } from '../progress-tone';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
@@ -91,7 +92,7 @@ const PARALLEL = 3;
 @Component({
   selector: 'app-staff-mail',
   imports: [
-    FormsModule, DatePipe, Avatar, ButtonModule, InputTextModule, MessageModule, MultiSelectModule, ProgressBarModule,
+    FormsModule, DatePipe, Avatar, ButtonModule, InputTextModule, MessageModule, MultiSelectModule, ProgressBarModule, ProgressTone,
     SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
   ],
   templateUrl: './staff-mail.html',

@@ -9,6 +9,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { ProgressTone } from '../progress-tone';
 import { SelectModule } from 'primeng/select';
 import { SliderModule } from 'primeng/slider';
 import { TabsModule } from 'primeng/tabs';
@@ -40,7 +41,7 @@ interface TaskDraft {
   selector: 'app-review-board',
   imports: [
     FormsModule, Avatar, Stars, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputNumberModule, InputTextModule, MessageModule,
-    ProgressBarModule, SelectModule, StarInput, SliderModule, TabsModule, TagModule, TextareaModule,
+    ProgressBarModule, ProgressTone, SelectModule, StarInput, SliderModule, TabsModule, TagModule, TextareaModule,
   ],
   templateUrl: './review-board.html',
   styleUrl: './review-board.scss',
