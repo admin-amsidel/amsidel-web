@@ -94,6 +94,57 @@ export interface Brand {
   code: string;
   name: string;
   active: boolean;
+  address: string | null;
+  launchedDate: string | null;
+  /** Comma separated names. */
+  owners: string | null;
+  gstNumber: string | null;
+  category: string | null;
+  contactNumber: string | null;
+  email: string | null;
+  /** Bank details for invoices. */
+  bankAccountNumber: string | null;
+  ifscCode: string | null;
+  upiId: string | null;
+  /** When the logo was uploaded; null = no logo (logo at /api/brands/{id}/logo). */
+  logoUpdatedAt: string | null;
+}
+
+/** An employee's PAN and salary account (payroll details, not in the employee record). */
+export interface BankDetails {
+  pan: string | null;
+  bankAccount: string | null;
+  ifsc: string | null;
+  upi: string | null;
+  /** The person asking may change them. */
+  canEdit: boolean;
+}
+
+export interface BrandBody {
+  code: string;
+  name: string;
+  active: boolean;
+  address: string;
+  launchedDate: string | null;
+  owners: string;
+  gstNumber: string;
+  category: string;
+  contactNumber: string;
+  email: string;
+  bankAccount: string;
+  ifsc: string;
+  upi: string;
+}
+
+/** Suggested brand categories; any other text is allowed too. */
+export const BRAND_CATEGORIES = [
+  'Food', 'Home Appliances', 'Building Materials', 'Doors & Windows', 'Electronics', 'IT Solutions', 'Medical',
+  'Hospitality', 'Retail', 'Real Estate', 'Education', 'Logistics',
+];
+
+/** The logo's address (a new upload gets a new address, so the browser does not keep the old one). */
+export function brandLogoUrl(brandId: number, version: string | null, apiBase: string): string | null {
+  return version ? `${apiBase}/api/brands/${brandId}/logo?v=${encodeURIComponent(version)}` : null;
 }
 
 /** Job title on the group's level ladder (Trainee = 1 ... CEO = 10). */

@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from './portal.config';
-import { Brand, Designation, Employee, EmployeeRequest } from './portal.models';
+import { BankDetails, Brand, BrandBody, Designation, Employee, EmployeeRequest } from './portal.models';
 
 /** Employee and brand records (owners and admins; the backend applies brand limits). */
 @Injectable({ providedIn: 'root' })
@@ -32,6 +32,30 @@ export class StaffService {
 
   brands(): Observable<Brand[]> {
     return this.http.get<Brand[]>(`${API_BASE}/api/brands`);
+  }
+
+  /** An employee's PAN and salary account; employeeId empty = my own (read-only). */
+  bankDetails(employeeId?: number | null): Observable<BankDetails> {
+    return this.http.get<BankDetails>(employeeId ? `${API_BASE}/api/employees/${employeeId}/bank-details` : `${API_BASE}/api/auth/me/bank-details`);
+  }
+
+  saveBankDetails(employeeId: number, body: { pan: string; bankAccount: string; ifsc: string; upi: string }): Observable<BankDetails> {
+    return this.http.put<BankDetails>(`${API_BASE}/api/employees/${employeeId}/bank-details`, body);
+  }
+
+  /** Owners only. */
+  saveBrand(body: BrandBody, id?: number): Observable<Brand> {
+    return id ? this.http.put<Brand>(`${API_BASE}/api/brands/${id}`, body) : this.http.post<Brand>(`${API_BASE}/api/brands`, body);
+  }
+
+  uploadBrandLogo(id: number, file: File): Observable<Brand> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<Brand>(`${API_BASE}/api/brands/${id}/logo`, form);
+  }
+
+  deleteBrandLogo(id: number): Observable<Brand> {
+    return this.http.delete<Brand>(`${API_BASE}/api/brands/${id}/logo`);
   }
 
   /** Most junior first. */

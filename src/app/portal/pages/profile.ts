@@ -3,6 +3,7 @@ import { Component, computed, inject, OnInit } from '@angular/core';
 import { TagModule } from 'primeng/tag';
 import { AuthService } from '../auth.service';
 import { ReportingLine } from '../org-chart/reporting-line';
+import { BankDetailsCard } from './bank-details-card';
 import { PhotoEditor } from '../photo-editor';
 import { designationLabel, ROLE_LABELS } from '../portal.models';
 
@@ -12,7 +13,7 @@ import { designationLabel, ROLE_LABELS } from '../portal.models';
  */
 @Component({
   selector: 'app-profile',
-  imports: [PhotoEditor, DatePipe, TagModule, ReportingLine],
+  imports: [PhotoEditor, DatePipe, TagModule, ReportingLine, BankDetailsCard],
   template: `
     @if (auth.user(); as me) {
       <section class="p-card hero">
@@ -48,6 +49,8 @@ import { designationLabel, ROLE_LABELS } from '../portal.models';
         <h2>My reporting line</h2>
         <app-reporting-line />
       </section>
+
+      <app-bank-details-card />
     }
   `,
   styles: `

@@ -178,6 +178,8 @@
       <h2>Reporting line</h2>
       <app-reporting-line [employeeId]="e.id" />
     </section>
+
+    <app-bank-details-card [employeeId]="e.id" />
   }
 
   @if (!isNew() && canEdit() && !isSelf()) {

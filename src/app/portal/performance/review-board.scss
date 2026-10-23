@@ -23,6 +23,7 @@
 :host ::ng-deep .tabs .p-tab { gap: 8px; }
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .bar h3, .bar h4 { margin: 0; }
+.ach-note { margin: 0 0 14px; font-size: .88rem; }
 .bar.sub { margin: 20px 0 10px; min-height: 36px; padding-top: 12px; border-top: 1px solid var(--line); }
 .bar.sub h4 { font-size: .95rem; }
 

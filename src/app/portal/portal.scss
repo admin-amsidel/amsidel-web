@@ -56,6 +56,8 @@ p-progressbar.tone-done .p-progressbar-value { background: var(--progress-done);
 }
 .p-datatable .p-datatable-tbody > tr.row-link { cursor: pointer; }
 .p-toast { max-width: calc(100vw - 32px); }
+/* a calendar opened from inside a dialog sits above the dialog */
+.over-dialog { z-index: 1200 !important; }
 
 /* ---- page layout ---- */
 .p-main { max-width: 1240px; margin: 0 auto; padding: 32px 20px 64px; }

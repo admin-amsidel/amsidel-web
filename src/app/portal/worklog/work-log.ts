@@ -13,6 +13,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
+import { ExportExcel } from '../export-excel';
 import { AuthService } from '../auth.service';
 import { TeamMember } from '../leave/leave.models';
 import { apiProblem, ROLE_LABELS } from '../portal.models';
@@ -31,7 +32,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 @Component({
   selector: 'app-work-log',
   imports: [
-    FormsModule, RouterLink, SlicePipe, ButtonModule, DialogModule, InputNumberModule, InputTextModule, MessageModule,
+    ExportExcel, FormsModule, RouterLink, SlicePipe, ButtonModule, DialogModule, InputNumberModule, InputTextModule, MessageModule,
     SelectModule, TableModule, TagModule, TextareaModule, TooltipModule,
   ],
   templateUrl: './work-log.html',

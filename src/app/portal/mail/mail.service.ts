@@ -23,8 +23,20 @@ export interface MailBody {
   bcc: string[];
   /** Ids from upload(). */
   attachments: string[];
-  /** Pictures inside the message, in order: [[image 1]] is the first. */
-  images: { fileId: string; caption: string }[];
+  /** Pictures inside the message, in order: [[image 1]] is the first; where and how big. */
+  images: { fileId: string; caption: string; align: PictureAlign; size: PictureSize }[];
+  /** The sign-off (**bold** allowed); empty = the saved or standard one. */
+  signature: string;
+}
+
+export type PictureAlign = 'LEFT' | 'CENTER' | 'RIGHT';
+export type PictureSize = 'SMALL' | 'MEDIUM' | 'LARGE';
+
+/** My sign-off for staff mail; saved = false when it is the standard one. */
+export interface MailSignature {
+  signature: string;
+  saved: boolean;
+  standard: string;
 }
 
 /** A file uploaded for the mail (kept a few hours on the server). inline: can go inside the message. */
@@ -54,6 +66,14 @@ export class MailService {
 
   setup(): Observable<MailSetup> {
     return this.http.get<MailSetup>(`${API_BASE}/api/mail/setup`);
+  }
+
+  signature(): Observable<MailSignature> {
+    return this.http.get<MailSignature>(`${API_BASE}/api/mail/signature`);
+  }
+
+  saveSignature(signature: string): Observable<MailSignature> {
+    return this.http.put<MailSignature>(`${API_BASE}/api/mail/signature`, { signature });
   }
 
   send(body: MailBody): Observable<MailResult> {

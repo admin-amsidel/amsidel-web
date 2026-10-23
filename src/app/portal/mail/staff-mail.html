@@ -78,10 +78,18 @@
           <p-button label="Insert name" icon="pi pi-user-plus" [text]="true" size="small" (onClick)="insertName(bodyEl, 'body')" />
         </span>
       </div>
+      <div class="fmt" role="toolbar" aria-label="Text style">
+        <button type="button" class="fmt__btn fmt__btn--b" title="Bold the selected words (**words**)" aria-label="Bold"
+                (mousedown)="$event.preventDefault()" (click)="bold(bodyEl)">B</button>
+        <button type="button" class="fmt__btn" title="Make this line a heading (# at the start)" aria-label="Heading"
+                (mousedown)="$event.preventDefault()" (click)="heading(bodyEl)"><span class="fmt__h">H</span> Heading</button>
+        <span class="fmt__tip">Select words, then <b>B</b> for bold; <b>Heading</b> for the line the cursor is on.</span>
+      </div>
       <textarea #bodyEl pTextarea id="m-body" rows="9" maxlength="20000" [autoResize]="true"
                 placeholder="What everyone should know: a new process, a new client, a reminder…"
                 [ngModel]="body()" (ngModelChange)="body.set($event)"></textarea>
-      <small class="hint">{{ '{name}' }} becomes each person's name. "Regards" and your name are added at the end.
+      <small class="hint">{{ '{name}' }} becomes each person's name. **words** show in bold and a line starting with # is a
+        heading. Your signature goes at the end.
         @if (pictures().length) { Each picture shows where its [[image n]] is in the text. }</small>
 
       @if (pictures().length) {
@@ -103,6 +111,16 @@
                 <input pInputText maxlength="300" [attr.aria-label]="'Description under picture ' + (i + 1)"
                        placeholder="Description shown under the picture (optional)"
                        [ngModel]="p.caption" (ngModelChange)="setCaption(p, $event)" />
+                <div class="pic__layout">
+                  <p-selectbutton [options]="alignOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
+                                  [ariaLabel]="'Position of picture ' + (i + 1)" size="small"
+                                  [ngModel]="p.align" (ngModelChange)="setLayout(p, { align: $event })">
+                    <ng-template #item let-o><i [class]="o.icon" [attr.title]="o.label" aria-hidden="true"></i><span class="sr-only">{{ o.label }}</span></ng-template>
+                  </p-selectbutton>
+                  <p-selectbutton [options]="sizeOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
+                                  [ariaLabel]="'Size of picture ' + (i + 1)" size="small"
+                                  [ngModel]="p.width" (ngModelChange)="setLayout(p, { width: $event })" />
+                </div>
               </div>
               <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" size="small"
                         [ariaLabel]="'Remove picture ' + (i + 1)" (onClick)="removePicture(p)" />
@@ -110,6 +128,23 @@
           }
         </ul>
       }
+    </div>
+
+    <div class="pf sig">
+      <div class="lbl-row">
+        <label for="m-sig">Signature</label>
+        <span class="lbl-actions">
+          @if (signature() !== signatureStandard()) {
+            <p-button label="Use standard" icon="pi pi-replay" [text]="true" size="small" (onClick)="signature.set(signatureStandard())" />
+          }
+          <p-button [label]="signatureSaved() === signature() ? 'Saved as mine' : 'Save as my signature'"
+                    [icon]="signatureSaved() === signature() ? 'pi pi-check' : 'pi pi-save'" [text]="true" size="small"
+                    [disabled]="signatureSaved() === signature()" [loading]="signatureBusy()" (onClick)="saveSignature()" />
+        </span>
+      </div>
+      <textarea pTextarea id="m-sig" rows="3" maxlength="1000" [autoResize]="true" placeholder="Regards,&#10;**Your name**&#10;Designation, brand, phone"
+                [ngModel]="signature()" (ngModelChange)="signature.set($event)"></textarea>
+      <small class="hint">Goes at the end of every mail and WhatsApp message. **words** are bold. Saved signatures come back next time.</small>
     </div>
 
     @if (byEmail()) {
@@ -203,15 +238,15 @@
         <p>Dear {{ preview().greeting }},</p>
         @for (part of previewParts(); track $index) {
           @if (part.kind === 'text') {
-            <p class="txt">{{ part.text }}</p>
+            <div class="txt" [innerHTML]="rich(part.text)"></div>
           } @else if (byEmail()) {
-            <figure class="pv-pic">
+            <figure class="pv-pic" [class]="'pv-pic pv-pic--' + part.pic.align.toLowerCase() + ' pv-pic--' + part.pic.width.toLowerCase()">
               <img [src]="part.pic.thumb" [alt]="part.pic.caption || 'Picture'" />
               @if (part.pic.caption.trim()) { <figcaption>{{ part.pic.caption }}</figcaption> }
             </figure>
           }
         }
-        <p>Regards,<br /><b>{{ preview().signedBy }}</b></p>
+        <div class="pv-sig" [innerHTML]="rich(preview().signature)"></div>
       </div>
       @if (byEmail() && attachments().length) {
         <div class="preview__files">
@@ -225,7 +260,8 @@
       <p class="wa-hint">
         <i class="pi pi-info-circle" aria-hidden="true"></i>
         WhatsApp goes from your own WhatsApp: after you press the button, each person's message opens in WhatsApp
-        ready to send, one tap each. The subject comes first, in bold.
+        ready to send, one tap each. The subject and headings come in bold. WhatsApp links carry text only, so pictures
+        and attachments go by email.
       </p>
     }
 

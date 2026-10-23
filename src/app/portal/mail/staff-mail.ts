@@ -14,11 +14,10 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
-import { AuthService } from '../auth.service';
 import { Avatar } from '../avatar';
 import { apiProblem, Brand, Employee } from '../portal.models';
 import { StaffService } from '../staff.service';
-import { MailBody, MailService, MailSetup } from './mail.service';
+import { MailBody, MailService, MailSetup, PictureAlign, PictureSize } from './mail.service';
 
 /** Email delivery; 'off' when this send is WhatsApp only. */
 type Delivery = 'queued' | 'sending' | 'sent' | 'failed' | 'off';
@@ -61,12 +60,18 @@ interface Picture extends Upload {
   /** Shown in the preview (a local object URL). */
   thumb: string;
   caption: string;
+  align: PictureAlign;
+  /** How big in the mail. */
+  width: PictureSize;
 }
 
 /** One piece of the preview: text, or a picture where [[image n]] is. */
 type PreviewPart = { kind: 'text'; text: string } | { kind: 'pic'; pic: Picture };
 
 const NAME = '{name}';
+/** **bold** in a line; a "# " line is a heading (the server reads the text the same way). */
+const BOLD = /\*\*(?=\S)(.+?)(?<=\S)\*\*/g;
+const HEADING = /^#{1,3}\s+(.+)$/;
 const MARKER = /\[\[image (\d{1,2})]]/g;
 const MB = 1024 * 1024;
 /** Same limits as the server (MailFileStore). */
@@ -101,7 +106,6 @@ const PARALLEL = 3;
 export class StaffMail implements OnInit {
   private readonly mail = inject(MailService);
   private readonly staff = inject(StaffService);
-  private readonly auth = inject(AuthService);
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
 
@@ -165,6 +169,22 @@ export class StaffMail implements OnInit {
     { label: 'Same for all', value: 'CUSTOM' },
   ];
   protected readonly formError = signal('');
+  /** The sign-off at the end; what is saved on the server, and the standard one. */
+  protected readonly signature = signal('');
+  protected readonly signatureSaved = signal<string | null>(null);
+  protected readonly signatureStandard = signal('');
+  protected readonly signatureBusy = signal(false);
+  protected readonly alignOptions = [
+    { label: 'Left', value: 'LEFT', icon: 'pi pi-align-left' },
+    { label: 'Centre', value: 'CENTER', icon: 'pi pi-align-center' },
+    { label: 'Right', value: 'RIGHT', icon: 'pi pi-align-right' },
+  ];
+  protected readonly sizeOptions = [
+    { label: 'Small', value: 'SMALL' },
+    { label: 'Medium', value: 'MEDIUM' },
+    { label: 'Full width', value: 'LARGE' },
+  ];
+  protected readonly rich = richHtml;
 
   // copies and files (email only)
   protected readonly showCopies = signal(false);
@@ -193,7 +213,7 @@ export class StaffMail implements OnInit {
       subject: fill(this.subject().trim()) || '(no subject)',
       greeting,
       body: fill(this.body().trim()) || 'Your message…',
-      signedBy: this.auth.user()?.name ?? '',
+      signature: fill(this.signature().trim()),
     };
   });
   /** The message with each [[image n]] shown as its picture; pictures not placed come after the text. */
@@ -264,6 +284,7 @@ export class StaffMail implements OnInit {
 
   ngOnInit(): void {
     this.mail.setup().subscribe({ next: (s) => this.setup.set(s), error: () => undefined });
+    this.mail.signature().subscribe({ next: (s) => this.fillSignature(s), error: () => undefined });
     this.staff.brands().subscribe({ next: (b) => this.brands.set(b), error: () => undefined });
     this.staff.employees().subscribe({
       next: (list) => {
@@ -288,6 +309,76 @@ export class StaffMail implements OnInit {
       field.focus();
       field.setSelectionRange(start + NAME.length, start + NAME.length);
     });
+  }
+
+  /** Wraps the selected words in **…** (or takes the marks off again); with nothing selected, adds **bold text**. */
+  protected bold(field: HTMLTextAreaElement): void {
+    const value = this.body();
+    const start = field.selectionStart ?? value.length;
+    const end = field.selectionEnd ?? value.length;
+    const picked = value.slice(start, end);
+    const wrapped = value.slice(Math.max(0, start - 2), start) === '**' && value.slice(end, end + 2) === '**';
+    let next: string;
+    let from: number;
+    let to: number;
+    if (wrapped) {
+      next = value.slice(0, start - 2) + picked + value.slice(end + 2);
+      from = start - 2;
+      to = end - 2;
+    } else {
+      // leave spaces around the selection outside the stars
+      const word = picked.trim() || 'bold text';
+      const lead = picked.length - picked.trimStart().length;
+      const s = start + (picked.trim() ? lead : 0);
+      const e = picked.trim() ? s + word.length : end;
+      next = value.slice(0, s) + '**' + word + '**' + value.slice(e);
+      from = s + 2;
+      to = from + word.length;
+    }
+    this.body.set(next);
+    queueMicrotask(() => {
+      field.focus();
+      field.setSelectionRange(from, to);
+    });
+  }
+
+  /** Makes the line the cursor is on a heading ("# " at its start), or a plain line again. */
+  protected heading(field: HTMLTextAreaElement): void {
+    const value = this.body();
+    const pos = field.selectionStart ?? value.length;
+    const lineStart = value.lastIndexOf('\n', pos - 1) + 1;
+    const lineEnd = value.indexOf('\n', pos) === -1 ? value.length : value.indexOf('\n', pos);
+    const line = value.slice(lineStart, lineEnd);
+    const mark = /^#{1,3}\s+/.exec(line);
+    const nextLine = mark ? line.slice(mark[0].length) : '# ' + (line.trim() || 'Heading');
+    this.body.set(value.slice(0, lineStart) + nextLine + value.slice(lineEnd));
+    queueMicrotask(() => {
+      field.focus();
+      const cursor = lineStart + nextLine.length;
+      field.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  protected saveSignature(): void {
+    const text = this.signature().trim();
+    this.signatureBusy.set(true);
+    this.mail.saveSignature(text).subscribe({
+      next: (s) => {
+        this.signatureBusy.set(false);
+        this.fillSignature(s);
+        this.toast.add({ severity: 'success', summary: s.saved ? 'Signature saved' : 'Back to the standard signature' });
+      },
+      error: (err) => {
+        this.signatureBusy.set(false);
+        this.toast.add({ severity: 'error', summary: 'Signature not saved', detail: apiProblem(err).message });
+      },
+    });
+  }
+
+  private fillSignature(s: { signature: string; standard: string }): void {
+    this.signature.set(s.signature);
+    this.signatureSaved.set(s.signature);
+    this.signatureStandard.set(s.standard);
   }
 
   /** Uploads the chosen files as attachments. */
@@ -331,7 +422,7 @@ export class StaffMail implements OnInit {
     }
     const p: Picture = {
       key: this.nextKey++, name: file.name, size: file.size, state: 'uploading', error: '', fileId: null,
-      thumb: URL.createObjectURL(file), caption: '',
+      thumb: URL.createObjectURL(file), caption: '', align: 'CENTER', width: 'LARGE',
     };
     this.pictures.update((list) => [...list, p]);
     const marker = `[[image ${this.pictures().length}]]`;
@@ -364,6 +455,11 @@ export class StaffMail implements OnInit {
 
   protected setCaption(p: Picture, caption: string): void {
     this.pictures.update((list) => list.map((x) => (x.key === p.key ? { ...x, caption } : x)));
+  }
+
+  /** Where the picture sits in the mail (left, centre, right) and how big it is. */
+  protected setLayout(p: Picture, change: Partial<Pick<Picture, 'align' | 'width'>>): void {
+    this.pictures.update((list) => list.map((x) => (x.key === p.key ? { ...x, ...change } : x)));
   }
 
   protected size(bytes: number): string {
@@ -414,6 +510,7 @@ export class StaffMail implements OnInit {
       }
     }
     if (this.greetingMode() === 'CUSTOM' && !this.greetingText().trim()) return this.formError.set('Write the words after "Dear", e.g. All.');
+    if (!this.signature().trim()) return this.formError.set('Write a signature, or press "Use standard".');
     if (!people.length) return this.formError.set(this.mode() === 'PICK' ? 'Choose at least one person.' : 'Nobody to send to.');
     const channel = this.channel();
     const byEmail = this.byEmail();
@@ -435,15 +532,14 @@ export class StaffMail implements OnInit {
       cc: this.cc(),
       bcc: this.bcc(),
       attachments: this.attachments().map((u) => u.fileId!),
-      images: this.pictures().map((p) => ({ fileId: p.fileId!, caption: p.caption.trim() })),
+      images: this.pictures().map((p) => ({ fileId: p.fileId!, caption: p.caption.trim(), align: p.align, size: p.width })),
+      signature: this.signature().trim(),
     };
     const begin = () => {
       this.draft = draft;
       this.sentVia.set(channel);
       this.show.set('ALL');
-      const me = this.auth.user();
-      const sign = { by: me?.name ?? '', company: me?.brandName ?? 'Amsidel Group' };
-      this.rows.set(people.map((e) => toRow(e, byEmail, byWhatsApp, draft, sign)));
+      this.rows.set(people.map((e) => toRow(e, byEmail, byWhatsApp, draft)));
       if (byEmail) this.start(this.rows().filter((r) => r.status === 'queued'));
     };
     // WhatsApp alone sends nothing by itself (each message is opened with a tap), so it needs no confirmation
@@ -544,7 +640,7 @@ export class StaffMail implements OnInit {
   }
 }
 
-function toRow(e: Employee, byEmail: boolean, byWhatsApp: boolean, draft: Draft, sign: { by: string; company: string }): Row {
+function toRow(e: Employee, byEmail: boolean, byWhatsApp: boolean, draft: Draft): Row {
   const email = e.companyEmail?.trim() || null;
   const wa = whatsappNumber(e.phone);
   return {
@@ -554,17 +650,46 @@ function toRow(e: Employee, byEmail: boolean, byWhatsApp: boolean, draft: Draft,
     at: null,
     wa,
     waState: !byWhatsApp ? 'off' : wa ? 'ready' : 'nophone',
-    waLink: byWhatsApp && wa ? `https://wa.me/${wa}?text=${encodeURIComponent(whatsappText(e.name, draft, sign))}` : null,
+    waLink: byWhatsApp && wa ? `https://wa.me/${wa}?text=${encodeURIComponent(whatsappText(e.name, draft))}` : null,
   };
 }
 
-/** The same message as the mail, as WhatsApp text: the subject in bold on top, then the letter. */
-function whatsappText(name: string, draft: Draft, sign: { by: string; company: string }): string {
+/** The same message as the mail, as WhatsApp text: the subject in bold on top, then the letter and the signature. */
+function whatsappText(name: string, draft: Draft): string {
   const fill = (s: string) => s.split(NAME).join(name);
   const greeting = draft.greeting ? fill(draft.greeting) : name;
   // pictures and attachments go by email only
   const body = fill(draft.body).replace(/\[\[image \d{1,2}]]\n?/g, '').trim();
-  return `*${fill(draft.subject)}*\n\nDear ${greeting},\n\n${body}\n\nRegards,\n${sign.by}\n${sign.company}`;
+  return `*${fill(draft.subject)}*\n\nDear ${greeting},\n\n${whatsappMarks(body)}\n\n${whatsappMarks(fill(draft.signature))}`;
+}
+
+/** WhatsApp's own bold: **words** -> *words*, a "# " heading -> a bold line. */
+function whatsappMarks(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => {
+      const h = HEADING.exec(line);
+      return h ? `*${h[1].replace(/\*\*/g, '').trim()}*` : line.replace(BOLD, '*$1*');
+    })
+    .join('\n');
+}
+
+/** The text as the mail shows it, for the preview: escaped, **bold** in bold, "# " lines as headings. */
+function richHtml(text: string): string {
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  let out = '';
+  let block = true;
+  for (const line of text.split('\n')) {
+    const h = HEADING.exec(line);
+    if (h) {
+      out += `<div class="rt-h">${esc(h[1]).replace(BOLD, '$1')}</div>`;
+      block = true;
+      continue;
+    }
+    out += (block ? '' : '<br>') + esc(line).replace(BOLD, '<b>$1</b>');
+    block = false;
+  }
+  return out;
 }
 
 /** "a@x.com, b@x.com; c@x.com" -> each address, trimmed, without repeats. */

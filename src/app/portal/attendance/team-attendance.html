@@ -4,6 +4,8 @@
     <p>Who checked in, where they work from, and every field visit. Open a row to see each entry.</p>
   </div>
   <div class="head-actions">
+    <app-export-excel kind="attendance" [people]="team()" [teamFirst]="true"
+                      [personPreset]="view() === 'PERSON' ? personId() : null" />
     <p-selectbutton [options]="viewOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
                     [ngModel]="view()" (ngModelChange)="view.set($event)">
       <ng-template #item let-o><i [class]="o.icon" aria-hidden="true"></i><span>{{ o.label }}</span></ng-template>

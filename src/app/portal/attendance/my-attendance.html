@@ -3,6 +3,9 @@
     <h1>Attendance</h1>
     <p>Check in when you start work, wherever you are. Field visits are checked in and closed one by one.</p>
   </div>
+  <div class="head-actions">
+    <app-export-excel kind="attendance" />
+  </div>
 </div>
 
 @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }

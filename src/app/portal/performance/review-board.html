@@ -194,11 +194,13 @@
 
     <!-- ================= achievements ================= -->
     <p-tabpanel value="achievements">
-      @if (self() || manager()) {
+      @if (manager()) {
         <div class="bar">
-          <span class="muted">{{ manager() ? 'Recognise good work: it shows on their review.' : 'Add your own; achievements your manager gives show as issued.' }}</span>
-          <p-button [label]="manager() ? 'Give achievement' : 'Add achievement'" icon="pi pi-trophy" size="small" (onClick)="newAchievement()" />
+          <span class="muted">Recognise good work: it shows on their review.</span>
+          <p-button label="Give achievement" icon="pi pi-trophy" size="small" (onClick)="newAchievement()" />
         </div>
+      } @else if (self()) {
+        <p class="muted ach-note">Achievements are given by your manager and show here.</p>
       }
       <div class="achievements">
         @for (a of r.achievements; track a.id) {

@@ -9,11 +9,12 @@
       </p>
     }
   </div>
-  @if (canRules()) {
-    <div class="head-actions">
+  <div class="head-actions">
+    <app-export-excel kind="worklog" [people]="team()" [personPreset]="viewing()" />
+    @if (canRules()) {
       <p-button label="Work hour rules" icon="pi pi-sliders-h" [outlined]="true" size="small" routerLink="/portal/worklog/rules" />
-    </div>
-  }
+    }
+  </div>
 </div>
 
 @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }

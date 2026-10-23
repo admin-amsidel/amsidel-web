@@ -17,6 +17,7 @@ import { AuthService } from '../auth.service';
 import { Avatar } from '../avatar';
 import { ReportingLine } from '../org-chart/reporting-line';
 import { PhotoEditor } from '../photo-editor';
+import { BankDetailsCard } from './bank-details-card';
 import { pinChecks, pinValidator } from '../pin-policy';
 import {
   accountStatus,
@@ -59,7 +60,7 @@ function staffNeedsBrand(g: AbstractControl): ValidationErrors | null {
   selector: 'app-employee-form',
   imports: [
     ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker,
-    InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule,
+    InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, BankDetailsCard,
   ],
   templateUrl: './employee-form.html',
   styles: `

@@ -9,6 +9,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
+import { ExportExcel } from '../export-excel';
 import { apiProblem } from '../portal.models';
 import { AttendanceEntries } from './attendance-entries';
 import {
@@ -26,7 +27,7 @@ import { captureFrame, currentFix, deviceInfo, locationPermission, startCamera, 
 @Component({
   selector: 'app-my-attendance',
   imports: [
-    FormsModule, DatePipe, AttendanceEntries, ButtonModule, InputTextModule, MessageModule, SelectButtonModule, TableModule,
+    ExportExcel, FormsModule, DatePipe, AttendanceEntries, ButtonModule, InputTextModule, MessageModule, SelectButtonModule, TableModule,
     TagModule, TextareaModule,
   ],
   templateUrl: './my-attendance.html',
