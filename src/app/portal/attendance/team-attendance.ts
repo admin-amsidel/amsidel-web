@@ -3,6 +3,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TouchDatePicker } from '../touch-datepicker';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
@@ -27,7 +28,7 @@ type Show = 'ALL' | 'IN' | 'OUT' | 'FLAGGED';
 @Component({
   selector: 'app-team-attendance',
   imports: [
-    FormsModule, DatePipe, Avatar, AttendanceEntries, AttendancePhoto, ButtonModule, DatePickerModule, MessageModule, SelectModule,
+    FormsModule, DatePipe, Avatar, AttendanceEntries, AttendancePhoto, ButtonModule, DatePickerModule, TouchDatePicker, MessageModule, SelectModule,
     SelectButtonModule, TableModule, TagModule,
   ],
   templateUrl: './team-attendance.html',

@@ -7,6 +7,7 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TouchDatePicker } from '../touch-datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
@@ -57,7 +58,7 @@ function staffNeedsBrand(g: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-employee-form',
   imports: [
-    ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule,
+    ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker,
     InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule,
   ],
   templateUrl: './employee-form.html',

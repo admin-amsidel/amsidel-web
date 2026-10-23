@@ -28,6 +28,30 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-h) + 12px);
+  /* iPhone Safari enlarges text in some blocks by itself (e.g. after turning the phone), which pushes boxes out of line */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* iPhone/iPad Safari zooms the whole page into any field with text under 16px and does not zoom back out, so the
+   layout looks broken after picking a date or a leave type. Keep every typing field at 16px or more there. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea,
+  .p-inputtext,
+  .p-select-label,
+  .p-datepicker-input {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* phones held sideways: keep content clear of the notch */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
 }
 
 body {

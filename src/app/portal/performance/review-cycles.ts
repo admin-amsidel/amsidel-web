@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TouchDatePicker } from '../touch-datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
@@ -19,7 +20,7 @@ import { PerfService } from './perf.service';
 /** Review cycles (date to date, one brand or all); closing one makes its reviews read-only. */
 @Component({
   selector: 'app-review-cycles',
-  imports: [FormsModule, ButtonModule, DatePickerModule, DialogModule, InputTextModule, MessageModule, SelectModule, TableModule, TagModule, ToggleSwitchModule],
+  imports: [FormsModule, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputTextModule, MessageModule, SelectModule, TableModule, TagModule, ToggleSwitchModule],
   template: `
     <div class="p-head">
       <div>

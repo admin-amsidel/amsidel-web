@@ -33,7 +33,8 @@ import { forestToTree } from './org-tree-build';
                       (open)="openPerson($event)" />
       }
     </section>
-    <p class="note">People without a "Reports to" sit at the top. Fold a branch with the arrow under a box.</p>
+    <p class="note">People without a "Reports to" sit at the top. Fold a branch with the arrow under a box. Zoom with − / +,
+      Fit, or by pinching on a phone.</p>
   `,
   styles: `.note { margin: 14px 4px 0; font-size: .84rem; color: var(--muted); }`,
 })

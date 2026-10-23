@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TouchDatePicker } from '../touch-datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
@@ -17,7 +18,7 @@ import { LeaveService } from './leave.service';
  */
 @Component({
   selector: 'app-holiday-editor',
-  imports: [FormsModule, ButtonModule, DatePickerModule, InputTextModule, MessageModule, SelectModule],
+  imports: [FormsModule, ButtonModule, DatePickerModule, TouchDatePicker, InputTextModule, MessageModule, SelectModule],
   template: `
     <section class="p-card">
       <div class="head-row">

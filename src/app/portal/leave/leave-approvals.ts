@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TouchDatePicker } from '../touch-datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -34,7 +35,7 @@ import { LeaveService } from './leave.service';
 @Component({
   selector: 'app-leave-approvals',
   imports: [
-    FormsModule, ButtonModule, DatePickerModule, DialogModule, InputNumberModule, InputTextModule, MessageModule,
+    FormsModule, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputNumberModule, InputTextModule, MessageModule,
     SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
   ],
   templateUrl: './leave-approvals.html',

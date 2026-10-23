@@ -5,6 +5,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TouchDatePicker } from '../touch-datepicker';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
@@ -31,7 +32,7 @@ import { LeaveService } from './leave.service';
 @Component({
   selector: 'app-my-leave',
   imports: [
-    FormsModule, ButtonModule, CheckboxModule, DatePickerModule, MessageModule, SelectModule, TableModule, TagModule,
+    FormsModule, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker, MessageModule, SelectModule, TableModule, TagModule,
     TextareaModule,
   ],
   templateUrl: './my-leave.html',

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TouchDatePicker } from '../touch-datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -38,7 +39,7 @@ interface TaskDraft {
 @Component({
   selector: 'app-review-board',
   imports: [
-    FormsModule, Avatar, Stars, ButtonModule, DatePickerModule, DialogModule, InputNumberModule, InputTextModule, MessageModule,
+    FormsModule, Avatar, Stars, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputNumberModule, InputTextModule, MessageModule,
     ProgressBarModule, SelectModule, StarInput, SliderModule, TabsModule, TagModule, TextareaModule,
   ],
   templateUrl: './review-board.html',

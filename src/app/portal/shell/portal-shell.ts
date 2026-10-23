@@ -247,6 +247,14 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
       .p-me__text, .p-me__caret { display: none; }
       .p-mark span { font-size: .92rem; letter-spacing: .1em; }
     }
+    /* small phones (iPhone SE, Galaxy S9+): keep "Staff Portal" clear of the photo */
+    @media (max-width: 380px) {
+      .p-mark { gap: 8px; }
+      .p-mark span { font-size: .8rem; letter-spacing: .06em; }
+    }
+    @media (max-width: 340px) {
+      .p-mark span { display: none; }
+    }
   `,
 })
 export class PortalShell {
