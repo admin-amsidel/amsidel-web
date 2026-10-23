@@ -86,7 +86,7 @@ import { employedFor, paymentLabel, PayKind, Payslip, PayslipLine, rupees, rupee
           <div class="net"><span>Net pay</span><b>{{ money(net()) }}</b></div>
         </div>
       </section>
-      <p class="foot">Net pay = gross earnings − deductions + reimbursements. System-generated statement from the Amsidel Staff Portal; no signature is needed.</p>
+      <p class="foot">Net pay = gross earnings − deductions + reimbursements. System-generated statement from the Amsidel Company Portal; no signature is needed.</p>
     </article>
   `,
   styles: `

@@ -36,6 +36,11 @@ interface NavGroup {
 type NavEntry = NavLink | NavGroup;
 
 const SIDEBAR_KEY = 'amsidel.portal.sidebar';
+const PRODUCTS = '/portal/products';
+
+function isProduct(path: string): boolean {
+  return path === PRODUCTS || path.startsWith(PRODUCTS + '/');
+}
 
 /**
  * Frame around every portal page: a top bar (brand, account menu) and a left sidebar with menus and
@@ -62,10 +67,18 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
                   [pTooltip]="collapsed() ? 'Expand menu' : 'Shrink menu'" tooltipPosition="bottom"
                   (onClick)="toggleCollapsed()" />
       }
-      <a class="p-mark" routerLink="/portal">
+      <a class="p-mark" routerLink="/portal/home">
         <img src="brand/amsidel-mark.png" alt="" width="60" height="28" />
-        <span>Staff Portal</span>
+        <span>Company Portal</span>
       </a>
+      @if (productStart(); as start) {
+        <nav class="p-switch" aria-label="Portal section">
+          <a routerLink="/portal/profile" [class.on]="section() === 'EMPLOYEE'" [attr.aria-current]="section() === 'EMPLOYEE' ? 'page' : null">
+            <i class="pi pi-users" aria-hidden="true"></i><span>Employee portal</span></a>
+          <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" [attr.aria-current]="section() === 'PRODUCT' ? 'page' : null">
+            <i class="pi pi-box" aria-hidden="true"></i><span>Product portal</span></a>
+        </nav>
+      }
       @if (auth.user(); as me) {
         <!-- photo and name open the account menu: My profile, Change PIN, Sign out -->
         <button type="button" class="p-me" aria-haspopup="menu" [attr.aria-label]="'Account menu for ' + me.name"
@@ -105,7 +118,7 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
     </div>
 
     @if (auth.user(); as me) {
-      <p-drawer [visible]="drawerOpen()" (visibleChange)="drawerOpen.set($event)" position="left" styleClass="p-menu-drawer"
+      <p-drawer appendTo="body" [visible]="drawerOpen()" (visibleChange)="drawerOpen.set($event)" position="left" styleClass="p-menu-drawer"
                 [modal]="true" [blockScroll]="true">
         <ng-template #header>
           <div class="dr-me">
@@ -130,6 +143,17 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
 
     <!-- the menu: links, and groups with sub-menus; with icons only, a group opens its pages in a pop-up -->
     <ng-template #tree let-mini="mini" let-drawer="drawer">
+      @if (drawer && productStart(); as start) {
+        <div class="dr-switch" role="group" aria-label="Portal section">
+          <a routerLink="/portal/profile" [class.on]="section() === 'EMPLOYEE'" (click)="drawerOpen.set(false)">
+            <i class="pi pi-users" aria-hidden="true"></i> Employee</a>
+          <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" (click)="drawerOpen.set(false)">
+            <i class="pi pi-box" aria-hidden="true"></i> Products</a>
+        </div>
+      }
+      @if (!mini && productStart()) {
+        <p class="nav__section">{{ section() === 'PRODUCT' ? 'Product portal' : 'Employee portal' }}</p>
+      }
       <nav class="nav" [class.nav--mini]="mini">
         @for (entry of nav(); track entry.label) {
           @if (entry.kind === 'link') {
@@ -198,6 +222,21 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
     .p-top .p-burger:hover, .p-top .p-collapse:hover { background: var(--accent-soft); color: var(--brass-dark); }
     .p-top .p-burger { display: none; }
     .p-mark { display: flex; align-items: center; gap: 12px; color: var(--pine); text-decoration: none; margin-right: auto; padding-left: 4px; }
+    .p-mark:has(+ .p-switch) { margin-right: 0; }
+    /* Employee portal | Product portal */
+    .p-switch { display: flex; gap: 4px; margin: 0 auto 0 22px; padding: 3px; border-radius: 10px; background: var(--accent-softer); border: 1px solid var(--line); }
+    .p-switch a { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 8px; color: var(--muted);
+      text-decoration: none; font: 600 .82rem/1 var(--body); white-space: nowrap; }
+    .p-switch a:hover { color: var(--brass-dark); }
+    .p-switch a.on { background: #fff; color: var(--brass-dark); box-shadow: 0 1px 4px rgba(23,59,99,.12); }
+    .p-switch a:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+    .p-switch i { font-size: .85rem; }
+    .nav__section { margin: 0 0 8px; padding: 0 12px; font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .dr-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; margin-bottom: 14px; border-radius: 10px;
+      background: var(--accent-softer); border: 1px solid var(--line); }
+    .dr-switch a { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 6px; border-radius: 8px;
+      color: var(--muted); text-decoration: none; font-weight: 600; font-size: .86rem; }
+    .dr-switch a.on { background: #fff; color: var(--brass-dark); box-shadow: 0 1px 4px rgba(23,59,99,.12); }
     .p-mark img { height: 24px; width: auto; }
     .p-mark span { font-family: var(--body); font-weight: 600; font-size: .95rem; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
     .p-me {
@@ -263,8 +302,10 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
       .p-top { padding: 0 10px 0 6px; }
       .p-me__text, .p-me__caret { display: none; }
       .p-mark span { font-size: .92rem; letter-spacing: .1em; }
+      .p-switch { display: none; }
+      .p-mark:has(+ .p-switch) { margin-right: auto; }
     }
-    /* small phones (iPhone SE, Galaxy S9+): keep "Staff Portal" clear of the photo */
+    /* small phones (iPhone SE, Galaxy S9+): keep "Company Portal" clear of the photo */
     @media (max-width: 380px) {
       .p-mark { gap: 8px; }
       .p-mark span { font-size: .8rem; letter-spacing: .06em; }
@@ -310,20 +351,33 @@ export class PortalShell {
     this.auth.reloadAccess().subscribe();
   }
 
+  /** The product portal is everything under /portal/products; the rest is the employee portal. */
+  protected readonly section = computed<'EMPLOYEE' | 'PRODUCT'>(() =>
+    this.url().startsWith(PRODUCTS + '/') || this.url().split(/[?#]/)[0] === PRODUCTS ? 'PRODUCT' : 'EMPLOYEE',
+  );
+  /** Where the product portal opens (its first page I may see); null = none of its menus are mine. */
+  protected readonly productStart = computed(() => {
+    const paths = (this.auth.access()?.menus ?? []).flatMap((m) => [m.path, ...m.children.map((c) => c.path)]);
+    return paths.find((p): p is string => !!p && isProduct(p)) ?? null;
+  });
+
   /**
-   * The menus this person may open, from menu access (the menus table, in its order); a group with a single page
-   * shows as a plain link. My profile is always there.
+   * The menus this person may open in the current section, from menu access (the menus table, in its order); a
+   * group with a single page shows as a plain link. My profile is always there in the employee portal.
    */
   protected readonly nav = computed<NavEntry[]>(() => {
     const me = this.auth.user();
     if (!me) return [];
     if (me.mustChangePassword) return [link('Change PIN', 'pi-key', '/portal/change-pin')];
     if (this.auth.accessDenied()) return [];
-    const menus = this.auth.access()?.menus ?? [];
+    const products = this.section() === 'PRODUCT';
+    const menus = (this.auth.access()?.menus ?? []).filter(
+      (m) => [m.path, ...m.children.map((c) => c.path)].some((p) => !!p && isProduct(p)) === products,
+    );
     // a link is "exact" when another page lives below its address (My leave /portal/leave vs /portal/leave/approvals)
     const paths = menus.flatMap((m) => [m.path, ...m.children.map((c) => c.path)]).filter((x): x is string => !!x);
     const exact = (path: string) => paths.some((other) => other.startsWith(path + '/'));
-    const entries: NavEntry[] = [link('My profile', 'pi-user', '/portal/profile')];
+    const entries: NavEntry[] = products ? [] : [link('My profile', 'pi-user', '/portal/profile')];
     for (const m of menus) {
       if (m.children.length) {
         const children = m.children.filter((c) => c.path).map((c) => link(c.name, c.icon ?? 'pi-circle', c.path!, exact(c.path!)));

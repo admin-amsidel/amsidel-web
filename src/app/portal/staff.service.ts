@@ -54,6 +54,21 @@ export class StaffService {
     return this.http.post<Brand>(`${API_BASE}/api/brands/${id}/logo`, form);
   }
 
+  /** The brand's UPI payment QR for invoices (PNG or JPEG). */
+  uploadBrandUpiQr(id: number, file: File): Observable<Brand> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<Brand>(`${API_BASE}/api/brands/${id}/upi-qr`, form);
+  }
+
+  deleteBrandUpiQr(id: number): Observable<Brand> {
+    return this.http.delete<Brand>(`${API_BASE}/api/brands/${id}/upi-qr`);
+  }
+
+  brandUpiQr(id: number): Observable<Blob> {
+    return this.http.get(`${API_BASE}/api/brands/${id}/upi-qr`, { responseType: 'blob' });
+  }
+
   deleteBrandLogo(id: number): Observable<Brand> {
     return this.http.delete<Brand>(`${API_BASE}/api/brands/${id}/logo`);
   }

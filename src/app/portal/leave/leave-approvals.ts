@@ -83,7 +83,8 @@ export class LeaveApprovals implements OnInit {
   protected readonly grantError = signal('');
   protected readonly memberBalances = signal<LeaveBalance[]>([]);
   protected readonly isCompOff = computed(() => this.types().find((t) => t.id === this.grantType())?.code === 'CO');
-  protected readonly today = new Date();
+  /** The end of today, so a date picked today is still allowed as the latest. */
+  protected readonly today = new Date(new Date().setHours(23, 59, 59, 999));
 
   ngOnInit(): void {
     this.loadRequests();

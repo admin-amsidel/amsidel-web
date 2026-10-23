@@ -108,6 +108,9 @@ export interface Brand {
   upiId: string | null;
   /** When the logo was uploaded; null = no logo (logo at /api/brands/{id}/logo). */
   logoUpdatedAt: string | null;
+  /** The UPI payment QR printed on invoices: when uploaded (null = none) and the UPI ID it pays to (null = not read). */
+  upiQrUpdatedAt: string | null;
+  upiQrPayee: string | null;
 }
 
 /** An employee's PAN and salary account (payroll details, not in the employee record). */

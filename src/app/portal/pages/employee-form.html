@@ -74,9 +74,8 @@
         </div>
         <div class="pf">
           <label for="f-phone">Phone *</label>
-          <input pInputText id="f-phone" formControlName="phone" type="tel" inputmode="tel" placeholder="+91 98470 12345"
-                 [invalid]="!!errorFor('phone')" />
-          @if (errorFor('phone'); as m) { <small class="error">{{ m }}</small> }
+          <app-phone-input inputId="f-phone" label="phone" formControlName="phone" [required]="true" />
+          @if (submitted() && errorFor('phone'); as m) { <small class="error">{{ m }}</small> }
         </div>
         <div class="pf">
           <label for="f-dob">Date of birth</label>
@@ -96,9 +95,8 @@
         </div>
         <div class="pf">
           <label for="f-emergency">Emergency contact number</label>
-          <input pInputText id="f-emergency" formControlName="emergencyContact" type="tel" inputmode="tel"
-                 [invalid]="!!errorFor('emergencyContact')" />
-          @if (errorFor('emergencyContact'); as m) { <small class="error">{{ m }}</small> }
+          <app-phone-input inputId="f-emergency" label="emergency contact" formControlName="emergencyContact" />
+          @if (submitted() && errorFor('emergencyContact'); as m) { <small class="error">{{ m }}</small> }
         </div>
         <div class="pf span-all">
           <label for="f-address">Address</label>

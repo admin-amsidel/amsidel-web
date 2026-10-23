@@ -14,6 +14,7 @@ import { AuthService } from '../auth.service';
 import { Avatar } from '../avatar';
 import { accountStatus, apiProblem, Brand, Designation, designationLabel, Employee, ROLE_LABELS } from '../portal.models';
 import { StaffService } from '../staff.service';
+import { phoneMatches } from '../phone-input';
 
 type StatusFilter = 'active' | 'inactive' | 'all';
 
@@ -172,7 +173,7 @@ export class EmployeeList implements OnInit {
         (status === 'all' || e.active === (status === 'active')) &&
         (brandId == null || e.brandId === brandId) &&
         (designationId == null || e.designationId === designationId) &&
-        (!q || [e.name, e.userId, e.empNumber, e.phone ?? '', e.designationName ?? ''].some((v) => v.toLowerCase().includes(q))),
+        (!q || [e.name, e.userId, e.empNumber, e.designationName ?? ''].some((v) => v.toLowerCase().includes(q)) || phoneMatches(q, e.phone)),
     );
   });
 

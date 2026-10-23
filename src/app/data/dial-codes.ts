@@ -29,6 +29,10 @@ export const DIAL_CODES: DialCode[] = [
   { iso: 'IE', name: 'Ireland', dial: '353', min: 7, max: 9, example: '85 012 3456' },
   { iso: 'DE', name: 'Germany', dial: '49', min: 6, max: 11, example: '1512 3456789' },
   { iso: 'FR', name: 'France', dial: '33', min: 9, max: 9, example: '6 12 34 56 78' },
+  { iso: 'IT', name: 'Italy', dial: '39', min: 6, max: 11, example: '312 345 6789' },
+  { iso: 'ES', name: 'Spain', dial: '34', min: 9, max: 9, example: '612 34 56 78' },
+  { iso: 'NL', name: 'Netherlands', dial: '31', min: 9, max: 9, example: '6 12345678' },
+  { iso: 'CH', name: 'Switzerland', dial: '41', min: 9, max: 9, example: '78 123 45 67' },
   { iso: 'AU', name: 'Australia', dial: '61', min: 9, max: 9, example: '412 345 678' },
   { iso: 'NZ', name: 'New Zealand', dial: '64', min: 8, max: 10, example: '21 123 4567' },
   { iso: 'SG', name: 'Singapore', dial: '65', min: 8, max: 8, example: '8123 4567' },
@@ -36,6 +40,9 @@ export const DIAL_CODES: DialCode[] = [
   { iso: 'LK', name: 'Sri Lanka', dial: '94', min: 9, max: 9, example: '71 234 5678' },
   { iso: 'NP', name: 'Nepal', dial: '977', min: 8, max: 10, example: '984 1234567' },
   { iso: 'BD', name: 'Bangladesh', dial: '880', min: 10, max: 10, example: '1812 345678' },
+  { iso: 'MV', name: 'Maldives', dial: '960', min: 7, max: 7, example: '771 2345' },
+  { iso: 'CN', name: 'China', dial: '86', min: 11, max: 11, example: '131 2345 6789' },
+  { iso: 'JP', name: 'Japan', dial: '81', min: 9, max: 10, example: '90 1234 5678' },
   { iso: 'ZA', name: 'South Africa', dial: '27', min: 9, max: 9, example: '71 123 4567' },
 ];
 

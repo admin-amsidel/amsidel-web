@@ -434,7 +434,8 @@ export class Payslips implements OnInit {
   protected readonly formError = signal('');
   protected readonly downloading = signal(false);
   protected readonly modes = PAYMENT_MODES;
-  protected readonly today = new Date();
+  /** The end of today, so a date picked today is still allowed as the latest. */
+  protected readonly today = new Date(new Date().setHours(23, 59, 59, 999));
   protected readonly mode = paymentLabel;
   protected readonly paidOn = signal<Date | null>(startOfToday());
   protected readonly payMode = signal<PaymentMode>('BANK');

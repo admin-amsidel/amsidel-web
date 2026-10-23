@@ -21,8 +21,8 @@ import { apiProblem } from '../portal.models';
         <div class="brand">
           <img src="brand/amsidel-mark.png" alt="" width="180" height="84" />
           <p class="kicker">Amsidel Group</p>
-          <h1>Staff Portal</h1>
-          <p class="lede">For employees and owners of every Amsidel brand.</p>
+          <h1>Company Portal</h1>
+          <p class="lede">Employees, products and sales of every Amsidel brand, in one place.</p>
         </div>
         <p class="foot">Amsidel Doors &amp; Windows</p>
       </section>

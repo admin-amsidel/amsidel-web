@@ -1,0 +1,93 @@
+import { Routes } from '@angular/router';
+import { menuGuard } from '../portal.guards';
+
+const T = ' · Amsidel Company Portal';
+
+/** The product portal, under /portal/products; each page needs its menu. */
+export const PRODUCT_ROUTES: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    title: 'Products overview' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_HOME' },
+    loadComponent: () => import('./overview').then((m) => m.ProductOverview),
+  },
+  {
+    path: 'items',
+    title: 'Items & stock' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_ITEMS' },
+    loadComponent: () => import('./items').then((m) => m.Items),
+  },
+  {
+    path: 'types',
+    title: 'Product types' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_TYPES' },
+    loadComponent: () => import('./types').then((m) => m.ProductTypes),
+  },
+  {
+    path: 'suppliers',
+    title: 'Suppliers' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_SUPPLIERS' },
+    loadComponent: () => import('./suppliers').then((m) => m.Suppliers),
+  },
+  {
+    path: 'purchases',
+    title: 'Purchase bills' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_PURCHASES' },
+    loadComponent: () => import('./purchases').then((m) => m.Purchases),
+  },
+  {
+    path: 'purchases/:id',
+    title: 'Purchase bill' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_PURCHASES' },
+    loadComponent: () => import('./purchase-editor').then((m) => m.PurchaseEditor),
+  },
+  {
+    path: 'customers',
+    title: 'Customers' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_CUSTOMERS' },
+    loadComponent: () => import('./customers').then((m) => m.Customers),
+  },
+  {
+    path: 'quotations',
+    title: 'Quotations' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_QUOTES', kind: 'QUOTATION' },
+    loadComponent: () => import('./sales-list').then((m) => m.SalesList),
+  },
+  {
+    path: 'quotations/:id',
+    title: 'Quotation' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_QUOTES', kind: 'QUOTATION' },
+    loadComponent: () => import('./sales-editor').then((m) => m.SalesEditor),
+  },
+  {
+    path: 'invoices',
+    title: 'Invoices' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_INVOICES', kind: 'INVOICE' },
+    loadComponent: () => import('./sales-list').then((m) => m.SalesList),
+  },
+  {
+    path: 'invoices/:id',
+    title: 'Invoice' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_INVOICES', kind: 'INVOICE' },
+    loadComponent: () => import('./sales-editor').then((m) => m.SalesEditor),
+  },
+  {
+    path: 'reports',
+    title: 'Reports' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_REPORTS' },
+    loadComponent: () => import('./reports').then((m) => m.Reports),
+  },
+];

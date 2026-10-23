@@ -29,6 +29,21 @@ export const menuGuard: CanActivateFn = (route) => {
   return auth.ensureAccess().pipe(map(() => auth.can(code) || router.createUrlTree(['/portal/profile'])));
 };
 
+/**
+ * The page after signing in: the choice between the employee and the product portal, for people who have product
+ * menus; everyone else goes straight to My profile.
+ */
+export const homeGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.ensureAccess().pipe(
+    map(() => {
+      const paths = (auth.access()?.menus ?? []).flatMap((m) => [m.path, ...m.children.map((c) => c.path)]);
+      return paths.some((p) => !!p && p.startsWith('/portal/products')) || router.createUrlTree(['/portal/profile']);
+    }),
+  );
+};
+
 /** Already signed in: skip the login page. */
 export const guestGuard: CanActivateFn = () => {
   const auth = inject(AuthService);

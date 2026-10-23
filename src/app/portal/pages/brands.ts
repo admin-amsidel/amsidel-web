@@ -16,6 +16,7 @@ import { apiProblem, Brand, BRAND_CATEGORIES, brandLogoUrl, fromIsoDate, toIsoDa
 import { API_BASE } from '../portal.config';
 import { StaffService } from '../staff.service';
 import { TouchDatePicker } from '../touch-datepicker';
+import { PhoneInput, phoneProblem } from '../phone-input';
 
 /**
  * Administration > Brands: the group's brands with their details (address, launched date, owners, GST number,
@@ -25,7 +26,7 @@ import { TouchDatePicker } from '../touch-datepicker';
 @Component({
   selector: 'app-brands',
   imports: [
-    FormsModule, DatePipe, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputTextModule, MessageModule,
+    PhoneInput, FormsModule, DatePipe, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputTextModule, MessageModule,
     SelectModule, TagModule, TextareaModule, ToggleSwitchModule,
   ],
   template: `
@@ -119,8 +120,7 @@ import { TouchDatePicker } from '../touch-datepicker';
         <div class="pf"><label for="b-gst">GST number</label>
           <input pInputText id="b-gst" maxlength="15" placeholder="32ABCDE1234F1Z5" [ngModel]="gst()" (ngModelChange)="gst.set($event.toUpperCase())" /></div>
         <div class="pf"><label for="b-phone">Contact number</label>
-          <input pInputText id="b-phone" type="tel" inputmode="tel" maxlength="20" placeholder="+91 484 240 0400"
-                 [ngModel]="phone()" (ngModelChange)="phone.set($event)" /></div>
+          <app-phone-input inputId="b-phone" label="contact number" [ngModel]="phone()" (ngModelChange)="phone.set($event)" /></div>
         <div class="pf"><label for="b-email">Email</label>
           <input pInputText id="b-email" type="email" inputmode="email" maxlength="150" placeholder="info@amsidel.com"
                  [ngModel]="email()" (ngModelChange)="email.set($event)" /></div>
@@ -144,6 +144,34 @@ import { TouchDatePicker } from '../touch-datepicker';
           <div class="pf span"><label for="b-upi">UPI ID</label>
             <input pInputText id="b-upi" maxlength="80" autocomplete="off" inputmode="email" placeholder="e.g. amsidel@okhdfcbank"
                    [ngModel]="upi()" (ngModelChange)="upi.set($event)" /></div>
+          <div class="pf span qr-edit">
+            <span class="pf-label">UPI QR code on invoices</span>
+            @if (editing(); as b) {
+              <div class="qr-row">
+                <span class="qr-box">
+                  @if (qrUrl(); as src) { <img [src]="src" alt="UPI QR code" /> } @else { <i class="pi pi-qrcode" aria-hidden="true"></i> }
+                </span>
+                <div class="qr-text">
+                  @if (b.upiQrUpdatedAt) {
+                    <b>Printed on every invoice of {{ b.code }}</b>
+                    <small class="hint block">{{ b.upiQrPayee ? 'Pays to ' + b.upiQrPayee : 'Could not be read here; scan one invoice PDF to check it.' }}</small>
+                  } @else {
+                    <small class="hint block">Upload the shop's PhonePe / GPay / bank QR. Without one, invoices get a QR made from the UPI ID with the amount due filled in.</small>
+                  }
+                  <div class="qr-acts">
+                    <p-button [label]="b.upiQrUpdatedAt ? 'Change QR' : 'Upload QR'" icon="pi pi-upload" [outlined]="true" size="small"
+                              [loading]="qrBusy()" (onClick)="qrIn.click()" />
+                    @if (b.upiQrUpdatedAt) {
+                      <p-button label="Remove" icon="pi pi-trash" [text]="true" severity="danger" size="small" (onClick)="removeQr()" />
+                    }
+                  </div>
+                  <input #qrIn type="file" hidden accept=".png,.jpg,.jpeg,image/png,image/jpeg" (change)="pickQr(qrIn)" />
+                </div>
+              </div>
+            } @else {
+              <small class="hint block">Save the brand first, then add its UPI QR code here.</small>
+            }
+          </div>
         </fieldset>
         <div class="pf"><span class="pf-label">Status</span>
           <label class="check" for="b-active"><p-toggleswitch inputId="b-active" [ngModel]="active()" (ngModelChange)="active.set($event)" />
@@ -179,6 +207,13 @@ import { TouchDatePicker } from '../touch-datepicker';
     .form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .form .span { grid-column: 1 / -1; }
     .logo-edit { display: flex; align-items: center; gap: 16px; }
+    .qr-row { display: flex; gap: 14px; align-items: center; }
+    .qr-box { flex: none; width: 96px; height: 96px; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+      display: grid; place-items: center; overflow: hidden; }
+    .qr-box img { width: 100%; height: 100%; object-fit: contain; }
+    .qr-box i { font-size: 2rem; color: var(--muted); }
+    .qr-text { display: grid; gap: 6px; min-width: 0; }
+    .qr-acts { display: flex; gap: 6px; flex-wrap: wrap; }
     .bank { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; padding: 12px 14px 14px; border: 1px solid var(--line);
       border-radius: 12px; }
     .bank legend { padding: 0 6px; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--pine); }
@@ -197,7 +232,8 @@ export class Brands implements OnInit {
   private readonly toast = inject(MessageService);
 
   protected readonly categories = BRAND_CATEGORIES;
-  protected readonly today = new Date();
+  /** The end of today, so a date picked today is still allowed as the latest. */
+  protected readonly today = new Date(new Date().setHours(23, 59, 59, 999));
   protected readonly owner = computed(() => this.auth.user()?.role === 'OWNER');
   protected readonly brands = signal<Brand[]>([]);
   protected readonly error = signal('');
@@ -221,6 +257,8 @@ export class Brands implements OnInit {
   protected readonly formError = signal('');
   protected readonly busy = signal(false);
   protected readonly ownerList = computed(() => this.ownersOf(this.owners()));
+  protected readonly qrUrl = signal<string | null>(null);
+  protected readonly qrBusy = signal(false);
   protected readonly preview = computed(() => this.fileUrl() ?? (this.editing() ? this.logo(this.editing()!) : null));
 
   ngOnInit(): void {
@@ -252,7 +290,56 @@ export class Brands implements OnInit {
     this.active.set(b?.active ?? true);
     this.clearFile();
     this.formError.set('');
+    this.showQr(b);
     this.open.set(true);
+  }
+
+  /** The uploaded QR, fetched with the sign-in (it is not public like the logo). */
+  private showQr(b: Brand | null): void {
+    const old = this.qrUrl();
+    if (old) URL.revokeObjectURL(old);
+    this.qrUrl.set(null);
+    if (!b?.upiQrUpdatedAt) return;
+    this.staff.brandUpiQr(b.id).subscribe({ next: (blob) => this.qrUrl.set(URL.createObjectURL(blob)), error: () => undefined });
+  }
+
+  protected pickQr(input: HTMLInputElement): void {
+    const f = input.files?.[0];
+    input.value = '';
+    const b = this.editing();
+    if (!f || !b) return;
+    if (!/\.(png|jpe?g)$/i.test(f.name)) return this.formError.set('The QR code must be a PNG or JPEG picture.');
+    if (f.size > 2 * 1024 * 1024) return this.formError.set('The QR code picture must be 2 MB or smaller.');
+    this.formError.set('');
+    this.qrBusy.set(true);
+    this.staff.uploadBrandUpiQr(b.id, f).subscribe({
+      next: (saved) => {
+        this.qrBusy.set(false);
+        this.editing.set(saved);
+        if (!this.upi() && saved.upiId) this.upi.set(saved.upiId);
+        this.showQr(saved);
+        this.toast.add({ severity: 'success', summary: 'UPI QR saved', detail: saved.upiQrPayee ? 'Pays to ' + saved.upiQrPayee : saved.name });
+        this.load();
+      },
+      error: (err) => {
+        this.qrBusy.set(false);
+        this.formError.set(apiProblem(err).message);
+      },
+    });
+  }
+
+  protected removeQr(): void {
+    const b = this.editing();
+    if (!b) return;
+    this.staff.deleteBrandUpiQr(b.id).subscribe({
+      next: (saved) => {
+        this.editing.set(saved);
+        this.showQr(saved);
+        this.toast.add({ severity: 'success', summary: 'UPI QR removed', detail: 'Invoices get a QR made from the UPI ID.' });
+        this.load();
+      },
+      error: (err) => this.formError.set(apiProblem(err).message),
+    });
   }
 
   protected pickLogo(input: HTMLInputElement): void {
@@ -288,7 +375,8 @@ export class Brands implements OnInit {
     }
     const phone = this.phone().trim();
     const email = this.email().trim();
-    if (phone && !/^\+?[0-9 ()-]{7,20}$/.test(phone)) return this.formError.set('Enter a valid phone number (7-20 digits, may start with +).');
+    const phoneError = phoneProblem(phone);
+    if (phoneError) return this.formError.set('Contact number: ' + phoneError);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return this.formError.set('Enter a valid email address.');
     const bankAccount = this.bankAccount().trim();
     const ifsc = this.ifsc().trim();

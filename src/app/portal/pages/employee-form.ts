@@ -34,14 +34,11 @@ import {
   toIsoDate,
 } from '../portal.models';
 import { StaffService } from '../staff.service';
-
-const PHONE = /^\+?[0-9 ()-]{7,20}$/;
+import { PhoneInput, phoneValidator } from '../phone-input';
 
 const PATTERN_MESSAGES: Record<string, string> = {
   userId: 'Use letters, numbers, dot, dash or underscore (no spaces).',
   empNumber: 'Use letters, numbers and dash only.',
-  phone: 'Enter a valid phone number (7–20 digits, may start with +).',
-  emergencyContact: 'Enter a valid phone number (7–20 digits, may start with +).',
 };
 
 function pastDate(c: AbstractControl<Date | null>): ValidationErrors | null {
@@ -59,7 +56,7 @@ function staffNeedsBrand(g: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-employee-form',
   imports: [
-    ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker,
+    PhoneInput, ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker,
     InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, BankDetailsCard,
   ],
   templateUrl: './employee-form.html',
@@ -84,7 +81,8 @@ export class EmployeeForm implements OnInit {
 
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly bloodGroups = BLOOD_GROUPS.map((g) => ({ label: g, value: g }));
-  protected readonly today = new Date();
+  /** The end of today, so a date picked today is still allowed as the latest. */
+  protected readonly today = new Date(new Date().setHours(23, 59, 59, 999));
   protected readonly statusOf = accountStatus;
 
   protected readonly form = this.fb.group(
@@ -97,8 +95,8 @@ export class EmployeeForm implements OnInit {
       reportsToId: this.fb.control<number | null>(null),
       name: ['', [Validators.required, Validators.maxLength(150)]],
       empNumber: ['', [Validators.maxLength(30), Validators.pattern(/^[A-Za-z0-9-]*$/)]],
-      phone: ['', [Validators.required, Validators.pattern(PHONE)]],
-      emergencyContact: ['', Validators.pattern(PHONE)],
+      phone: ['', [Validators.required, phoneValidator(true)]],
+      emergencyContact: ['', phoneValidator()],
       joinedDate: this.fb.control<Date | null>(new Date(), Validators.required),
       dob: this.fb.control<Date | null>(null, pastDate),
       bloodGroup: [''],
@@ -226,6 +224,7 @@ export class EmployeeForm implements OnInit {
     if (e['minlength']) return `Use at least ${e['minlength'].requiredLength} characters.`;
     if (e['maxlength']) return `Use at most ${e['maxlength'].requiredLength} characters.`;
     if (e['future']) return 'Date of birth must be in the past.';
+    if (e['phone']) return e['phone'];
     if (e['pattern']) return PATTERN_MESSAGES[name] ?? 'Check this value.';
     return 'Check this value.';
   }
