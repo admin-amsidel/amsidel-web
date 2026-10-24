@@ -19,8 +19,9 @@
 
 /* Top bar */
 .topbar {
-  background: var(--dark);
-  color: #cfcac2;
+  background: var(--chip);
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
   font-size: 0.8rem;
 }
 
@@ -43,10 +44,10 @@
     align-items: center;
     gap: 6px;
     text-decoration: none;
-    color: #fff;
+    color: var(--ink);
 
     &:hover {
-      color: var(--gold-hi);
+      color: var(--brass);
     }
   }
 }
@@ -329,8 +330,9 @@
 
   &:hover,
   &.is-active {
-    background: var(--brass);
-    color: #fff;
+    background: var(--chip);
+    border-color: var(--chip-line);
+    color: var(--chip-gold);
   }
 }
 
@@ -566,12 +568,13 @@
 
 /* Footer */
 .footer {
-  background: var(--dark);
-  color: #b9b4ab;
+  background: var(--chip);
+  color: var(--muted);
   font-size: 0.92rem;
+  border-top: 1px solid var(--line);
 
   h3 {
-    color: #fff;
+    color: var(--ink);
     font-size: 1.1rem;
     margin-bottom: 16px;
   }
@@ -588,7 +591,7 @@
     text-decoration: none;
 
     &:hover {
-      color: var(--gold-hi);
+      color: var(--brass);
     }
   }
 }
@@ -631,7 +634,7 @@
   flex: none;
   width: 14px;
   height: 14px;
-  color: var(--gold-hi);
+  color: var(--brass);
 }
 
 .footer__bottom {
@@ -640,7 +643,7 @@
   gap: 12px;
   flex-wrap: wrap;
   padding-block: 22px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--chip-line);
   font-size: 0.82rem;
 }
 
@@ -672,9 +675,10 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--brass);
-  color: #fff;
-  box-shadow: 0 10px 26px rgba(30, 30, 33, 0.25);
+  background: var(--chip);
+  color: var(--chip-gold);
+  border: 1px solid var(--chip-line);
+  box-shadow: 0 10px 26px rgba(17, 17, 19, 0.16);
   transition: transform 0.2s;
 
   &:hover {

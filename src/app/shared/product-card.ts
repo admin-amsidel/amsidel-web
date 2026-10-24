@@ -30,7 +30,7 @@ import { categoryBySlug, Product } from '../data/products';
     .card:hover .card__media img { transform: scale(1.04); }
     .card__view {
       position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 10px); opacity: 0;
-      background: var(--pine); color: #fff; font-size: .72rem; font-weight: 600; letter-spacing: .14em;
+      background: var(--chip); color: var(--chip-gold); font-size: .72rem; font-weight: 600; letter-spacing: .14em;
       text-transform: uppercase; padding: 8px 16px; border-radius: 40px; white-space: nowrap;
       transition: opacity .25s, transform .25s;
     }

@@ -145,7 +145,7 @@ function visitDateValidator(c: AbstractControl<string>): ValidationErrors | null
     .note { margin: 0; font-size: .92rem; padding: 12px 16px; border-radius: var(--radius); }
     .note--ok { background: #eef6ee; color: #1f5f2a; border: 1px solid #cfe5d1; }
     .note--err { background: #fbeeed; color: #8a1f17; border: 1px solid #f0cfcb; }
-    .note--wait { background: #f6f1e6; color: #6b5420; border: 1px solid #e6d8b8; }
+    .note--wait { background: #f4f4f5; color: #3f3f46; border: 1px solid #e4e4e7; }
     .reach { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
     .reach a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
     /* iOS gives empty date inputs no height of their own */

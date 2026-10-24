@@ -56,7 +56,7 @@ import { SiteVisitForm } from '../../shared/site-visit-form';
     .steps span:not(.num) { color: var(--muted); font-size: .92rem; }
     .num {
       flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
-      background: var(--pine); color: var(--gold-hi); font-family: var(--display); font-size: 1.05rem;
+      background: var(--chip); color: var(--chip-gold); border: 1px solid var(--chip-line); font-family: var(--display); font-size: 1.05rem;
     }
     .area { display: flex; gap: 12px; align-items: center; margin: 22px 0 0; padding: 14px 18px; border-radius: 8px; background: var(--soft); color: var(--muted); font-size: .92rem; }
     .area svg { flex: none; width: 22px; height: 22px; color: var(--brass); }

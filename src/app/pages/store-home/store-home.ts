@@ -3,7 +3,6 @@ import { RouterLink } from '@angular/router';
 import { CATEGORIES, PRODUCTS, productsIn } from '../../data/products';
 import { BrochureCta } from '../../shared/brochure-cta';
 import { ProductCard } from '../../shared/product-card';
-import { SiteNews } from '../../shared/site-news';
 
 /** How long each hero image is shown, in milliseconds. */
 const SLIDE_MS = 5000;
@@ -18,7 +17,7 @@ interface Slide {
 
 @Component({
   selector: 'app-store-home',
-  imports: [BrochureCta, RouterLink, ProductCard, SiteNews],
+  imports: [BrochureCta, RouterLink, ProductCard],
   templateUrl: './store-home.html',
   styleUrl: './store-home.scss',
 })

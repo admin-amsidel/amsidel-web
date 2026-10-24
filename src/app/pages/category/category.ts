@@ -100,10 +100,10 @@ import { ScrollTo } from '../../shared/scroll-to';
     .apps { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 26px; }
     .apps__label { font-size: .75rem; letter-spacing: .18em; text-transform: uppercase; font-weight: 600; margin-right: 6px; }
     .pill { border: 1px solid var(--line); border-radius: 40px; padding: 6px 14px; font-size: .86rem; }
-    .features { background: var(--pine); color: #fff; border-radius: 8px; padding: 34px 30px; }
+    .features { background: var(--chip); color: var(--ink); border: 1px solid var(--chip-line); border-radius: 8px; padding: 34px 30px; }
     .features h3 { font-size: 1.4rem; margin-bottom: 14px; }
     .features ul { list-style: none; margin: 0 0 26px; padding: 0; display: grid; gap: 12px; }
-    .features li { padding-left: 28px; position: relative; color: #e6e2da; }
+    .features li { padding-left: 28px; position: relative; color: var(--ink); }
     .features li::before { content: ''; position: absolute; left: 0; top: 9px; width: 14px; height: 2px; background: var(--gold-hi); }
     .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
     .quote { display: grid; grid-template-columns: 1fr 1.4fr; gap: 64px; align-items: start; }

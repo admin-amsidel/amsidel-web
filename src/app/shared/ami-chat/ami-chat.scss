@@ -18,9 +18,10 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  background: var(--pine);
-  color: #fff;
-  box-shadow: 0 10px 26px rgba(30, 30, 33, 0.28);
+  background: var(--chip);
+  color: var(--chip-gold);
+  border: 1px solid var(--chip-line);
+  box-shadow: 0 10px 26px rgba(30, 30, 33, 0.16);
   transition: transform 0.2s;
 
   &:hover {
@@ -213,8 +214,9 @@
   align-items: center;
   gap: 12px;
   padding: 12px 10px 12px 16px;
-  background: var(--pine);
-  color: #fff;
+  background: var(--chip);
+  color: var(--ink);
+  border-bottom: 1px solid var(--chip-line);
 }
 
 .panel__title {
@@ -231,7 +233,7 @@
 
   small {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--muted);
   }
 }
 
@@ -257,7 +259,7 @@
   cursor: pointer;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--chip-hover);
   }
 
   svg {
@@ -290,8 +292,9 @@
   justify-items: end;
 
   .bubble {
-    background: var(--brass);
-    color: #fff;
+    background: var(--chip);
+    color: var(--ink);
+    border: 1px solid var(--chip-line);
     border-radius: 14px 14px 4px 14px;
   }
 }
@@ -434,14 +437,16 @@
   // hover only on mouse devices; on touch screens it sticks after a tap
   @media (hover: hover) {
     &:hover {
-      background: var(--brass);
-      color: #fff;
+      background: var(--chip);
+      border-color: var(--chip-line);
+      color: var(--chip-gold);
     }
   }
 
   &:active {
-    background: var(--brass);
-    color: #fff;
+    background: var(--chip-hover);
+    border-color: var(--chip-line);
+    color: var(--chip-gold);
   }
 }
 
@@ -478,8 +483,8 @@
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: var(--brass);
-  color: #fff;
+  background: var(--chip);
+  color: var(--chip-gold);
   cursor: pointer;
 
   &.send--idle {

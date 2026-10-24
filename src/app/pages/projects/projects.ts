@@ -51,7 +51,7 @@ import { RouterLink } from '@angular/router';
     .lb-close { top: 16px; right: 16px; }
     .lb-prev { left: 14px; top: 50%; transform: translateY(-50%); }
     .lb-next { right: 14px; top: 50%; transform: translateY(-50%); }
-    .lb-count { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); color: #cfcac2; font-size: .85rem; }
+    .lb-count { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); color: #c4c4c8; font-size: .85rem; }
     @media (max-width: 560px) { .lightbox { padding: 70px 12px; } .lb-prev, .lb-next { top: auto; bottom: 8px; transform: none; } }
   `,
 })

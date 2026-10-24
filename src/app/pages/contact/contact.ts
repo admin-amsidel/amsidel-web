@@ -90,7 +90,7 @@ import { QuoteForm } from '../../shared/quote-form';
     .cards strong { font-size: .75rem; letter-spacing: .16em; text-transform: uppercase; color: var(--brass-dark); }
     .cards a, .cards span:not(.ic) { overflow-wrap: anywhere; text-decoration: none; font-weight: 500; }
     .cards a:hover { color: var(--brass-dark); }
-    .ic { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: var(--pine); color: var(--gold-hi); }
+    .ic { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: var(--chip); border: 1px solid var(--chip-line); color: var(--chip-gold); }
     .ic svg { width: 22px; height: 22px; }
     .form-card { background: var(--soft); border-radius: 10px; padding: 40px 36px; border: 1px solid var(--line); }
     .form-card > p { color: var(--muted); margin: 10px 0 28px; }

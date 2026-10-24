@@ -1,5 +1,6 @@
 /* Global tokens and shared building blocks.
-   Palette comes from the Amsidel logo: charcoal + brushed gold on white. */
+   Palette comes from the Amsidel logo: charcoal + brushed gold on white. The Doors & Windows website narrows it
+   to plain gray, white and black with gold for text (see app-store-shell below). */
 :root {
   --bg: #ffffff;
   --ink: #1e1e21;
@@ -17,6 +18,59 @@
   --shadow: 0 14px 34px rgba(30, 30, 33, 0.1);
   --header-h: 84px;
   color-scheme: light;
+}
+
+/* Doors & Windows: neutral gray, white and black; gold only as text and thin lines (no cream or beige).
+   --brass is the gold for text on white (deep enough to read), --gold-hi the gold for text on black. */
+app-store-shell {
+  --ink: #111113;
+  --muted: #5d5d64;
+  --line: #e4e4e7;
+  --pine: #1c1c1f;
+  --dark: #0c0c0d;
+  --soft: #f4f4f5;
+  --brass: #a07a38;
+  --brass-dark: #7d5d26;
+  --gold-hi: #d9b56f;
+  --shadow: 0 14px 34px rgba(17, 17, 19, 0.1);
+  /* light gray surfaces in place of black: buttons, top bar, footer, badges, the chat; deep gold text on them */
+  --chip: #ececef;
+  --chip-hover: #e0e0e4;
+  --chip-line: #d4d4d9;
+  --chip-gold: #7a5a22;
+}
+
+/* Buttons there: light gray with deep gold text */
+app-store-shell {
+  .btn--gold,
+  .btn--dark {
+    background: var(--chip);
+    color: var(--chip-gold);
+    border-color: var(--chip-line);
+
+    &:hover {
+      background: var(--chip-hover);
+      border-color: #c4c4ca;
+      color: #5e4417;
+    }
+  }
+
+  .btn--outline {
+    border-color: var(--chip-line);
+    color: var(--ink);
+    background: #fff;
+
+    &:hover {
+      background: var(--chip);
+      color: var(--chip-gold);
+      border-color: var(--chip-line);
+    }
+  }
+
+  .btn--ghost-light:hover {
+    border-color: var(--gold-hi);
+    color: var(--gold-hi);
+  }
 }
 
 *,
@@ -238,7 +292,7 @@ h2 {
   p {
     margin: 10px 0 0;
     max-width: 60ch;
-    color: #e6e2da;
+    color: #e4e4e7;
   }
 }
 
