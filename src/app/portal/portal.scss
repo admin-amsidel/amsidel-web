@@ -141,3 +141,37 @@ p-progressbar.tone-done .p-progressbar-value { background: var(--progress-done);
   .p-selectbutton .p-togglebutton { flex: none; white-space: nowrap; }
   .p-tablist-tab-list { flex-wrap: nowrap; }
 }
+
+/* phones: in a dialog every choice must show, so the buttons wrap onto a second line instead */
+@media (max-width: 760px) {
+  .p-dialog .p-selectbutton { flex-wrap: wrap; overflow: visible; }
+}
+
+/* ---- phones: a compact list in place of a wide table (only-desk / only-phone pick which shows) ----
+   .mrow: what it is on the left (title + a small line), the amount on the right, actions or details under it */
+.only-phone { display: none; }
+@media (max-width: 760px) {
+  .only-phone { display: block; }
+  .only-desk { display: none !important; }
+}
+.mlist { list-style: none; margin: 0; padding: 0; }
+.mlist > li { border-bottom: 1px solid var(--line); }
+.mlist > li:last-child { border-bottom: 0; }
+.mrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: start; padding: 10px 2px; width: 100%;
+  background: none; border: 0; text-align: left; font: inherit; color: inherit; }
+button.mrow, summary.mrow { cursor: pointer; }
+.mrow__title { font-weight: 600; overflow-wrap: anywhere; line-height: 1.35; }
+.mrow__sub { display: block; font-size: .78rem; color: var(--muted); margin-top: 2px; line-height: 1.4; overflow-wrap: anywhere; }
+.mrow__end { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+.mrow__end small { display: block; font-weight: 400; font-size: .74rem; color: var(--muted); }
+.mrow__acts { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.mlist details > summary { list-style: none; }
+.mlist details > summary::-webkit-details-marker { display: none; }
+.mlist details > summary .mrow__title::after { content: '\25BE'; margin-left: 6px; font-size: .7rem; color: var(--muted); }
+.mlist details[open] > summary .mrow__title::after { content: '\25B4'; }
+.mfigs { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; font-size: .82rem; padding: 0 2px 12px; margin: 0; }
+.mfigs dt { color: var(--muted); }
+.mfigs dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.mrow .pos, .mfigs .pos { color: #1f7a45; }
+.mrow .neg, .mfigs .neg { color: #b3261e; }
+.mrow .warn, .mfigs .warn { color: #b45309; }

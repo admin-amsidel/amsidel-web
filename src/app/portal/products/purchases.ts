@@ -65,7 +65,7 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
           <tr class="row-link" (click)="router.navigate(['/portal/products/purchases', b.id])">
             <td data-label="Bill" class="stack-full"><b>{{ b.number }}</b>
               <small class="muted block">{{ b.supplierBillNo ? 'Their bill ' + b.supplierBillNo : '' }}{{ brand.many() && !brand.selected() ? ' · ' + b.brandCode : '' }}</small></td>
-            <td data-label="Date" class="nowrap">{{ b.billDate | date: 'd MMM y' }}</td>
+            <td data-label="Date" class="nowrap">{{ b.billDate | date: 'd MMM y' }}<small class="muted block">{{ b.createdByName ? 'by ' + b.createdByName : '' }}</small></td>
             <td data-label="Supplier">{{ b.supplierName }}<small class="muted block">{{ b.lines }} item line{{ b.lines === 1 ? '' : 's' }}</small></td>
             <td data-label="Status"><p-tag [value]="status(b).label" [severity]="status(b).severity" />
               @if (pay(b); as p) { <p-tag [value]="p.label" [severity]="p.severity" styleClass="ml" /> }</td>

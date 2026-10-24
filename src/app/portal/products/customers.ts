@@ -14,9 +14,10 @@ import { rupees, rupeesRound } from '../payroll/payroll.models';
 import { apiProblem } from '../portal.models';
 import { CustomerForm } from './customer-form';
 import { BrandPick, TradeBrand } from './trade-brand';
-import { Customer, DOC_STATUS, payLabel, SalesRow } from './trade.models';
+import { Customer, DOC_STATUS, HistoryEntry, payLabel, SalesRow } from './trade.models';
 import { TradeService } from './trade.service';
 import { phoneMatches } from '../phone-input';
+import { HistoryList } from './history-list';
 
 /**
  * Sales > Customers: everyone a brand sells to (the first phone number is unique), what they were billed and still
@@ -25,7 +26,7 @@ import { phoneMatches } from '../phone-input';
 @Component({
   selector: 'app-customers',
   imports: [
-    FormsModule, DatePipe, RouterLink, BrandPick, CustomerForm, ButtonModule, DrawerModule, IconFieldModule, InputIconModule,
+    HistoryList, FormsModule, DatePipe, RouterLink, BrandPick, CustomerForm, ButtonModule, DrawerModule, IconFieldModule, InputIconModule,
     InputTextModule, MessageModule, TableModule, TagModule,
   ],
   template: `
@@ -83,6 +84,7 @@ import { phoneMatches } from '../phone-input';
     <p-drawer appendTo="body" [visible]="!!picked()" (visibleChange)="!$event && picked.set(null)" position="right" [style]="{ width: 'min(440px, 100vw)' }" [modal]="true">
       <ng-template #header>@if (picked(); as c) { <div><b>{{ c.name }}</b><small class="muted block">{{ c.code }} · {{ c.phone }}</small></div> }</ng-template>
       @if (picked(); as c) {
+        @let who = c;
         <div class="facts">
           <div><span>Billed</span><b>{{ money(c.balance.billed) }}</b></div>
           <div><span>Received</span><b>{{ money(c.balance.paid) }}</b></div>
@@ -93,6 +95,7 @@ import { phoneMatches } from '../phone-input';
           <p-button label="New quotation" icon="pi pi-file-edit" size="small" [outlined]="true" routerLink="/portal/products/quotations/new" [queryParams]="{ customer: c.id }" />
           <p-button label="New invoice" icon="pi pi-receipt" size="small" routerLink="/portal/products/invoices/new" [queryParams]="{ customer: c.id }" />
         </div>
+        @if (who.updatedByName) { <p class="muted small-note">Last changed by {{ who.updatedByName }}, {{ who.updatedAt | date: 'd MMM y, h:mm a' }}</p> }
         <h3>Quotations and invoices</h3>
         <ul class="docs">
           @for (d of docs(); track d.id) {
@@ -105,6 +108,8 @@ import { phoneMatches } from '../phone-input';
             </li>
           } @empty { <li class="muted">None yet.</li> }
         </ul>
+        <h3 class="mt">History</h3>
+        <app-history-list [entries]="history()" />
       }
     </p-drawer>
   `,
@@ -123,6 +128,8 @@ import { phoneMatches } from '../phone-input';
     .addr { margin: 0 0 12px; color: var(--muted); font-size: .88rem; white-space: pre-line; }
     .drawer-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
     h3 { margin: 0 0 8px; font-size: 1rem; }
+    h3.mt { margin-top: 18px; }
+    .small-note { font-size: .8rem; margin: 0 0 12px; }
     .docs { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
     @media (max-width: 760px) { .num { text-align: left; } }
   `,
@@ -149,6 +156,7 @@ export class Customers implements OnInit {
   protected readonly editing = signal<Customer | null>(null);
   protected readonly picked = signal<Customer | null>(null);
   protected readonly docs = signal<SalesRow[]>([]);
+  protected readonly history = signal<HistoryEntry[]>([]);
 
   ngOnInit(): void {
     this.brand.load().subscribe({ next: () => this.load(), error: (e) => this.error.set(apiProblem(e).message) });
@@ -177,5 +185,7 @@ export class Customers implements OnInit {
     this.picked.set(c);
     this.docs.set([]);
     this.trade.customerDocuments(c.id).subscribe({ next: (d) => this.docs.set(d), error: () => undefined });
+    this.history.set([]);
+    this.trade.history('CUSTOMER', c.id).subscribe({ next: (h) => this.history.set(h), error: () => undefined });
   }
 }

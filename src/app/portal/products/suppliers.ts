@@ -18,9 +18,10 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { rupees, rupeesRound } from '../payroll/payroll.models';
 import { apiProblem } from '../portal.models';
 import { BrandPick, TradeBrand } from './trade-brand';
-import { payLabel, PURCHASE_STATUS, PurchaseRow, Supplier } from './trade.models';
+import { HistoryEntry, payLabel, PURCHASE_STATUS, PurchaseRow, Supplier } from './trade.models';
 import { TradeService } from './trade.service';
 import { phoneMatches, PhoneInput, phoneProblem } from '../phone-input';
+import { HistoryList } from './history-list';
 
 /**
  * Purchasing > Suppliers: who each brand buys from, with contact, GST/PAN and bank / UPI details for paying them,
@@ -29,7 +30,7 @@ import { phoneMatches, PhoneInput, phoneProblem } from '../phone-input';
 @Component({
   selector: 'app-suppliers',
   imports: [
-    PhoneInput, FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DialogModule, DrawerModule, IconFieldModule, InputIconModule,
+    HistoryList, PhoneInput, FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DialogModule, DrawerModule, IconFieldModule, InputIconModule,
     InputTextModule, MessageModule, SelectModule, TableModule, TagModule, TextareaModule, ToggleSwitchModule,
   ],
   template: `
@@ -126,6 +127,7 @@ import { phoneMatches, PhoneInput, phoneProblem } from '../phone-input';
     <p-drawer appendTo="body" [visible]="!!picked()" (visibleChange)="!$event && picked.set(null)" position="right" [style]="{ width: 'min(440px, 100vw)' }" [modal]="true">
       <ng-template #header>@if (picked(); as s) { <div><b>{{ s.name }}</b><small class="muted block">{{ s.code }} · {{ s.phone }}</small></div> }</ng-template>
       @if (picked(); as s) {
+        @let who = s;
         <div class="facts">
           <div><span>Bought</span><b>{{ money(s.balance.billed) }}</b></div>
           <div><span>Paid</span><b>{{ money(s.balance.paid) }}</b></div>
@@ -134,6 +136,7 @@ import { phoneMatches, PhoneInput, phoneProblem } from '../phone-input';
         <div class="drawer-actions">
           <p-button label="New purchase bill" icon="pi pi-plus" size="small" routerLink="/portal/products/purchases/new" [queryParams]="{ supplier: s.id }" />
         </div>
+        @if (who.updatedByName) { <p class="muted small-note">Last changed by {{ who.updatedByName }}, {{ who.updatedAt | date: 'd MMM y, h:mm a' }}</p> }
         <h3>Bills</h3>
         <ul class="docs">
           @for (b of bills(); track b.id) {
@@ -145,6 +148,8 @@ import { phoneMatches, PhoneInput, phoneProblem } from '../phone-input';
             </li>
           } @empty { <li class="muted">No bills yet.</li> }
         </ul>
+        <h3 class="mt">History</h3>
+        <app-history-list [entries]="history()" />
       }
     </p-drawer>
   `,
@@ -166,6 +171,8 @@ import { phoneMatches, PhoneInput, phoneProblem } from '../phone-input';
     .facts span { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
     .drawer-actions { margin-bottom: 14px; }
     h3 { margin: 0 0 8px; font-size: 1rem; }
+    h3.mt { margin-top: 18px; }
+    .small-note { font-size: .8rem; margin: 0 0 12px; }
     .docs { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
     @media (max-width: 760px) { .grid, .bank { grid-template-columns: 1fr; } .num { text-align: left; } }
   `,
@@ -197,6 +204,7 @@ export class Suppliers implements OnInit {
   protected readonly busy = signal(false);
   protected readonly picked = signal<Supplier | null>(null);
   protected readonly bills = signal<PurchaseRow[]>([]);
+  protected readonly history = signal<HistoryEntry[]>([]);
 
   ngOnInit(): void {
     this.brand.load().subscribe({ next: () => this.load(), error: (e) => this.error.set(apiProblem(e).message) });
@@ -253,6 +261,8 @@ export class Suppliers implements OnInit {
     this.picked.set(s);
     this.bills.set([]);
     this.trade.supplierBills(s.id).subscribe({ next: (b) => this.bills.set(b), error: () => undefined });
+    this.history.set([]);
+    this.trade.history('SUPPLIER', s.id).subscribe({ next: (h) => this.history.set(h), error: () => undefined });
   }
 }
 

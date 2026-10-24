@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth.service';
+import { NewsBoard } from '../news-board';
 import { MenuNode } from '../portal.models';
 
 interface Shortcut {
@@ -10,21 +11,23 @@ interface Shortcut {
 }
 
 /**
- * After signing in: the Company Portal's two parts side by side. The Employee portal (profile, attendance, leave,
- * work log, payroll…) and the Product portal (products and stock, suppliers, customers, quotations, invoices,
- * reports), each with its first pages as shortcuts. People without product menus never see this page.
+ * After signing in, for everyone: the news and announcements (with today's birthdays), then the Company Portal's
+ * parts. The Employee portal (profile, attendance, leave, work log, payroll…) and, for people with product menus,
+ * the Product portal (products and stock, suppliers, customers, quotations, invoices, reports), each with its pages
+ * as shortcuts.
  */
 @Component({
   selector: 'app-portal-home',
-  imports: [RouterLink],
+  imports: [RouterLink, NewsBoard],
   template: `
     <div class="p-head">
       <div>
         <h1>Welcome{{ firstName() ? ', ' + firstName() : '' }}</h1>
-        <p>Choose where to work. You can switch at any time from the top bar.</p>
+        <p>{{ hasProducts() ? 'Choose where to work. You can switch at any time from the top bar.' : 'The latest news, and your pages.' }}</p>
       </div>
     </div>
-    <div class="parts">
+    <app-news-board />
+    <div class="parts" [class.single]="!hasProducts()">
       <a class="part" routerLink="/portal/profile">
         <span class="part__icon"><i class="pi pi-users" aria-hidden="true"></i></span>
         <span class="part__kicker">Employee portal</span>
@@ -32,6 +35,7 @@ interface Shortcut {
         <span class="part__text">Your profile, attendance, leave, work log, performance and pay; your team and payroll.</span>
         <span class="part__go">Open employee portal <i class="pi pi-arrow-right" aria-hidden="true"></i></span>
       </a>
+      @if (hasProducts()) {
       <a class="part part--products" [routerLink]="productStart()">
         <span class="part__icon"><i class="pi pi-box" aria-hidden="true"></i></span>
         <span class="part__kicker">Product portal</span>
@@ -39,8 +43,9 @@ interface Shortcut {
         <span class="part__text">Products, stock and prices; suppliers and purchases; customers, quotations, invoices, payments and reports.</span>
         <span class="part__go">Open product portal <i class="pi pi-arrow-right" aria-hidden="true"></i></span>
       </a>
+      }
     </div>
-    <div class="shortcuts">
+    <div class="shortcuts" [class.single]="!hasProducts()">
       <section class="p-card">
         <h2>Employee portal</h2>
         <nav class="links" aria-label="Employee portal pages">
@@ -49,6 +54,7 @@ interface Shortcut {
           }
         </nav>
       </section>
+      @if (hasProducts()) {
       <section class="p-card">
         <h2>Product portal</h2>
         <nav class="links" aria-label="Product portal pages">
@@ -57,6 +63,7 @@ interface Shortcut {
           }
         </nav>
       </section>
+      }
     </div>
   `,
   styles: `
@@ -83,6 +90,7 @@ interface Shortcut {
       color: var(--ink); text-decoration: none; font-size: .88rem; background: #fff; }
     .links a:hover { background: var(--accent-softer); border-color: #b9d3ef; color: var(--brass-dark); }
     .links i { color: var(--brass-dark); font-size: .9rem; }
+    .parts.single, .shortcuts.single { grid-template-columns: 1fr; }
     @media (max-width: 760px) { .parts, .shortcuts { grid-template-columns: 1fr; } .part { padding: 20px; } }
   `,
 })
@@ -103,4 +111,5 @@ export class PortalHome {
     ...this.pages().filter((p) => !p.product).map((p) => p.s),
   ]);
   protected readonly productLinks = computed(() => this.pages().filter((p) => p.product).map((p) => p.s));
+  protected readonly hasProducts = computed(() => this.productLinks().length > 0);
 }

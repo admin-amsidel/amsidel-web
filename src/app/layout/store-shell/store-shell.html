@@ -77,12 +77,23 @@
           <a routerLink="/">Amsidel Group</a>
         </li>
       </ul>
+      @if (news.offers().length) {
+        <a class="btn btn--dark nav__cta-mobile" routerLink="/doors-windows/offers">See {{ news.offers().length === 1 ? 'our offer' : 'our ' + news.offers().length + ' offers' }}</a>
+      }
       <a class="btn btn--gold nav__cta-mobile" routerLink="/doors-windows/contact" fragment="quote">Get a free quote</a>
       <a class="btn btn--outline nav__cta-mobile" [href]="site.brochure.url" [attr.download]="site.brochure.file">Download brochure</a>
     </nav>
 
     <div class="header__actions">
       <a class="btn btn--gold header__cta" routerLink="/doors-windows/contact" fragment="quote">Get a Quote</a>
+      @if (news.offers().length) {
+        <a class="offers-btn" routerLink="/doors-windows/offers" routerLinkActive="is-active" title="Offers"
+           [attr.aria-label]="news.offers().length + (news.offers().length === 1 ? ' offer' : ' offers') + ' running'">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8L3 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /><circle cx="7.5" cy="8.5" r="1.6" fill="currentColor" /></svg>
+          <span class="offers-btn__label">Offers</span>
+          <span class="offers-btn__count" aria-hidden="true">{{ news.offers().length }}</span>
+        </a>
+      }
       <button
         class="burger"
         type="button"

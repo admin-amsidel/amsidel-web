@@ -45,7 +45,8 @@ import { TradeService } from './trade.service';
             <td data-label="Name">{{ t.name }}@if (t.description) { <small class="muted block">{{ t.description }}</small> }</td>
             <td data-label="Brand">{{ t.brand.code }}</td>
             <td data-label="Items" class="num">{{ t.itemCount }}</td>
-            <td data-label="Status"><p-tag [value]="t.active ? 'In use' : 'Not used'" [severity]="t.active ? 'success' : 'secondary'" /></td>
+            <td data-label="Status"><p-tag [value]="t.active ? 'In use' : 'Not used'" [severity]="t.active ? 'success' : 'secondary'" />
+              @if (t.updatedByName) { <small class="muted block">changed by {{ t.updatedByName }}</small> }</td>
             <td class="stack-end">
               <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" [ariaLabel]="'Change ' + t.name" (onClick)="edit(t)" />
             </td>

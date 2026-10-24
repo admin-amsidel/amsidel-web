@@ -24,6 +24,7 @@ import { apiProblem, toIsoDate } from '../portal.models';
 import { BrandPick, TradeBrand } from './trade-brand';
 import { Item, ItemDetail, ProductType, qty, STOCK_KIND_LABELS, StockKind, Supplier } from './trade.models';
 import { TradeService } from './trade.service';
+import { HistoryList } from './history-list';
 
 type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
 
@@ -35,7 +36,7 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
 @Component({
   selector: 'app-items',
   imports: [
-    FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, DialogModule, DrawerModule, IconFieldModule,
+    HistoryList, FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, DialogModule, DrawerModule, IconFieldModule,
     InputIconModule, InputNumberModule, InputTextModule, MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule,
     TextareaModule, ToggleSwitchModule, TooltipModule,
   ],
@@ -238,7 +239,9 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
             <p-button label="Save stock change" icon="pi pi-check" size="small" [loading]="busy()" (onClick)="adjust(d)" />
           </div>
         }
-        <h3>History</h3>
+        <h3>Changes</h3>
+        <app-history-list [entries]="d.history" empty="No changes yet." />
+        <h3 class="mt">Stock history</h3>
         <ul class="moves">
           @for (m of d.moves; track m.id) {
             <li>
@@ -291,6 +294,7 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
     .moves { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
     .moves li { display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: start; }
     .moves li.none { display: block; }
+    h3.mt { margin-top: 18px; }
     .dr-title { min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
     .span-all { flex: 1 1 100%; line-height: 1.5; }
     .mq { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }

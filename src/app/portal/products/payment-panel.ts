@@ -45,6 +45,7 @@ import { TradeService } from './trade.service';
       <div class="sum">
         <span>Total <b>{{ money(totals().total) }}</b></span>
         <span>Paid <b>{{ money(totals().paid) }}</b></span>
+        @if (totals().writtenOff > 0) { <span>Discount written off <b>{{ money(totals().writtenOff) }}</b></span> }
         <span [class.due]="totals().due > 0">Still due <b>{{ money(totals().due) }}</b></span>
       </div>
       <ul class="list">

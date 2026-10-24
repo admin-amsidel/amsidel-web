@@ -15,13 +15,14 @@ import { TagModule } from 'primeng/tag';
 import { rupees, rupeesRound } from '../payroll/payroll.models';
 import { apiProblem, toIsoDate } from '../portal.models';
 import { Bar, Bars } from './bars';
+import { HistoryList } from './history-list';
 import { BrandPick, TradeBrand } from './trade-brand';
 import {
-  Customer, fyRange, Group, Item, monthRange, OwedReport, PaymentReport, ProductType, PurchaseReport, qty, SalesReport, StockReport, Supplier,
+  Customer, fyRange, Group, HistoryEntry, Item, monthRange, OwedReport, PaymentReport, ProductType, PurchaseReport, qty, SalesReport, StockReport, Supplier,
 } from './trade.models';
 import { ReportFilter, saveFile, TradeService } from './trade.service';
 
-type Tab = 'sales' | 'purchases' | 'spend' | 'stock' | 'payments' | 'owed';
+type Tab = 'sales' | 'purchases' | 'spend' | 'stock' | 'payments' | 'owed' | 'activity';
 type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
 type SalesBy = 'invoices' | 'customer' | 'type' | 'item' | 'lines';
 type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
@@ -34,7 +35,7 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
 @Component({
   selector: 'app-reports',
   imports: [
-    FormsModule, DatePipe, NgTemplateOutlet, RouterLink, Bars, BrandPick, ButtonModule, DatePickerModule, InputTextModule, MessageModule, SelectModule,
+    HistoryList, FormsModule, DatePipe, NgTemplateOutlet, RouterLink, Bars, BrandPick, ButtonModule, DatePickerModule, InputTextModule, MessageModule, SelectModule,
     SelectButtonModule, TableModule, TabsModule, TagModule,
   ],
   template: `
@@ -45,7 +46,9 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
       </div>
       <div class="head-actions">
         <app-brand-pick (changed)="reload()" />
-        <p-button label="Excel" icon="pi pi-file-excel" [outlined]="true" [loading]="excelBusy()" (onClick)="excel()" />
+        @if (tab() !== 'activity') {
+          <p-button label="Excel" icon="pi pi-file-excel" [outlined]="true" [loading]="excelBusy()" (onClick)="excel()" />
+        }
       </div>
     </div>
 
@@ -57,6 +60,7 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
         <p-tab value="stock"><i class="pi pi-box" aria-hidden="true"></i> Stock</p-tab>
         <p-tab value="payments"><i class="pi pi-wallet" aria-hidden="true"></i> Payments</p-tab>
         <p-tab value="owed"><i class="pi pi-exclamation-circle" aria-hidden="true"></i> Owed</p-tab>
+        <p-tab value="activity"><i class="pi pi-history" aria-hidden="true"></i> Activity</p-tab>
       </p-tablist>
     </p-tabs>
 
@@ -69,6 +73,12 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
         } @else {
           <span class="muted range">{{ from() | date: 'd MMM y' }} – {{ to() | date: 'd MMM y' }}</span>
         }
+      }
+      @if (tab() === 'activity') {
+        <p-select [options]="peopleOptions()" optionLabel="label" optionValue="value" [showClear]="true" placeholder="Everyone"
+                  ariaLabel="Done by" [ngModel]="byName()" (ngModelChange)="byName.set($event)" />
+        <p-select [options]="subjectOptions" optionLabel="label" optionValue="value" [showClear]="true" placeholder="Every kind of record"
+                  ariaLabel="Kind of record" [ngModel]="subject()" (ngModelChange)="subject.set($event)" />
       }
       @if (tab() === 'sales') {
         <p-select [options]="customerOptions()" optionLabel="label" optionValue="value" [filter]="true" [showClear]="true" placeholder="All customers"
@@ -261,6 +271,14 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
       </div>
     }
 
+    <!-- ===== activity ===== -->
+    @if (tab() === 'activity' && activity(); as list) {
+      <section class="p-card">
+        <h2>Who did what <small class="muted">{{ shownActivity().length }} of {{ list.length }}</small></h2>
+        <app-history-list [entries]="shownActivity()" [showSubject]="true" empty="Nothing was done in this period." />
+      </section>
+    }
+
     @if (loading()) { <p class="p-loading">Loading…</p> }
 
     <ng-template #groupTable let-groups="groups" let-margin="margin" let-what="what">
@@ -343,6 +361,27 @@ export class Reports implements OnInit {
   protected readonly stock = signal<StockReport | null>(null);
   protected readonly payments = signal<PaymentReport | null>(null);
   protected readonly owed = signal<OwedReport | null>(null);
+  protected readonly activity = signal<HistoryEntry[] | null>(null);
+  protected readonly byName = signal<string | null>(null);
+  protected readonly subject = signal<string | null>(null);
+  protected readonly subjectOptions = [
+    { label: 'Quotations', value: 'QUOTATION' },
+    { label: 'Invoices', value: 'INVOICE' },
+    { label: 'Purchase bills', value: 'PURCHASE' },
+    { label: 'Items & stock', value: 'ITEM' },
+    { label: 'Customers', value: 'CUSTOMER' },
+    { label: 'Suppliers', value: 'SUPPLIER' },
+    { label: 'Product types', value: 'PRODUCT_TYPE' },
+    { label: 'Projects', value: 'PROJECT' },
+    { label: 'Project tasks', value: 'PROJECT_TASK' },
+    { label: 'Income & expenses', value: 'MONEY_ENTRY' },
+    { label: 'Bank statements', value: 'BANK_STATEMENT' },
+    { label: 'Bank balances', value: 'BANK_BALANCE' },
+  ];
+  protected readonly peopleOptions = computed(() =>
+    [...new Set((this.activity() ?? []).map((h) => h.byName).filter((n): n is string => !!n))].sort().map((n) => ({ label: n, value: n })));
+  protected readonly shownActivity = computed(() =>
+    (this.activity() ?? []).filter((h) => (!this.byName() || h.byName === this.byName()) && (!this.subject() || h.subjectType === this.subject())));
   protected readonly salesBy = signal<SalesBy>('customer');
   protected readonly buyBy = signal<BuyBy>('supplier');
 
@@ -451,6 +490,9 @@ export class Reports implements OnInit {
         break;
       case 'payments':
         this.trade.paymentReport(f).subscribe({ next: (r) => { this.payments.set(r); done(); }, error: fail });
+        break;
+      case 'activity':
+        this.trade.activity(f.brandId, f.from, f.to).subscribe({ next: (r) => { this.activity.set(r); done(); }, error: fail });
         break;
       case 'owed':
         this.trade.owedReport(f.brandId).subscribe({ next: (r) => { this.owed.set(r); done(); }, error: fail });

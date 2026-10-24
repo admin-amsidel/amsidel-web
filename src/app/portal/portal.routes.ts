@@ -170,6 +170,13 @@ export const PORTAL_ROUTES: Routes = [
         loadComponent: () => import('./performance/review-cycles').then((m) => m.ReviewCycles),
       },
       {
+        path: 'admin/news',
+        title: 'News & announcements · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'NEWS' },
+        loadComponent: () => import('./pages/news-admin').then((m) => m.NewsAdmin),
+      },
+      {
         path: 'admin/brands',
         title: 'Brands · Amsidel Company Portal',
         canActivate: [menuGuard],

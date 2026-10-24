@@ -21,6 +21,8 @@ import { PaymentPanel } from './payment-panel';
 import { TradeBrand } from './trade-brand';
 import { Item, money, payLabel, PURCHASE_STATUS, PurchaseBill, PurchaseBody, qty, Supplier, workOut } from './trade.models';
 import { TradeService } from './trade.service';
+import { HistoryList } from './history-list';
+import { AuthService } from '../auth.service';
 
 interface Line {
   key: number;
@@ -39,7 +41,7 @@ const GST_RATES = [0, 5, 12, 18, 28].map((r) => ({ label: r + '%', value: r }));
 @Component({
   selector: 'app-purchase-editor',
   imports: [
-    FormsModule, DatePipe, RouterLink, PaymentPanel, ButtonModule, CheckboxModule, DatePickerModule, DialogModule, InputNumberModule,
+    HistoryList, FormsModule, DatePipe, RouterLink, PaymentPanel, ButtonModule, CheckboxModule, DatePickerModule, DialogModule, InputNumberModule,
     InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, ToggleSwitchModule,
   ],
   template: `
@@ -53,8 +55,9 @@ const GST_RATES = [0, 5, 12, 18, 28].map((r) => ({ label: r + '%', value: r }));
           }
         </h1>
         @if (bill(); as b) {
-          <p>{{ b.company.name }} · made by {{ b.createdByName ?? '—' }} on {{ b.createdAt | date: 'd MMM y' }}
-            @if (b.receivedAt) { · received {{ b.receivedAt | date: 'd MMM y, h:mm a' }} by {{ b.receivedByName }} }</p>
+          <p>{{ b.company.name }} · made by <b>{{ b.createdByName ?? '—' }}</b> on {{ b.createdAt | date: 'd MMM y' }}
+            @if (b.receivedAt) { · received {{ b.receivedAt | date: 'd MMM y, h:mm a' }} by <b>{{ b.receivedByName }}</b> }
+            @if (b.updatedByName && b.updatedAt) { · last changed by {{ b.updatedByName }}, {{ b.updatedAt | date: 'd MMM y, h:mm a' }} }</p>
         } @else {
           <p>Write down what was bought. When the goods arrive, receive the bill to add them to stock.</p>
         }
@@ -131,6 +134,12 @@ const GST_RATES = [0, 5, 12, 18, 28].map((r) => ({ label: r + '%', value: r }));
               <app-payment-panel [docId]="b.id" party="SUPPLIER" [payments]="b.payments" [totals]="b.totals" [canAdd]="b.status !== 'CANCELLED'"
                                  [payeeUpi]="supplier()?.upi ?? null" (changed)="paid($event)" />
             }
+          }
+          @if (bill(); as h) {
+            <section class="p-card hist">
+              <h2>History</h2>
+              <app-history-list [entries]="h.history" />
+            </section>
           }
         </div>
 
@@ -242,6 +251,7 @@ export class PurchaseEditor implements OnInit {
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
   protected readonly brand = inject(TradeBrand);
+  private readonly auth = inject(AuthService);
   protected readonly money = rupees;
   protected readonly gstRates = GST_RATES;
 
@@ -296,13 +306,14 @@ export class PurchaseEditor implements OnInit {
       switchMap((b) => {
         if (b) this.fill(b);
         else {
-          this.brandId.set(this.brand.brandId());
+          // a new bill is in my own brand (owners may choose another)
+          this.brandId.set(this.auth.user()?.brandId ?? this.brand.brandId());
           this.supplierId.set(preset);
           this.addLine();
           this.dirty.set(false);
         }
-        const scope = b?.company.brandId ?? this.brand.selected();
-        return forkJoin([this.trade.suppliers(scope), this.trade.items(scope)]);
+        // every brand I may use: the lists then show the bill's brand
+        return forkJoin([this.trade.suppliers(null), this.trade.items(null)]);
       }),
     ).subscribe({
       next: ([s, i]) => {

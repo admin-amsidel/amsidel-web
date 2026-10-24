@@ -53,6 +53,9 @@ export const AMI = {
   notUnderstood: "I'm not sure I have the answer to that one. Shall I pass your question to our support team?",
   faqIntro: 'Here are some questions customers often ask:',
   anythingElse: 'Anything else I can help you with?',
+  offersIntro: (n: number) => (n === 1 ? 'We have an offer running right now:' : `We have ${n} offers running right now:`),
+  offersOutro: 'Tap below to see them with the details, or ask me and the team will help you claim one.',
+  noOffers: 'There are no offers running at the moment. New ones are announced on our Offers page first.',
 
   faqs: [
     {

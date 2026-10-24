@@ -14,16 +14,17 @@ import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
-import { forkJoin, Observable, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, Observable, of, switchMap } from 'rxjs';
 import { rupees } from '../payroll/payroll.models';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { AuthService } from '../auth.service';
 import { CustomerForm } from './customer-form';
 import { PaymentPanel } from './payment-panel';
 import { TradeBrand } from './trade-brand';
-import { Customer, DOC_STATUS, DocKind, DocStatus, Item, money, payLabel, qty, SalesBody, SalesDoc, workOut } from './trade.models';
+import { Customer, DOC_STATUS, DocKind, DocStatus, Item, money, payLabel, ProjectRow, qty, SalesBody, SalesDoc, workOut } from './trade.models';
 import { saveFile, TradeService } from './trade.service';
 import { phoneSearchText } from '../phone-input';
+import { HistoryList } from './history-list';
 
 interface Line {
   key: number;
@@ -51,7 +52,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
 @Component({
   selector: 'app-sales-editor',
   imports: [
-    FormsModule, DatePipe, RouterLink, CustomerForm, PaymentPanel, ButtonModule, DatePickerModule, DialogModule, InputNumberModule,
+    HistoryList, FormsModule, DatePipe, RouterLink, CustomerForm, PaymentPanel, ButtonModule, DatePickerModule, DialogModule, InputNumberModule,
     InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, ToggleSwitchModule, TooltipModule,
   ],
   template: `
@@ -67,13 +68,17 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
           }
         </h1>
         @if (doc(); as d) {
-          <p>{{ d.company.name }} · made by {{ d.createdByName ?? '—' }} on {{ d.createdAt | date: 'd MMM y' }}
-            @if (d.issuedAt) { · issued {{ d.issuedAt | date: 'd MMM y, h:mm a' }} by {{ d.issuedByName }} }
+          <p>{{ d.company.name }} · prepared by <b>{{ d.createdByName ?? '—' }}</b>{{ d.createdByDesignation ? ', ' + d.createdByDesignation : '' }}
+            on {{ d.createdAt | date: 'd MMM y' }}
+            @if (d.issuedAt) { · issued {{ d.issuedAt | date: 'd MMM y, h:mm a' }} by <b>{{ d.issuedByName }}</b> }
+            @if (d.updatedByName && d.updatedAt) { · last changed by {{ d.updatedByName }}, {{ d.updatedAt | date: 'd MMM y, h:mm a' }} }
+            @if (d.projectId) { · project <a [routerLink]="'/portal/products/projects/' + d.projectId">{{ d.projectCode }} {{ d.projectName }}</a> }
             @if (d.quotationId) { · from quotation <a [routerLink]="'/portal/products/quotations/' + d.quotationId">{{ d.quotationNumber }}</a> }
             @if (d.invoiceId) { · invoice <a [routerLink]="'/portal/products/invoices/' + d.invoiceId">{{ d.invoiceNumber }}</a> }
           </p>
         } @else {
-          <p>{{ invoice() ? 'A draft invoice can be changed and take advance payments. Issuing it gives it its number and takes the items out of stock.'
+          <p>Prepared by <b>{{ me()?.name }}</b>{{ me()?.designationName ? ', ' + me()?.designationName : '' }}{{ brandName() ? ' · ' + brandName() : '' }}.
+            {{ invoice() ? 'A draft invoice can be changed and take advance payments; issuing it numbers it and takes the items out of stock.'
             : 'Prices offered to a customer. Download the PDF to send it.' }}</p>
         }
       </div>
@@ -112,6 +117,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
                   <label for="se-brand">Brand *</label>
                   <p-select inputId="se-brand" [options]="brand.brands()" optionLabel="name" optionValue="id" placeholder="Choose the brand"
                             [ngModel]="brandId()" (ngModelChange)="pickBrand($event)" />
+                  <small class="hint">Items and customers of this brand are listed.</small>
                 </div>
               }
               <div class="pf grow">
@@ -119,7 +125,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
                 <div class="with-btn">
                   <p-select inputId="se-cust" [options]="customerOptions()" optionLabel="label" optionValue="value" [filter]="true"
                             filterBy="label,phone" placeholder="Search name or phone" [disabled]="!editable() || !brandId()"
-                            [ngModel]="customerId()" (ngModelChange)="customerId.set($event); dirty.set(true)" (onFilter)="lastSearch.set($event.filter)" />
+                            [ngModel]="customerId()" (ngModelChange)="customerId.set($event); projectId.set(null); dirty.set(true)" (onFilter)="lastSearch.set($event.filter)" />
                   @if (editable()) {
                     <p-button icon="pi pi-user-plus" [outlined]="true" ariaLabel="New customer" pTooltip="New customer" [disabled]="!brandId()" (onClick)="customerOpen.set(true)" />
                   }
@@ -139,6 +145,15 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
                                 [ngModel]="validUntil()" (ngModelChange)="validUntil.set($event); dirty.set(true)" />
                 </div>
               }
+              <div class="pf grow">
+                <label for="se-proj">Project <span class="opt">(optional)</span></label>
+                <p-select inputId="se-proj" [options]="projectOptions()" optionLabel="label" optionValue="value" [filter]="true" [showClear]="true"
+                          [placeholder]="customerId() ? (projectOptions().length ? 'Not part of a project' : 'No open projects for this customer') : 'Choose the customer first'"
+                          [disabled]="!editable() || !customerId()" [ngModel]="projectId()" (ngModelChange)="projectId.set($event); dirty.set(true)" />
+                @if (projectId()) {
+                  <small class="hint"><a [routerLink]="'/portal/products/projects/' + projectId()">Open the project</a> · its tasks, other bills and payments</small>
+                }
+              </div>
             </div>
           </section>
 
@@ -209,6 +224,12 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
               <app-payment-panel [docId]="d.id" party="CUSTOMER" [payments]="d.payments" [totals]="d.totals" [canAdd]="false" />
             }
           }
+          @if (doc(); as h) {
+            <section class="p-card hist">
+              <h2>History</h2>
+              <app-history-list [entries]="h.history" />
+            </section>
+          }
         </div>
 
         <aside class="side">
@@ -251,7 +272,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
               <div class="p-actions">
                 <p-button [label]="isNew() ? 'Save ' + (invoice() ? 'draft invoice' : 'quotation') : 'Save changes'" icon="pi pi-check"
                           [loading]="busy()" [disabled]="!isNew() && !dirty()" (onClick)="save()" />
-                @if (doc() && (doc()!.status === 'DRAFT' || !invoice())) {
+                @if (doc()?.canDelete) {
                   <p-button label="Delete" icon="pi pi-trash" [text]="true" severity="danger" (onClick)="remove()" />
                 }
               </div>
@@ -359,6 +380,12 @@ export class SalesEditor implements OnInit {
   protected readonly customers = signal<Customer[]>([]);
   protected readonly items = signal<Item[]>([]);
   protected readonly customerId = signal<number | null>(null);
+  protected readonly projectId = signal<number | null>(null);
+  protected readonly projects = signal<ProjectRow[]>([]);
+  /** The customer's projects that are still open (and the one already chosen). */
+  protected readonly projectOptions = computed(() =>
+    this.projects().filter((p) => p.customerId === this.customerId() && ((!p.settled && p.status !== 'CANCELLED') || p.id === this.projectId()))
+      .map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` })));
   protected readonly docDate = signal<Date | null>(new Date());
   protected readonly validUntil = signal<Date | null>(null);
   protected readonly lines = signal<Line[]>([]);
@@ -377,6 +404,8 @@ export class SalesEditor implements OnInit {
   protected readonly cancelReason = signal('');
   private nextKey = 1;
 
+  protected readonly me = computed(() => this.auth.user());
+  protected readonly brandName = computed(() => this.brand.brands().find((b) => b.id === this.brandId())?.name ?? '');
   protected readonly editable = computed(() => !this.doc() || this.doc()!.editable);
   protected readonly canInvoice = computed(() => this.auth.can('PROD_INVOICES'));
   protected readonly title = computed(() => {
@@ -420,13 +449,16 @@ export class SalesEditor implements OnInit {
       switchMap((d) => {
         if (d) this.fill(d);
         else {
-          this.brandId.set(this.brand.brandId());
+          // a new bill is in my own brand (owners may choose another)
+          this.brandId.set(this.auth.user()?.brandId ?? this.brand.brandId());
           this.customerId.set(preset);
+          this.projectId.set(Number(this.route.snapshot.queryParamMap.get('project')) || null);
           if (!this.invoice()) this.validUntil.set(new Date(Date.now() + 15 * 86400000));
           this.addLine(false);
           this.dirty.set(false);
         }
-        return this.loadLists(d?.company.brandId ?? this.brand.selected());
+        // every brand I may use: the list then shows the bill's brand
+        return this.loadLists(null);
       }),
     ).subscribe({
       next: () => {
@@ -441,10 +473,12 @@ export class SalesEditor implements OnInit {
   }
 
   private loadLists(brandId: number | null): Observable<unknown> {
-    return forkJoin([this.trade.customers(brandId), this.trade.items(brandId)]).pipe(
-      switchMap(([c, i]) => {
+    return forkJoin([this.trade.customers(brandId), this.trade.items(brandId),
+      this.trade.projects(brandId).pipe(catchError(() => of([] as ProjectRow[])))]).pipe(
+      switchMap(([c, i, pj]) => {
         this.customers.set(c);
         this.items.set(i);
+        this.projects.set(pj);
         return of(true);
       }),
     );
@@ -455,6 +489,7 @@ export class SalesEditor implements OnInit {
     this.kind.set(d.kind);
     this.brandId.set(d.company.brandId);
     this.customerId.set(d.customer.id);
+    this.projectId.set(d.projectId);
     this.docDate.set(fromIsoDate(d.docDate));
     this.validUntil.set(fromIsoDate(d.validUntil));
     const free = new Set<number>();
@@ -553,7 +588,7 @@ export class SalesEditor implements OnInit {
     }
     if (this.discount() > this.sums().subtotal) return this.problem('The discount is more than the lines add up to.');
     return {
-      kind: this.kind(), brandId: this.brandId(), customerId: this.customerId()!, docDate: toIsoDate(this.docDate())!,
+      kind: this.kind(), brandId: this.brandId(), customerId: this.customerId()!, projectId: this.projectId(), docDate: toIsoDate(this.docDate())!,
       validUntil: this.invoice() ? null : toIsoDate(this.validUntil()),
       lines: lines.map((l) => ({
         itemId: l.itemId, name: l.name.trim(), size: l.size.trim() || null, description: l.description.trim() || null,
@@ -634,7 +669,7 @@ export class SalesEditor implements OnInit {
           next: (x) => {
             this.fill(x);
             this.toast.add({ severity: 'success', summary: 'Invoice issued', detail: x.number ?? '' });
-            this.loadLists(x.company.brandId).subscribe();
+            this.loadLists(null).subscribe();
           },
           error: (e) => this.toast.add({ severity: 'error', summary: 'Not issued', detail: apiProblem(e).message, life: 8000 }),
         });

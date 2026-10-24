@@ -6,6 +6,7 @@ import { CATEGORIES } from '../../data/products';
 import { SITE, telHref } from '../../data/site.config';
 import { AmiChat } from '../../shared/ami-chat/ami-chat';
 import { ScrollTo } from '../../shared/scroll-to';
+import { SiteNewsService } from '../../shared/site-news.service';
 
 /** Header, footer and floating actions shared by every Doors & Windows page. */
 @Component({
@@ -21,6 +22,8 @@ export class StoreShell {
   protected readonly systems = CATEGORIES.filter((c) => c.group === 'doors-windows');
   protected readonly doors = CATEGORIES.filter((c) => c.group === 'doors');
   protected readonly tel = SITE.phone ? telHref(SITE.phone) : '';
+  /** The offers (and news) the company portal made public. */
+  protected readonly news = inject(SiteNewsService);
 
   protected readonly scrolled = signal(false);
   protected readonly drawerOpen = signal(false);
@@ -33,6 +36,7 @@ export class StoreShell {
   private readonly header = viewChild<ElementRef<HTMLElement>>('header');
 
   constructor() {
+    this.news.load();
     // keep the page from scrolling behind the open mobile drawer
     effect(() => {
       document.body.style.overflow = this.drawerOpen() ? 'hidden' : '';

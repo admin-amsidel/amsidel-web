@@ -5,7 +5,7 @@ import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
 import { toIsoDate } from '../portal.models';
 import {
-  BrandRef, Customer, DocKind, DocStatus, Item, ItemDetail, OwedReport, Overview, PaymentBody, PaymentReport, ProductType,
+  BrandRef, Customer, HistoryEntry, PersonRef, Project, ProjectBody, ProjectRow, ProjectStatus, TaskBody, TradeSubject, DocKind, DocStatus, Item, ItemDetail, OwedReport, Overview, PaymentBody, PaymentReport, ProductType,
   PurchaseBill, PurchaseBody, PurchaseReport, PurchaseRow, SalesBody, SalesDoc, SalesReport, SalesRow, StockKind, StockReport,
   Supplier,
 } from './trade.models';
@@ -154,6 +154,70 @@ export class TradeService {
   /** Returns the invoice or purchase bill the payment was on. */
   voidPayment(id: number, reason: string): Observable<SalesDoc | PurchaseBill> {
     return this.http.post<SalesDoc | PurchaseBill>(`${T}/payments/${id}/void`, { reason });
+  }
+
+  // ---- projects ----
+
+  projects(brandId: number | null): Observable<ProjectRow[]> {
+    return this.http.get<ProjectRow[]>(`${T}/projects`, { params: params({ brandId }) });
+  }
+
+  project(id: number): Observable<Project> {
+    return this.http.get<Project>(`${T}/projects/${id}`);
+  }
+
+  people(brandId: number | null): Observable<PersonRef[]> {
+    return this.http.get<PersonRef[]>(`${T}/people`, { params: params({ brandId }) });
+  }
+
+  saveProject(id: number | null, body: ProjectBody): Observable<Project> {
+    return id ? this.http.put<Project>(`${T}/projects/${id}`, body) : this.http.post<Project>(`${T}/projects`, body);
+  }
+
+  projectStatus(id: number, status: ProjectStatus, note: string): Observable<Project> {
+    return this.http.post<Project>(`${T}/projects/${id}/status`, { status, note });
+  }
+
+  settleProject(id: number, text: string): Observable<Project> {
+    return this.http.post<Project>(`${T}/projects/${id}/settle`, { text });
+  }
+
+  reopenProject(id: number, text: string): Observable<Project> {
+    return this.http.post<Project>(`${T}/projects/${id}/reopen`, { text });
+  }
+
+  deleteProject(id: number): Observable<void> {
+    return this.http.delete<void>(`${T}/projects/${id}`);
+  }
+
+  commentProject(id: number, text: string): Observable<Project> {
+    return this.http.post<Project>(`${T}/projects/${id}/comments`, { text });
+  }
+
+  addTask(projectId: number, body: TaskBody): Observable<Project> {
+    return this.http.post<Project>(`${T}/projects/${projectId}/tasks`, body);
+  }
+
+  saveTask(taskId: number, body: TaskBody): Observable<Project> {
+    return this.http.put<Project>(`${T}/project-tasks/${taskId}`, body);
+  }
+
+  taskStatus(taskId: number, status: ProjectStatus): Observable<Project> {
+    return this.http.post<Project>(`${T}/project-tasks/${taskId}/status`, { status });
+  }
+
+  deleteTask(taskId: number): Observable<Project> {
+    return this.http.delete<Project>(`${T}/project-tasks/${taskId}`);
+  }
+
+  // ---- history ----
+
+  history(type: TradeSubject, id: number): Observable<HistoryEntry[]> {
+    return this.http.get<HistoryEntry[]>(`${T}/history/${type}/${id}`, { context: silent() });
+  }
+
+  activity(brandId: number | null, from: Date, to: Date): Observable<HistoryEntry[]> {
+    return this.http.get<HistoryEntry[]>(`${T}/history`, { params: params({ brandId, from, to }) });
   }
 
   // ---- overview and reports ----

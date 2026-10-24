@@ -45,6 +45,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/site-visit/site-visit').then((m) => m.SiteVisit),
       },
       {
+        path: 'offers',
+        title: 'Offers · Amsidel Doors & Windows',
+        loadComponent: () => import('./pages/offers/offers').then((m) => m.Offers),
+      },
+      {
         path: 'contact',
         title: 'Contact · Amsidel Doors & Windows',
         loadComponent: () => import('./pages/contact/contact').then((m) => m.Contact),

@@ -7,6 +7,7 @@ import { CATEGORIES, Category, Product, PRODUCTS, productsIn } from '../../data/
 import { SITE, telHref, whatsappHref } from '../../data/site.config';
 import { sendEnquiry, warmUpEnquiries } from '../enquiry';
 import { formatPhone } from '../phone-field';
+import { SiteNewsService } from '../site-news.service';
 
 interface ChatLink {
   label: string;
@@ -68,6 +69,9 @@ export class AmiChat implements OnDestroy {
   protected readonly supportTel = telHref(AMI.supportPhone);
   protected readonly whatsapp = SITE.whatsapp ? whatsappHref(AMI.whatsappText) : '';
 
+  /** The offers (Discount news) the company portal made public. */
+  private readonly news = inject(SiteNewsService);
+
   protected readonly open = signal(false);
   protected readonly teaser = signal(false);
   protected readonly messages = signal<ChatMsg[]>([]);
@@ -100,6 +104,7 @@ export class AmiChat implements OnDestroy {
   private phoneRequired = false;
 
   constructor() {
+    this.news.load();
     this.later(() => {
       if (!this.started) this.teaser.set(true);
     }, 4000);
@@ -311,11 +316,43 @@ export class AmiChat implements OnDestroy {
     return { label: `Call support: ${AMI.supportPhone}`, href: telHref(AMI.supportPhone) };
   }
 
+  /** "Offers (2)" while offers run; nothing otherwise. */
+  private offersChoice(): Choice[] {
+    const n = this.news.offers().length;
+    return n ? [{ label: `Offers (${n})`, run: () => this.showOffers() }] : [];
+  }
+
+  /** The running offers, with the way to the Offers page. */
+  private async showOffers(): Promise<void> {
+    this.step.set('browse');
+    const offers = this.news.offers();
+    if (!offers.length) {
+      await this.say({ text: AMI.noOffers, links: [{ label: 'Offers page', route: ['/doors-windows/offers'] }] });
+      return this.menu();
+    }
+    this.lead.types.add('Offers');
+    const till = (d: string | null) => (d ? ` (till ${new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})` : '');
+    await this.say({ text: AMI.offersIntro(offers.length) + '\n' + offers.map((o) => `• ${o.title}${till(o.endDate)}`).join('\n') });
+    await this.say({
+      text: AMI.offersOutro,
+      links: [
+        { label: offers.length === 1 ? 'See the offer' : `See all ${offers.length} offers`, route: ['/doors-windows/offers'] },
+        { label: 'Book a free site visit', route: ['/doors-windows/site-visit'] },
+      ],
+    });
+    this.choices.set([
+      this.supportChoice('Ask about an offer'),
+      { label: 'Product types', run: () => this.showTypes() },
+      { label: 'Common questions', run: () => this.showFaqs() },
+    ]);
+  }
+
   private async showTypes(): Promise<void> {
     this.step.set('browse');
     await this.say({ text: AMI.askType });
     this.choices.set([
       this.supportChoice(),
+      ...this.offersChoice(),
       ...CATEGORIES.map((c) => ({ label: c.name, run: () => this.showCategory(c) })),
       { label: 'I have a product code', run: () => this.askCode() },
       { label: 'Common questions', run: () => this.showFaqs() },
@@ -417,6 +454,7 @@ export class AmiChat implements OnDestroy {
     this.step.set('browse');
     this.choices.set([
       this.supportChoice(),
+      ...this.offersChoice(),
       { label: 'Product types', run: () => this.showTypes() },
       { label: 'I have a product code', run: () => this.askCode() },
       { label: 'Brochure', run: async () => (await this.sayBrochure(), this.menu()) },
@@ -484,6 +522,7 @@ export class AmiChat implements OnDestroy {
     if (cat) return this.showCategory(cat);
 
     if (/brochure|catalog|catalogue|pdf/.test(lower)) return (await this.sayBrochure(), this.menu());
+    if (/\b(offers?|discounts?|deals?|promo(tion)?s?|sale|festival|diwali|onam|% ?off)\b/.test(lower)) return this.showOffers();
     if (/^\s*(hi|hello|hey|thanks?|thank you|ok|okay)\b/.test(lower)) {
       await this.say({ text: AMI.anythingElse });
       return this.menu();

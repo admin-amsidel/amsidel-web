@@ -12,6 +12,175 @@ export interface Balance {
   due: number;
 }
 
+export type TradeSubject = 'QUOTATION' | 'INVOICE' | 'PURCHASE' | 'ITEM' | 'CUSTOMER' | 'SUPPLIER' | 'PRODUCT_TYPE' | 'PROJECT' | 'PROJECT_TASK'
+  | 'MONEY_ENTRY' | 'BANK_STATEMENT' | 'BANK_BALANCE';
+
+/** One step in a record's history. */
+export interface HistoryEntry {
+  id: number;
+  at: string;
+  subjectType: TradeSubject;
+  subjectId: number;
+  subjectLabel: string | null;
+  action: string;
+  details: string | null;
+  byName: string | null;
+  brandCode: string | null;
+}
+
+export const HISTORY_ACTIONS: Record<string, { label: string; icon: string; tone: 'blue' | 'green' | 'amber' | 'red' | 'grey' }> = {
+  CREATED: { label: 'Made', icon: 'pi pi-plus-circle', tone: 'blue' },
+  UPDATED: { label: 'Changed', icon: 'pi pi-pencil', tone: 'grey' },
+  STATUS: { label: 'Status', icon: 'pi pi-flag', tone: 'blue' },
+  INVOICED: { label: 'Made into invoice', icon: 'pi pi-receipt', tone: 'green' },
+  ISSUED: { label: 'Issued', icon: 'pi pi-check-circle', tone: 'green' },
+  RECEIVED: { label: 'Received into stock', icon: 'pi pi-download', tone: 'green' },
+  PAYMENT: { label: 'Payment', icon: 'pi pi-wallet', tone: 'green' },
+  REFUND: { label: 'Refund', icon: 'pi pi-replay', tone: 'amber' },
+  VOIDED: { label: 'Payment voided', icon: 'pi pi-ban', tone: 'red' },
+  CANCELLED: { label: 'Cancelled', icon: 'pi pi-times-circle', tone: 'red' },
+  DELETED: { label: 'Deleted', icon: 'pi pi-trash', tone: 'red' },
+  STOCK: { label: 'Stock changed', icon: 'pi pi-box', tone: 'amber' },
+  SETTLED: { label: 'Settled & closed', icon: 'pi pi-lock', tone: 'green' },
+  REOPENED: { label: 'Reopened', icon: 'pi pi-lock-open', tone: 'amber' },
+  COMMENT: { label: 'Comment', icon: 'pi pi-comment', tone: 'blue' },
+  WRITE_OFF: { label: 'Discount written off', icon: 'pi pi-percentage', tone: 'amber' },
+  UPLOADED: { label: 'Uploaded', icon: 'pi pi-upload', tone: 'blue' },
+};
+
+// ---- projects ----
+
+export type ProjectStatus = 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export const PROJECT_STATUS: Record<ProjectStatus, { label: string; severity: 'secondary' | 'info' | 'success' | 'danger' }> = {
+  QUEUED: { label: 'Queued', severity: 'secondary' },
+  IN_PROGRESS: { label: 'In progress', severity: 'info' },
+  COMPLETED: { label: 'Completed', severity: 'success' },
+  CANCELLED: { label: 'Cancelled', severity: 'danger' },
+};
+
+export const PROJECT_STATUS_OPTIONS = (Object.keys(PROJECT_STATUS) as ProjectStatus[]).map((s) => ({ value: s, label: PROJECT_STATUS[s].label }));
+
+export interface PersonRef {
+  id: number;
+  name: string;
+  designation: string | null;
+}
+
+export interface ProjectMoney {
+  estimated: number | null;
+  finalAmount: number | null;
+  quoted: number;
+  billed: number;
+  paid: number;
+  /** Finalized, else billed, else estimated. */
+  toPay: number;
+  due: number;
+  quotations: number;
+  invoices: number;
+  /** Discounts written off on its invoices. */
+  writtenOff: number;
+}
+
+export interface ProjectTask {
+  id: number;
+  title: string;
+  description: string | null;
+  status: ProjectStatus;
+  regDate: string;
+  startDate: string | null;
+  endDate: string | null;
+  assignee: PersonRef | null;
+  billId: number | null;
+  billNumber: string | null;
+  billKind: DocKind | null;
+  remarks: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  updatedByName: string | null;
+  updatedAt: string | null;
+  history: HistoryEntry[];
+}
+
+export interface ProjectRow {
+  id: number;
+  code: string;
+  name: string;
+  brandCode: string;
+  customerId: number;
+  customerName: string;
+  customerPhone: string;
+  status: ProjectStatus;
+  settled: boolean;
+  ownerName: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  money: ProjectMoney;
+  tasks: number;
+  tasksDone: number;
+  createdByName: string | null;
+  updatedAt: string | null;
+}
+
+export interface Project {
+  id: number;
+  code: string;
+  name: string;
+  brand: BrandRef;
+  customer: PartyRef;
+  description: string | null;
+  status: ProjectStatus;
+  settled: boolean;
+  settledAt: string | null;
+  settledByName: string | null;
+  owner: PersonRef | null;
+  members: PersonRef[];
+  startDate: string | null;
+  endDate: string | null;
+  remarks: string | null;
+  money: ProjectMoney;
+  bills: SalesRow[];
+  payments: Payment[];
+  tasks: ProjectTask[];
+  history: HistoryEntry[];
+  createdByName: string | null;
+  createdAt: string;
+  updatedByName: string | null;
+  updatedAt: string | null;
+  completedAt: string | null;
+  /** I may change it (not settled, or I am an admin / owner). */
+  editable: boolean;
+  /** Owner or admin: settle with money due, reopen, delete. */
+  admin: boolean;
+}
+
+export interface ProjectBody {
+  brandId: number | null;
+  name: string;
+  customerId: number;
+  description: string | null;
+  ownerId: number | null;
+  memberIds: number[];
+  startDate: string | null;
+  endDate: string | null;
+  estimatedAmount: number | null;
+  finalAmount: number | null;
+  status: ProjectStatus | null;
+  remarks: string | null;
+}
+
+export interface TaskBody {
+  title: string;
+  description: string | null;
+  status: ProjectStatus | null;
+  regDate: string;
+  startDate: string | null;
+  endDate: string | null;
+  assigneeId: number | null;
+  billId: number | null;
+  remarks: string | null;
+}
+
 export interface ProductType {
   id: number;
   brand: BrandRef;
@@ -21,6 +190,8 @@ export interface ProductType {
   sortOrder: number;
   active: boolean;
   itemCount: number;
+  updatedByName: string | null;
+  updatedAt: string | null;
 }
 
 export interface Supplier {
@@ -45,6 +216,8 @@ export interface Supplier {
   balance: Balance;
   bills: number;
   items: number;
+  updatedByName: string | null;
+  updatedAt: string | null;
 }
 
 export interface Customer {
@@ -65,6 +238,8 @@ export interface Customer {
   quotations: number;
   invoices: number;
   lastDocDate: string | null;
+  updatedByName: string | null;
+  updatedAt: string | null;
 }
 
 export interface Item {
@@ -94,6 +269,8 @@ export interface Item {
   stockValue: number;
   lowStock: boolean;
   active: boolean;
+  updatedByName: string | null;
+  updatedAt: string | null;
 }
 
 export type StockKind = 'OPENING' | 'PURCHASE' | 'PURCHASE_CANCEL' | 'SALE' | 'SALE_CANCEL' | 'ADJUST_IN' | 'ADJUST_OUT';
@@ -126,6 +303,7 @@ export interface StockMove {
 export interface ItemDetail {
   item: Item;
   moves: StockMove[];
+  history: HistoryEntry[];
 }
 
 export type DocKind = 'QUOTATION' | 'INVOICE';
@@ -159,6 +337,8 @@ export interface Totals {
   total: number;
   paid: number;
   due: number;
+  /** Discount written off after issue (Income & expenses); settled like a payment. */
+  writtenOff: number;
 }
 
 export interface Company {
@@ -253,6 +433,15 @@ export interface SalesDoc {
   cancelledAt: string | null;
   cancelReason: string | null;
   editable: boolean;
+  createdByDesignation: string | null;
+  updatedByName: string | null;
+  updatedAt: string | null;
+  history: HistoryEntry[];
+  projectId: number | null;
+  projectCode: string | null;
+  projectName: string | null;
+  /** I may delete it (owner or admin, and it can be deleted). */
+  canDelete: boolean;
 }
 
 export interface SalesRow {
@@ -270,12 +459,16 @@ export interface SalesRow {
   total: number;
   paid: number;
   due: number;
+  createdByName: string | null;
+  projectId: number | null;
+  projectCode: string | null;
 }
 
 export interface SalesBody {
   kind: DocKind;
   brandId: number | null;
   customerId: number;
+  projectId: number | null;
   docDate: string;
   validUntil: string | null;
   lines: SalesLine[];
@@ -320,6 +513,9 @@ export interface PurchaseBill {
   cancelledAt: string | null;
   cancelReason: string | null;
   editable: boolean;
+  updatedByName: string | null;
+  updatedAt: string | null;
+  history: HistoryEntry[];
 }
 
 export interface PurchaseRow {
@@ -336,6 +532,7 @@ export interface PurchaseRow {
   paid: number;
   due: number;
   lines: number;
+  createdByName: string | null;
 }
 
 export interface PurchaseBody {

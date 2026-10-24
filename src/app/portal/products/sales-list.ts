@@ -79,8 +79,8 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
         <ng-template #body let-d>
           <tr class="row-link" (click)="open(d)">
             <td data-label="Number" class="stack-full"><b>{{ d.number ?? 'Draft' }}</b>{{ brand.many() && !brand.selected() ? ' · ' + d.brandCode : '' }}</td>
-            <td data-label="Date" class="nowrap">{{ d.docDate | date: 'd MMM y' }}</td>
-            <td data-label="Customer">{{ d.customerName }}<small class="muted block">{{ d.customerPhone }}</small></td>
+            <td data-label="Date" class="nowrap">{{ d.docDate | date: 'd MMM y' }}<small class="muted block">{{ d.createdByName ? 'by ' + d.createdByName : '' }}</small></td>
+            <td data-label="Customer">{{ d.customerName }}<small class="muted block">{{ d.customerPhone }}{{ d.projectCode ? ' · ' + d.projectCode : '' }}</small></td>
             <td data-label="Status">
               <p-tag [value]="status(d).label" [severity]="status(d).severity" />
               @if (pay(d); as p) { <p-tag [value]="p.label" [severity]="p.severity" styleClass="ml" /> }

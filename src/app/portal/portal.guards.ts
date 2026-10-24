@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
-import { map } from 'rxjs';
+import { catchError, map, of } from 'rxjs';
 import { AuthService } from './auth.service';
 
 /** Portal pages need a valid session; otherwise go to the login page and come back afterwards. */
@@ -30,18 +30,14 @@ export const menuGuard: CanActivateFn = (route) => {
 };
 
 /**
- * The page after signing in: the choice between the employee and the product portal, for people who have product
- * menus; everyone else goes straight to My profile.
+ * The page after signing in, for everyone: the news, then the employee portal and (for people with product menus)
+ * the product portal. Only when the menus cannot be loaded does it go to My profile.
  */
 export const homeGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return auth.ensureAccess().pipe(
-    map(() => {
-      const paths = (auth.access()?.menus ?? []).flatMap((m) => [m.path, ...m.children.map((c) => c.path)]);
-      return paths.some((p) => !!p && p.startsWith('/portal/products')) || router.createUrlTree(['/portal/profile']);
-    }),
-  );
+  // everyone lands here (the news is for all); the page shows the product portal only to people who have it
+  return auth.ensureAccess().pipe(map(() => true), catchError(() => of(router.createUrlTree(['/portal/profile']))));
 };
 
 /** Already signed in: skip the login page. */
