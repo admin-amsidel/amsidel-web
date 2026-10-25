@@ -517,13 +517,23 @@
     display: none;
   }
 
-  /* not enough room on phones; both emails are still in the footer and on the contact page */
-  .topbar__alt {
-    display: none !important;
-  }
-
+  /* phones: the phone number and both emails, on two short centred lines (wrapping, never cut off) */
   .topbar__inner {
     justify-content: center;
+    padding-block: 6px;
+  }
+
+  .topbar__links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 16px;
+    font-size: 0.76rem;
+    min-width: 0;
+
+    a,
+    .contact-text {
+      overflow-wrap: anywhere;
+    }
   }
 }
 

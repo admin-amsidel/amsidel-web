@@ -112,6 +112,13 @@ export const PRODUCT_ROUTES: Routes = [
     loadComponent: () => import('./reconciler').then((m) => m.Reconciler),
   },
   {
+    path: 'mail',
+    title: 'Customer & supplier mail' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_MAIL', audience: 'TRADE' },
+    loadComponent: () => import('../mail/staff-mail').then((m) => m.StaffMail),
+  },
+  {
     path: 'reports',
     title: 'Reports' + T,
     canActivate: [menuGuard],

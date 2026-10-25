@@ -1,7 +1,7 @@
 <div class="p-head">
   <div>
-    <h1>Staff mail</h1>
-    <p>Write once; each employee gets it personally, by office email, WhatsApp or both.</p>
+    <h1>{{ t.title }}</h1>
+    <p>{{ t.intro }}</p>
   </div>
 </div>
 
@@ -23,12 +23,20 @@
         <label for="m-subject">Subject *</label>
         <p-button label="Insert name" icon="pi pi-user-plus" [text]="true" size="small" (onClick)="insertName(subjectEl, 'subject')" />
       </div>
-      <input #subjectEl pInputText id="m-subject" maxlength="200" autocomplete="off" placeholder="e.g. New client: Kumar residence"
+      <input #subjectEl pInputText id="m-subject" maxlength="200" autocomplete="off" [placeholder]="t.placeholder"
              [ngModel]="subject()" (ngModelChange)="subject.set($event)" />
     </div>
 
     @if (byEmail()) {
       <div class="pf copies">
+        @if (alwaysCc()) {
+          <div class="copies__row copies__fixed">
+            <span class="lbl">CC</span>
+            <span class="fixed-cc" title="Copied on every mail; it cannot be taken off">
+              <i class="pi pi-lock" aria-hidden="true"></i> {{ alwaysCc() }} <small>always copied</small>
+            </span>
+          </div>
+        }
         @if (!showCopies()) {
           <p-button label="Add CC / BCC" icon="pi pi-users" [text]="true" size="small" styleClass="add-copies" (onClick)="showCopies.set(true)" />
         } @else {
@@ -58,7 +66,7 @@
       <div class="dear">
         <span>Dear</span>
         @if (greetingMode() === 'NAME') {
-          <span class="dear__auto"><i class="pi pi-user" aria-hidden="true"></i> employee's name</span>
+          <span class="dear__auto"><i class="pi pi-user" aria-hidden="true"></i> {{ t.theirName }}</span>
         } @else {
           <input pInputText id="m-greet" maxlength="100" aria-label="Words after Dear" placeholder="All"
                  [ngModel]="greetingText()" (ngModelChange)="greetingText.set($event)" />
@@ -86,7 +94,7 @@
         <span class="fmt__tip">Select words, then <b>B</b> for bold; <b>Heading</b> for the line the cursor is on.</span>
       </div>
       <textarea #bodyEl pTextarea id="m-body" rows="9" maxlength="20000" [autoResize]="true"
-                placeholder="What everyone should know: a new process, a new client, a reminder…"
+                [placeholder]="t.bodyHint"
                 [ngModel]="body()" (ngModelChange)="body.set($event)"></textarea>
       <small class="hint">{{ '{name}' }} becomes each person's name. **words** show in bold and a line starting with # is a
         heading. Your signature goes at the end.
@@ -190,7 +198,7 @@
     </div>
     <p-selectbutton [options]="modeOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
                     [ngModel]="mode()" (ngModelChange)="mode.set($event)" />
-    @if (mode() === 'ALL') {
+    @if (mode() !== 'PICK') {
       @if (brands().length > 1) {
         <div class="pf mt">
           <label for="m-brand">Brand</label>
@@ -200,20 +208,20 @@
       }
     } @else {
       <div class="pf mt">
-        <label for="m-people">People</label>
+        <label for="m-people">{{ t.people }}</label>
         <p-multiselect inputId="m-people" [options]="peopleOptions()" optionLabel="label" optionValue="value" [filter]="true"
-                       filterPlaceholder="Search by name or number" placeholder="Choose people" display="chip"
-                       [maxSelectedLabels]="4" selectedItemsLabel="{0} people" appendTo="body" [loading]="loading()"
+                       [filterPlaceHolder]="t.search" [placeholder]="t.pick" display="chip"
+                       [maxSelectedLabels]="4" [selectedItemsLabel]="t.chosen" appendTo="body" [loading]="loading()"
                        [ngModel]="picked()" (ngModelChange)="picked.set($event)" />
       </div>
     }
     <p class="count">
-      @if (loading()) { Loading employees… }
+      @if (loading()) { {{ t.loading }} }
       @else {
         @if (byEmail()) {
           <span class="line"><i class="pi pi-envelope" aria-hidden="true"></i>
             <b>{{ recipients().length - noEmail() }}</b> by email
-            @if (noEmail()) { <span class="warn">· {{ noEmail() }} without an office email</span> }
+            @if (noEmail()) { <span class="warn">· {{ noEmail() }} {{ t.noEmail }}</span> }
           </span>
         }
         @if (byWhatsApp()) {
@@ -228,9 +236,9 @@
     <div class="preview" aria-label="Preview">
       <div class="preview__bar"><span>Preview for {{ preview().name }}</span></div>
       <div class="preview__subj">{{ preview().subject }}</div>
-      @if (byEmail() && (cc().length || bcc().length)) {
+      @if (byEmail() && (cc().length || bcc().length || alwaysCc())) {
         <div class="preview__cc">
-          @if (cc().length) { <span>CC: {{ cc().join(', ') }}</span> }
+          @if (cc().length || alwaysCc()) { <span>CC: {{ (alwaysCc() ? [alwaysCc()] : []).concat(cc()).join(', ') }}</span> }
           @if (bcc().length) { <span>BCC: {{ bcc().join(', ') }}</span> }
         </div>
       }
@@ -318,21 +326,22 @@
              [paginator]="shownRows().length > 25" [rows]="25">
       <ng-template #header>
         <tr>
-          <th>Employee</th>
-          @if (sentVia() !== 'WHATSAPP') { <th>Office email</th><th>Email status</th><th>Details</th> }
+          <th>{{ t.who }}</th>
+          @if (sentVia() !== 'WHATSAPP') { <th>{{ t.emailCol }}</th><th>Email status</th><th>Details</th> }
           @if (sentVia() !== 'EMAIL') { <th>WhatsApp</th> }
         </tr>
       </ng-template>
       <ng-template #body let-r>
         <tr>
-          <td data-label="Employee" class="stack-full">
+          <td [attr.data-label]="t.who" class="stack-full">
             <span class="person">
-              <app-avatar [name]="r.name" [employeeId]="r.id" [photoVersion]="r.photoUpdatedAt" [photoPath]="r.photoPath" [size]="30" />
-              <span><b>{{ r.name }}</b><small class="muted">{{ r.empNumber }}</small></span>
+              <app-avatar [name]="r.name" [employeeId]="r.kind === 'EMPLOYEE' ? r.personId : null" [photoVersion]="r.photoUpdatedAt"
+                          [photoPath]="r.photoPath" [size]="30" />
+              <span><b>{{ r.name }}</b><small class="muted">{{ r.kind === 'EMPLOYEE' ? '' : (r.kind === 'CUSTOMER' ? 'Customer · ' : 'Supplier · ') }}{{ r.empNumber }}</small></span>
             </span>
           </td>
           @if (sentVia() !== 'WHATSAPP') {
-            <td data-label="Office email">{{ r.email ?? '—' }}</td>
+            <td [attr.data-label]="t.emailCol">{{ r.email ?? '—' }}</td>
             <td data-label="Email status">
               <p-tag [value]="tag(r).value" [severity]="tag(r).severity" [icon]="r.status === 'sending' ? 'pi pi-spin pi-spinner' : ''" />
             </td>

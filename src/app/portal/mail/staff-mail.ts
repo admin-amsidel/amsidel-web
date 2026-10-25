@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { catchError, from, map, mergeMap, of, Subscription, tap } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -15,9 +16,9 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { Avatar } from '../avatar';
-import { apiProblem, Brand, Employee } from '../portal.models';
+import { apiProblem, Employee } from '../portal.models';
 import { StaffService } from '../staff.service';
-import { MailBody, MailService, MailSetup, PictureAlign, PictureSize } from './mail.service';
+import { MailBody, MailRecipient, MailService, MailSetup, PictureAlign, PictureSize, STAFF_MAIL_API, TRADE_MAIL_API } from './mail.service';
 
 /** Email delivery; 'off' when this send is WhatsApp only. */
 type Delivery = 'queued' | 'sending' | 'sent' | 'failed' | 'off';
@@ -25,8 +26,30 @@ type Delivery = 'queued' | 'sending' | 'sent' | 'failed' | 'off';
 type WhatsApp = 'ready' | 'opened' | 'nophone' | 'off';
 export type Channel = 'EMAIL' | 'WHATSAPP' | 'BOTH';
 
-interface Row {
+/** Staff mail goes to employees; customer and supplier mail (Product portal) to customers and suppliers. */
+type Audience = 'STAFF' | 'TRADE';
+
+/** Someone who can get the mail: an employee, a customer or a supplier. */
+interface Person {
+  /** Unique in the list (suppliers are negative, so they never clash with customers). */
+  key: number;
   id: number;
+  kind: 'EMPLOYEE' | 'CUSTOMER' | 'SUPPLIER';
+  name: string;
+  /** Employee number, customer or supplier code. */
+  code: string;
+  email: string | null;
+  phone: string | null;
+  brandId: number | null;
+  photoPath: string | null;
+  photoUpdatedAt: string | null;
+}
+
+interface Row {
+  /** Person.key */
+  id: number;
+  personId: number;
+  kind: Person['kind'];
   name: string;
   empNumber: string;
   email: string | null;
@@ -43,7 +66,7 @@ interface Row {
 }
 
 /** Everything about the message except who gets it. */
-type Draft = Omit<MailBody, 'employeeId'>;
+type Draft = Omit<MailBody, 'employeeId' | 'party' | 'partyId'>;
 
 /** A file added to the mail: uploading, ready (with its id on the server) or failed. */
 interface Upload {
@@ -86,7 +109,8 @@ const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const PARALLEL = 3;
 
 /**
- * Staff mail: one message written once and sent to each chosen employee as their own personal mail
+ * Staff mail, and the Product portal's customer and supplier mail (the same page; route data audience = 'TRADE'):
+ * one message written once and sent to each chosen employee (or customer, or supplier) as their own personal mail
  * ("Dear Anu," or "Dear All,") at their office address. While it sends, every person's mail shows queued,
  * sending, sent or failed (with the reason); failed ones can be sent again. Nothing is kept after leaving the page.
  * WhatsApp (free, from the sender's own WhatsApp): each person's message opens in WhatsApp ready to send with one
@@ -109,39 +133,68 @@ export class StaffMail implements OnInit {
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
 
+  /** Who this page mails, and the API it uses. */
+  protected readonly audience: Audience = inject(ActivatedRoute).snapshot.data['audience'] === 'TRADE' ? 'TRADE' : 'STAFF';
+  protected readonly trade = this.audience === 'TRADE';
+  private readonly api = this.trade ? TRADE_MAIL_API : STAFF_MAIL_API;
+  /** The words that differ between the two. */
+  protected readonly t = this.trade
+    ? {
+      title: 'Customer & supplier mail', intro: 'Write once; each customer or supplier gets it personally, by email, WhatsApp or both.',
+      person: 'customer or supplier', people: 'Customers / suppliers', theirName: "customer's or supplier's name", loading: 'Loading customers and suppliers…',
+      emailCol: 'Email', noEmail: 'without an email', noEmailAll: 'None of them has an email on record.', who: 'Customer / supplier',
+      confirm: 'Send customer & supplier mail', placeholder: 'e.g. Your quotation for the villa windows', pick: 'Choose customers or suppliers',
+      search: 'Search by name, code or email', chosen: '{0} chosen', bodyHint: 'What they should know: an offer, a quotation, an order, a reminder…',
+    }
+    : {
+      title: 'Staff mail', intro: 'Write once; each employee gets it personally, by office email, WhatsApp or both.',
+      person: 'employee', people: 'People', theirName: "employee's name", loading: 'Loading employees…',
+      emailCol: 'Office email', noEmail: 'without an office email', noEmailAll: 'None of these people has an office email on record.', who: 'Employee',
+      confirm: 'Send staff mail', placeholder: 'e.g. New client: Kumar residence', pick: 'Choose people',
+      search: 'Search by name or number', chosen: '{0} people', bodyHint: 'What everyone should know: a new process, a new client, a reminder…',
+    };
+
   protected readonly setup = signal<MailSetup | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal('');
 
   // who
-  protected readonly employees = signal<Employee[]>([]);
-  protected readonly brands = signal<Brand[]>([]);
+  protected readonly employees = signal<Person[]>([]);
+  protected readonly brands = signal<{ id: number; name: string }[]>([]);
   protected readonly brandId = signal<number | null>(null);
-  protected readonly mode = signal<'ALL' | 'PICK'>('ALL');
+  protected readonly mode = signal<'ALL' | 'CUSTOMERS' | 'SUPPLIERS' | 'PICK'>(this.trade ? 'CUSTOMERS' : 'ALL');
   protected readonly picked = signal<number[]>([]);
-  protected readonly modeOptions = [
-    { label: 'All employees', value: 'ALL' },
-    { label: 'Choose people', value: 'PICK' },
-  ];
+  protected readonly modeOptions = this.trade
+    ? [
+      { label: 'All customers', value: 'CUSTOMERS' },
+      { label: 'All suppliers', value: 'SUPPLIERS' },
+      { label: 'Choose', value: 'PICK' },
+    ]
+    : [
+      { label: 'All employees', value: 'ALL' },
+      { label: 'Choose people', value: 'PICK' },
+    ];
   protected readonly brandOptions = computed(() => [
     { value: null, label: 'All brands' },
     ...this.brands().map((b) => ({ value: b.id, label: b.name })),
   ]);
   protected readonly peopleOptions = computed(() =>
     this.employees().map((e) => ({
-      value: e.id,
-      label: `${e.empNumber} · ${e.name}${e.companyEmail ? '' : ' (no office email)'}`,
+      value: e.key,
+      label: `${this.trade ? (e.kind === 'CUSTOMER' ? 'Customer' : 'Supplier') + ' · ' : ''}${e.code} · ${e.name}`
+        + (e.email ? (this.trade ? ' · ' + e.email : '') : this.trade ? ' (no email)' : ' (no office email)'),
     })),
   );
   protected readonly recipients = computed(() => {
     if (this.mode() === 'PICK') {
       const ids = new Set(this.picked());
-      return this.employees().filter((e) => ids.has(e.id));
+      return this.employees().filter((e) => ids.has(e.key));
     }
     const brand = this.brandId();
-    return this.employees().filter((e) => brand === null || e.brandId === brand);
+    const kind = this.mode() === 'CUSTOMERS' ? 'CUSTOMER' : this.mode() === 'SUPPLIERS' ? 'SUPPLIER' : 'EMPLOYEE';
+    return this.employees().filter((e) => e.kind === kind && (brand === null || e.brandId === brand));
   });
-  protected readonly noEmail = computed(() => this.recipients().filter((e) => !e.companyEmail).length);
+  protected readonly noEmail = computed(() => this.recipients().filter((e) => !e.email).length);
   protected readonly noPhone = computed(() => this.recipients().filter((e) => !whatsappNumber(e.phone)).length);
 
   // how
@@ -193,6 +246,8 @@ export class StaffMail implements OnInit {
   protected readonly cc = computed(() => addresses(this.ccText()));
   protected readonly bcc = computed(() => addresses(this.bccText()));
   protected readonly badAddresses = computed(() => [...this.cc(), ...this.bcc()].filter((a) => !EMAIL.test(a)));
+  /** The office address the server copies on every mail (shown, cannot be taken off). */
+  protected readonly alwaysCc = computed(() => this.setup()?.alwaysCc?.trim() ?? '');
   protected readonly attachments = signal<Upload[]>([]);
   protected readonly pictures = signal<Picture[]>([]);
   protected readonly attachAccept = ATTACH_TYPES.map((t) => '.' + t).join(',');
@@ -205,7 +260,7 @@ export class StaffMail implements OnInit {
 
   /** How the mail reads for the first person who will get it. */
   protected readonly preview = computed(() => {
-    const name = (this.recipients().find((e) => e.companyEmail) ?? this.recipients()[0])?.name ?? 'Anu Thomas';
+    const name = (this.recipients().find((e) => e.email) ?? this.recipients()[0])?.name ?? (this.trade ? 'Varghese Villa' : 'Anu Thomas');
     const fill = (s: string) => s.split(NAME).join(name);
     const greeting = this.greetingMode() === 'NAME' ? name : fill(this.greetingText().trim() || 'All');
     return {
@@ -283,18 +338,30 @@ export class StaffMail implements OnInit {
   }
 
   ngOnInit(): void {
-    this.mail.setup().subscribe({ next: (s) => this.setup.set(s), error: () => undefined });
-    this.mail.signature().subscribe({ next: (s) => this.fillSignature(s), error: () => undefined });
+    this.mail.setup(this.api).subscribe({ next: (s) => this.setup.set(s), error: () => undefined });
+    this.mail.signature(this.api).subscribe({ next: (s) => this.fillSignature(s), error: () => undefined });
+    const failed = (err: unknown) => {
+      this.error.set(apiProblem(err).message);
+      this.loading.set(false);
+    };
+    if (this.trade) {
+      this.mail.recipients().subscribe({
+        next: (r) => {
+          this.brands.set(r.brands);
+          this.employees.set([...r.customers, ...r.suppliers].map(fromParty));
+          this.loading.set(false);
+        },
+        error: failed,
+      });
+      return;
+    }
     this.staff.brands().subscribe({ next: (b) => this.brands.set(b), error: () => undefined });
     this.staff.employees().subscribe({
       next: (list) => {
-        this.employees.set(list.filter((e) => e.active).sort((a, b) => a.name.localeCompare(b.name)));
+        this.employees.set(list.filter((e) => e.active).sort((a, b) => a.name.localeCompare(b.name)).map(fromEmployee));
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(apiProblem(err).message);
-        this.loading.set(false);
-      },
+      error: failed,
     });
   }
 
@@ -362,7 +429,7 @@ export class StaffMail implements OnInit {
   protected saveSignature(): void {
     const text = this.signature().trim();
     this.signatureBusy.set(true);
-    this.mail.saveSignature(text).subscribe({
+    this.mail.saveSignature(text, this.api).subscribe({
       next: (s) => {
         this.signatureBusy.set(false);
         this.fillSignature(s);
@@ -403,7 +470,7 @@ export class StaffMail implements OnInit {
 
   protected removeAttachment(u: Upload): void {
     this.attachments.update((list) => list.filter((x) => x.key !== u.key));
-    if (u.fileId) this.mail.remove(u.fileId).subscribe({ error: () => undefined });
+    if (u.fileId) this.mail.remove(u.fileId, this.api).subscribe({ error: () => undefined });
   }
 
   /** Uploads a picture and puts [[image n]] on its own line where the cursor is in the message. */
@@ -450,7 +517,7 @@ export class StaffMail implements OnInit {
     this.body.set(body);
     this.pictures.update((list) => list.filter((x) => x.key !== p.key));
     URL.revokeObjectURL(p.thumb);
-    if (p.fileId) this.mail.remove(p.fileId).subscribe({ error: () => undefined });
+    if (p.fileId) this.mail.remove(p.fileId, this.api).subscribe({ error: () => undefined });
   }
 
   protected setCaption(p: Picture, caption: string): void {
@@ -483,11 +550,11 @@ export class StaffMail implements OnInit {
   private upload(file: File, key: number, list: typeof this.attachments | typeof this.pictures): void {
     const patch = (change: Partial<Upload>) =>
       (list as typeof this.attachments).update((items) => items.map((x) => (x.key === key ? { ...x, ...change } : x)));
-    this.mail.upload(file).subscribe({
+    this.mail.upload(file, this.api).subscribe({
       next: (f) => {
         // removed while it was uploading: drop it on the server too
         if (!(list as typeof this.attachments)().some((x) => x.key === key)) {
-          this.mail.remove(f.id).subscribe({ error: () => undefined });
+          this.mail.remove(f.id, this.api).subscribe({ error: () => undefined });
           return;
         }
         patch({ state: 'ready', fileId: f.id, size: f.size });
@@ -511,7 +578,7 @@ export class StaffMail implements OnInit {
     }
     if (this.greetingMode() === 'CUSTOM' && !this.greetingText().trim()) return this.formError.set('Write the words after "Dear", e.g. All.');
     if (!this.signature().trim()) return this.formError.set('Write a signature, or press "Use standard".');
-    if (!people.length) return this.formError.set(this.mode() === 'PICK' ? 'Choose at least one person.' : 'Nobody to send to.');
+    if (!people.length) return this.formError.set(this.mode() === 'PICK' ? `Choose at least one ${this.t.person}.` : 'Nobody to send to.');
     const channel = this.channel();
     const byEmail = this.byEmail();
     const byWhatsApp = this.byWhatsApp();
@@ -519,9 +586,9 @@ export class StaffMail implements OnInit {
     const chats = byWhatsApp ? people.length - this.noPhone() : 0;
     if (!mails && !chats) {
       return this.formError.set(
-        channel === 'EMAIL' ? 'None of these people has an office email on record.'
-          : channel === 'WHATSAPP' ? 'None of these people has a phone number on record.'
-            : 'None of these people has an office email or a phone number on record.',
+        channel === 'EMAIL' ? this.t.noEmailAll
+          : channel === 'WHATSAPP' ? 'None of them has a phone number on record.'
+            : 'None of them has an email or a phone number on record.',
       );
     }
 
@@ -545,15 +612,16 @@ export class StaffMail implements OnInit {
     // WhatsApp alone sends nothing by itself (each message is opened with a tap), so it needs no confirmation
     if (!byEmail) return begin();
 
-    const skipped = this.noEmail() ? ` (${this.noEmail()} without an office email will be skipped)` : '';
+    const skipped = this.noEmail() ? ` (${this.noEmail()} ${this.t.noEmail} will be skipped)` : '';
     const copies = draft.cc.length + draft.bcc.length;
     const copied = copies
       ? ` Each one is also copied to ${copies} CC/BCC ${copies === 1 ? 'address' : 'addresses'} (${mails * copies} copies in all).`
       : '';
+    const office = this.alwaysCc() ? ` The office (${this.alwaysCc()}) gets a copy of each.` : '';
     this.confirm.confirm({
-      header: byWhatsApp ? 'Send email and WhatsApp' : 'Send staff mail',
+      header: byWhatsApp ? 'Send email and WhatsApp' : this.t.confirm,
       message:
-        `Send ${mails} separate ${mails === 1 ? 'mail' : 'mails'}, each addressed to the person${skipped}?${copied}` +
+        `Send ${mails} separate ${mails === 1 ? 'mail' : 'mails'}, each addressed to the person${skipped}?${copied}${office}` +
         (byWhatsApp ? ` Then open each of the ${chats} WhatsApp ${chats === 1 ? 'message' : 'messages'} from the list below.` : ''),
       icon: 'pi pi-send',
       acceptLabel: 'Send',
@@ -614,7 +682,10 @@ export class StaffMail implements OnInit {
           (r) =>
             of(r).pipe(
               tap(() => this.patch(r.id, { status: 'sending' })),
-              mergeMap(() => this.mail.send({ employeeId: r.id, ...draft })),
+              mergeMap(() => this.mail.send(
+                r.kind === 'EMPLOYEE' ? { employeeId: r.personId, ...draft } : { party: r.kind, partyId: r.personId, ...draft },
+                this.api,
+              )),
               map((res) => ({ id: r.id, status: (res.sent ? 'sent' : 'failed') as Delivery, note: res.error ?? '', at: res.at })),
               catchError((err) => of({ id: r.id, status: 'failed' as Delivery, note: apiProblem(err).message, at: null })),
             ),
@@ -640,13 +711,27 @@ export class StaffMail implements OnInit {
   }
 }
 
-function toRow(e: Employee, byEmail: boolean, byWhatsApp: boolean, draft: Draft): Row {
-  const email = e.companyEmail?.trim() || null;
+function fromEmployee(e: Employee): Person {
+  return {
+    key: e.id, id: e.id, kind: 'EMPLOYEE', name: e.name, code: e.empNumber, email: e.companyEmail?.trim() || null, phone: e.phone,
+    brandId: e.brandId, photoPath: e.photoPath, photoUpdatedAt: e.photoUpdatedAt,
+  };
+}
+
+function fromParty(p: MailRecipient): Person {
+  return {
+    key: p.party === 'SUPPLIER' ? -p.id : p.id, id: p.id, kind: p.party, name: p.name, code: p.code, email: p.email?.trim() || null,
+    phone: p.phone, brandId: p.brandId, photoPath: null, photoUpdatedAt: null,
+  };
+}
+
+function toRow(e: Person, byEmail: boolean, byWhatsApp: boolean, draft: Draft): Row {
+  const email = e.email;
   const wa = whatsappNumber(e.phone);
   return {
-    id: e.id, name: e.name, empNumber: e.empNumber, email, photoPath: e.photoPath, photoUpdatedAt: e.photoUpdatedAt,
+    id: e.key, personId: e.id, kind: e.kind, name: e.name, empNumber: e.code, email, photoPath: e.photoPath, photoUpdatedAt: e.photoUpdatedAt,
     status: !byEmail ? 'off' : email ? 'queued' : 'failed',
-    note: byEmail && !email ? 'No office email on record' : '',
+    note: byEmail && !email ? (e.kind === 'EMPLOYEE' ? 'No office email on record' : 'No email on record') : '',
     at: null,
     wa,
     waState: !byWhatsApp ? 'off' : wa ? 'ready' : 'nophone',

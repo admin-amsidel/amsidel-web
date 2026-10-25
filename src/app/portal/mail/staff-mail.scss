@@ -110,3 +110,21 @@
 .note { margin: 12px 0 0; font-size: .8rem; color: var(--muted); }
 
 @media (max-width: 1100px) { .mail-grid { grid-template-columns: 1fr; } }
+
+/* the office copy: on every mail, cannot be taken off */
+.copies__fixed { align-items: center; }
+.copies__fixed .lbl { font-size: .86rem; font-weight: 600; }
+.fixed-cc {
+  display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 10px; border-radius: 999px;
+  background: var(--accent-softer, #eef4fb); border: 1px solid var(--line); font-size: .86rem; overflow-wrap: anywhere;
+}
+.fixed-cc i { font-size: .74rem; color: var(--brass-dark); }
+.fixed-cc small { color: var(--muted); font-size: .74rem; }
+
+/* the people picker stays inside its column; a long chosen name is cut short with "…" */
+.who { min-width: 0; }
+:host ::ng-deep .who .p-multiselect { width: 100%; max-width: 100%; min-width: 0; }
+:host ::ng-deep .who .p-multiselect-label-container { min-width: 0; overflow: hidden; }
+:host ::ng-deep .who .p-multiselect-chip-item { max-width: 100%; min-width: 0; }
+:host ::ng-deep .who .p-multiselect-chip { max-width: 100%; }
+:host ::ng-deep .who .p-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
