@@ -13,6 +13,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../auth.service';
 import { BusyService } from '../busy';
 import { Avatar } from '../avatar';
+import { TeamChat } from '../chat/team-chat';
 import { PortalStyles } from '../portal-styles';
 import { ROLE_LABELS } from '../portal.models';
 
@@ -53,7 +54,7 @@ function isProduct(path: string): boolean {
   selector: 'app-portal-shell',
   imports: [
     RouterOutlet, RouterLink, NgTemplateOutlet, Avatar, ButtonModule, DrawerModule, MenuModule, ToastModule, TooltipModule,
-    ConfirmDialogModule, PortalStyles,
+    ConfirmDialogModule, PortalStyles, TeamChat,
   ],
   encapsulation: ViewEncapsulation.None,
   template: `
@@ -189,6 +190,9 @@ function isProduct(path: string): boolean {
       </nav>
     </ng-template>
     <p-menu #groupMenu [model]="groupItems()" [popup]="true" appendTo="body" styleClass="p-popup-menu" />
+
+    <!-- team chat: the chat button and window, for people given the Team chat checkpoint -->
+    @if (auth.can('CHAT')) { <app-team-chat /> }
 
     <p-toast position="top-right" [breakpoints]="{ '760px': { width: 'calc(100vw - 24px)', right: '12px', left: '12px' } }" />
     <p-confirmdialog [style]="{ width: '440px' }" [breakpoints]="{ '760px': 'calc(100vw - 24px)' }" />
