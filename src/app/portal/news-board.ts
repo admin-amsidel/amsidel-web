@@ -32,7 +32,7 @@ const SLIDE_MS = 6500;
     /* the whole poster, nothing cut off; the same picture blurred fills the space around it */
     .fill { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); filter: blur(18px) brightness(.7); transform: scale(1.05); }
     .whole { position: relative; object-fit: contain; }
-    .ph { width: 100%; height: 100%; display: grid; place-items: center; font-size: 2.4rem; color: rgba(255, 255, 255, .9); }
+    .ph { width: 100%; height: 100%; display: grid; place-items: center; font-size: 2.4rem; color: #9ca3af; }
   `,
 })
 export class NewsPicture {
@@ -158,56 +158,44 @@ export class NewsPicture {
     .manage { font-size: .86rem; font-weight: 600; color: var(--brass-dark); text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
     .manage:hover { text-decoration: underline; }
 
-    .slider { position: relative; height: 340px; border-radius: 16px; overflow: hidden; background: #0f2a47; box-shadow: 0 10px 30px rgba(23, 59, 99, .14); touch-action: pan-y; }
+    /* every kind of news on plain white: the poster carries the colour */
+    .slider { position: relative; height: 340px; border-radius: 16px; overflow: hidden; background: #fff; border: 1px solid var(--line);
+      box-shadow: 0 10px 30px rgba(23, 59, 99, .08); touch-action: pan-y; }
     .slide { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 70%) minmax(0, 1fr); opacity: 0; visibility: hidden;
-      transform: translateX(24px); transition: opacity .6s ease, transform .6s ease, visibility .6s; color: #fff;
-      background: linear-gradient(120deg, #123a63, #1d5fa3); }
+      transform: translateX(24px); transition: opacity .6s ease, transform .6s ease, visibility .6s; color: var(--ink); background: #fff; }
     .slide.on { opacity: 1; visibility: visible; transform: none; z-index: 1; }
-    .tone-green { background: linear-gradient(120deg, #0f4d33, #1f7a45); }
-    .tone-red { background: linear-gradient(120deg, #6b1712, #b3261e); }
-    .tone-violet { background: linear-gradient(120deg, #3b1f6b, #6941b8); }
-    .tone-pink, .tone-bday { background: linear-gradient(120deg, #7a1f4b, #c2457f); }
-    .tone-amber { background: linear-gradient(120deg, #6b3c07, #b45309); }
-    .tone-grey { background: linear-gradient(120deg, #2b3440, #4b5868); }
-    .slide__pic { position: relative; overflow: hidden; background: rgba(255, 255, 255, .08); }
-    .slide__pic::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 60%, rgba(0, 0, 0, .18)); pointer-events: none; }
+    .slide__pic { position: relative; overflow: hidden; background: #f4f4f5; border-right: 1px solid var(--line); }
     .bday { display: grid; place-items: center; }
     .faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 20px; }
-    .faces ::ng-deep .av { box-shadow: 0 0 0 4px rgba(255, 255, 255, .85); }
+    .faces ::ng-deep .av { box-shadow: 0 0 0 4px #fff, 0 2px 10px rgba(0, 0, 0, .12); }
     /* the poster gets 70%, the details 30%: a narrow column, so smaller type and the text clipped to fit */
     .slide__text { padding: 24px 58px 44px 22px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
     .chip { align-self: flex-start; font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-      background: rgba(255, 255, 255, .16); padding: 5px 10px; border-radius: 999px; display: inline-flex; gap: 6px; align-items: center; }
-    .slide h3 { margin: 0; font-size: 1.25rem; line-height: 1.3; font-weight: 600; color: #fff; overflow-wrap: anywhere;
+      background: #f4f4f5; color: var(--brass-dark); border: 1px solid var(--line); padding: 5px 10px; border-radius: 999px; display: inline-flex; gap: 6px; align-items: center; }
+    .slide h3 { margin: 0; font-size: 1.25rem; line-height: 1.3; font-weight: 600; color: var(--ink); overflow-wrap: anywhere;
       display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .body { margin: 0; font-size: .9rem; line-height: 1.5; opacity: .92; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
-    .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .8rem; opacity: .85; }
-    .more { align-self: flex-start; margin-top: auto; background: #fff; color: #123a63; border: 0; border-radius: 8px; padding: 8px 14px;
+    .body { margin: 0; font-size: .9rem; line-height: 1.5; color: #3f3f46; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+    .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .8rem; color: var(--muted); }
+    .more { align-self: flex-start; margin-top: auto; background: #fff; color: var(--ink); border: 1px solid #d4d4d8; border-radius: 8px; padding: 8px 14px;
       font-weight: 600; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; font: inherit; font-weight: 600; }
-    .more:hover { background: #eaf2fb; }
+    .more:hover { background: #f4f4f5; }
     .nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 38px; height: 38px; border-radius: 50%; border: 0;
-      background: rgba(255, 255, 255, .2); color: #fff; cursor: pointer; display: grid; place-items: center; }
-    .nav:hover, .nav:focus-visible { background: rgba(255, 255, 255, .35); }
+      background: rgba(255, 255, 255, .92); color: var(--ink); border: 1px solid #d4d4d8; box-shadow: 0 2px 8px rgba(0, 0, 0, .1); cursor: pointer; display: grid; place-items: center; }
+    .nav:hover, .nav:focus-visible { background: #fff; border-color: #a1a1aa; }
     .prev { left: 10px; }
     .next { right: 10px; }
     .dots { position: absolute; z-index: 2; bottom: 14px; right: 20px; display: flex; gap: 6px; }
-    .dots button { width: 22px; height: 6px; border-radius: 4px; border: 0; padding: 0; background: rgba(255, 255, 255, .35); cursor: pointer; overflow: hidden; position: relative; }
-    .dots button.on { width: 40px; background: rgba(255, 255, 255, .45); }
-    .fill { position: absolute; inset: 0; background: #fff; transform-origin: left; animation: fill linear forwards; }
+    .dots button { width: 22px; height: 6px; border-radius: 4px; border: 0; padding: 0; background: #d4d4d8; cursor: pointer; overflow: hidden; position: relative; }
+    .dots button.on { width: 40px; background: #d4d4d8; }
+    .fill { position: absolute; inset: 0; background: #52525b; transform-origin: left; animation: fill linear forwards; }
     @keyframes fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
     .empty { margin: 0; padding: 18px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); background: #fff; }
 
     .cards { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
     .card { width: 100%; text-align: left; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px;
       background: #fff; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font: inherit; color: var(--ink); background-image: none; }
-    .card:hover { border-color: #b9d3ef; box-shadow: 0 6px 18px rgba(23, 59, 99, .08); }
-    .card__pic { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; background: linear-gradient(120deg, #123a63, #1d5fa3); display: block; }
-    .card.tone-green .card__pic { background: linear-gradient(120deg, #0f4d33, #1f7a45); }
-    .card.tone-red .card__pic { background: linear-gradient(120deg, #6b1712, #b3261e); }
-    .card.tone-violet .card__pic { background: linear-gradient(120deg, #3b1f6b, #6941b8); }
-    .card.tone-pink .card__pic { background: linear-gradient(120deg, #7a1f4b, #c2457f); }
-    .card.tone-amber .card__pic { background: linear-gradient(120deg, #6b3c07, #b45309); }
-    .card.tone-grey .card__pic { background: linear-gradient(120deg, #2b3440, #4b5868); }
+    .card:hover { border-color: #a1a1aa; box-shadow: 0 6px 18px rgba(0, 0, 0, .06); }
+    .card__pic { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; background: #f4f4f5; border: 1px solid var(--line); display: block; }
     .card__pic ::ng-deep .ph { font-size: 1.3rem; }
     .card__text { display: grid; gap: 2px; min-width: 0; }
     .card__text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -224,6 +212,7 @@ export class NewsPicture {
     @media (max-width: 760px) {
       .slider { height: 470px; }
       .slide { grid-template-columns: 1fr; grid-template-rows: 210px minmax(0, 1fr); }
+      .slide__pic { border-right: 0; border-bottom: 1px solid var(--line); }
       .slide__text { padding: 16px 18px 44px; }
       .slide h3 { font-size: 1.2rem; }
       .body { -webkit-line-clamp: 2; }

@@ -1,31 +1,49 @@
 import { HistoryEntry, PayMode } from './trade.models';
 
-/** Other income and expenses (see the server's MoneyCategory). Funding moves the bank, not the profit. */
-export type MoneyCategory =
-  | 'INVESTMENT' | 'DIRECTOR_LOAN' | 'CAPITAL' | 'BANK_LOAN' | 'OTHER_INCOME'
-  | 'TRANSPORT' | 'FIXING' | 'MAINTENANCE' | 'REFUND' | 'DISCOUNT' | 'RENT' | 'UTILITIES' | 'BANK_CHARGES' | 'LOAN_REPAYMENT' | 'MISC';
+/** The code of a category of other income or expense (money_types on the server), e.g. TRANSPORT. */
+export type MoneyCategory = string;
 
-export const CATEGORIES: { value: MoneyCategory; label: string; income: boolean; funding: boolean; hint: string }[] = [
-  { value: 'INVESTMENT', label: 'Investment from a person', income: true, funding: true, hint: 'Money put in by another person' },
-  { value: 'DIRECTOR_LOAN', label: 'Investor / director loan', income: true, funding: true, hint: 'A loan from an investor or director' },
-  { value: 'CAPITAL', label: 'Capital investment', income: true, funding: true, hint: "The brand's own capital" },
-  { value: 'BANK_LOAN', label: 'Bank loan', income: true, funding: true, hint: 'A loan credited by the bank' },
-  { value: 'OTHER_INCOME', label: 'Other income', income: true, funding: false, hint: 'Interest, scrap sale, commission…' },
-  { value: 'TRANSPORT', label: 'Transportation', income: false, funding: false, hint: 'Lorry, auto, courier' },
-  { value: 'FIXING', label: 'Fixing / installation', income: false, funding: false, hint: 'Fitting labour at site' },
-  { value: 'MAINTENANCE', label: 'Maintenance / service', income: false, funding: false, hint: 'Repairs, service visits' },
-  { value: 'REFUND', label: 'Refund outside an invoice', income: false, funding: false, hint: 'Money given back that is not an invoice refund' },
-  { value: 'DISCOUNT', label: 'Discount allowed / short payment', income: false, funding: false, hint: 'What a customer did not pay' },
-  { value: 'RENT', label: 'Rent', income: false, funding: false, hint: 'Shop, godown, office' },
-  { value: 'UTILITIES', label: 'Electricity, phone & internet', income: false, funding: false, hint: 'Monthly bills' },
-  { value: 'BANK_CHARGES', label: 'Bank charges', income: false, funding: false, hint: 'Charges and GST on them' },
-  { value: 'LOAN_REPAYMENT', label: 'Loan repayment', income: false, funding: true, hint: 'EMI or paying back a loan' },
-  { value: 'MISC', label: 'Miscellaneous expense', income: false, funding: false, hint: 'Anything else' },
-];
+/** The discount (invoice write-off): always an active expense. */
+export const DISCOUNT = 'DISCOUNT';
 
-export function category(c: MoneyCategory) {
-  return CATEGORIES.find((x) => x.value === c)!;
+/** A category, set up by owners and admins. Funding (investment, loans) moves the bank, not the profit. */
+export interface MoneyType {
+  code: string;
+  label: string;
+  income: boolean;
+  funding: boolean;
+  /** Switched off: kept for old entries, not offered for new ones. */
+  active: boolean;
+  builtIn: boolean;
+  /** The discount: only its name can change. */
+  locked: boolean;
+  /** Entries were made with it: it cannot be deleted or change between income and expense. */
+  used: boolean;
+  sortOrder: number;
+  updatedAt: string | null;
+  updatedByName: string | null;
 }
+
+export interface MoneyTypeBody { label: string; income?: boolean; funding?: boolean; active?: boolean; sortOrder?: number | null }
+
+/** A line under the ones the portal started with, in the category list. */
+export const CATEGORY_HINTS: Record<string, string> = {
+  INVESTMENT: 'Money put in by another person',
+  DIRECTOR_LOAN: 'A loan from an investor or director',
+  CAPITAL: "The brand's own capital",
+  BANK_LOAN: 'A loan credited by the bank',
+  OTHER_INCOME: 'Interest, scrap sale, commission…',
+  TRANSPORT: 'Lorry, auto, courier',
+  FIXING: 'Fitting labour at site',
+  MAINTENANCE: 'Repairs, service visits',
+  REFUND: 'Money given back that is not an invoice refund',
+  DISCOUNT: 'What a customer did not pay',
+  RENT: 'Shop, godown, office',
+  UTILITIES: 'Monthly bills',
+  BANK_CHARGES: 'Charges and GST on them',
+  LOAN_REPAYMENT: 'EMI or paying back a loan',
+  MISC: 'Anything else',
+};
 
 export interface MoneyEntry {
   id: number;

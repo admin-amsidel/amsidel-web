@@ -69,6 +69,11 @@ export class StaffService {
     return this.http.get(`${API_BASE}/api/brands/${id}/upi-qr`, { responseType: 'blob' });
   }
 
+  /** keySecret blank = keep the saved one; keyId blank = online payments off. */
+  saveBrandRazorpay(id: number, keyId: string, keySecret: string): Observable<Brand> {
+    return this.http.put<Brand>(`${API_BASE}/api/brands/${id}/razorpay`, { keyId, keySecret });
+  }
+
   deleteBrandLogo(id: number): Observable<Brand> {
     return this.http.delete<Brand>(`${API_BASE}/api/brands/${id}/logo`);
   }

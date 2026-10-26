@@ -14,8 +14,10 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { rupees, rupeesRound } from '../payroll/payroll.models';
 import { apiProblem } from '../portal.models';
-import { CATEGORIES, MoneyCategory, MoneyEntry } from './accounts.models';
-import { AccountsService } from './accounts.service';
+import { MoneyCategory, MoneyEntry } from './accounts.models';
+import { AccountsService, MoneyTypes } from './accounts.service';
+import { AuthService } from '../auth.service';
+import { CategoryDialog } from './category-dialog';
 import { EntryDialog } from './entry-dialog';
 import { BrandPick, TradeBrand } from './trade-brand';
 import { fyRange, monthRange, PAY_MODES } from './trade.models';
@@ -32,7 +34,7 @@ type Side = 'ALL' | 'IN' | 'OUT';
   selector: 'app-ledger',
   imports: [
     FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, IconFieldModule, InputIconModule, InputTextModule,
-    MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule, EntryDialog,
+    MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule, EntryDialog, CategoryDialog,
   ],
   template: `
     <div class="p-head">
@@ -42,6 +44,9 @@ type Side = 'ALL' | 'IN' | 'OUT';
       </div>
       <div class="head-actions">
         <app-brand-pick (changed)="load()" />
+        @if (auth.isAdmin()) {
+          <p-button label="Categories" icon="pi pi-tags" [outlined]="true" severity="secondary" (onClick)="cats().show()" />
+        }
         <p-button label="Add income" icon="pi pi-arrow-down-left" [outlined]="true" (onClick)="dialog().add({ income: true })" />
         <p-button label="Add expense" icon="pi pi-arrow-up-right" (onClick)="dialog().add({ income: false })" />
       </div>
@@ -113,6 +118,7 @@ type Side = 'ALL' | 'IN' | 'OUT';
     </section>
 
     <app-entry-dialog (saved)="load()" (deleted)="load()" />
+    <app-category-dialog (changed)="load()" />
   `,
   styles: `
     .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
@@ -142,6 +148,9 @@ type Side = 'ALL' | 'IN' | 'OUT';
 export class Ledger implements OnInit {
   private readonly accounts = inject(AccountsService);
   protected readonly brand = inject(TradeBrand);
+  protected readonly auth = inject(AuthService);
+  private readonly types = inject(MoneyTypes);
+  protected readonly cats = viewChild.required(CategoryDialog);
   protected readonly dialog = viewChild.required(EntryDialog);
   protected readonly money = rupees;
   protected readonly round = rupeesRound;
@@ -163,7 +172,8 @@ export class Ledger implements OnInit {
   ];
   protected readonly sides = [{ label: 'All', value: 'ALL' }, { label: 'Income', value: 'IN' }, { label: 'Expenses', value: 'OUT' }];
   protected readonly catOptions = computed(() =>
-    CATEGORIES.filter((c) => this.side() === 'ALL' || c.income === (this.side() === 'IN')).map((c) => ({ value: c.value, label: c.label })));
+    this.types.list().filter((c) => this.side() === 'ALL' || c.income === (this.side() === 'IN'))
+      .map((c) => ({ value: c.code, label: c.label + (c.active ? '' : ' (switched off)') })));
   protected readonly shown = computed(() => {
     const q = this.query().trim().toLowerCase();
     return this.rows().filter((e) =>
@@ -185,6 +195,7 @@ export class Ledger implements OnInit {
   });
 
   ngOnInit(): void {
+    this.types.load();
     this.brand.load().subscribe({ next: () => this.load(), error: (e) => this.error.set(apiProblem(e).message) });
   }
 

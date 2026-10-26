@@ -119,6 +119,13 @@ export const PRODUCT_ROUTES: Routes = [
     loadComponent: () => import('../mail/staff-mail').then((m) => m.StaffMail),
   },
   {
+    path: 'pay',
+    title: 'Pay bill' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_PAY' },
+    loadComponent: () => import('./pay').then((m) => m.PayBill),
+  },
+  {
     path: 'reports',
     title: 'Reports' + T,
     canActivate: [menuGuard],

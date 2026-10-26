@@ -111,6 +111,9 @@ export interface Brand {
   /** The UPI payment QR printed on invoices: when uploaded (null = none) and the UPI ID it pays to (null = not read). */
   upiQrUpdatedAt: string | null;
   upiQrPayee: string | null;
+  /** The brand's Razorpay account for bills paid online (the secret is never sent back). */
+  razorpayKeyId: string | null;
+  razorpayReady: boolean;
 }
 
 /** An employee's PAN and salary account (payroll details, not in the employee record). */

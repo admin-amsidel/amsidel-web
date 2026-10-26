@@ -8,7 +8,7 @@ import { SiteNewsService } from '../../shared/site-news.service';
   selector: 'app-offers',
   imports: [RouterLink, OfferBanners],
   template: `
-    <section class="page-banner" style="background-image: url('images/hero/hero-2.webp')">
+    <section class="page-banner offers-banner" style="background-image: url('images/hero/hero-2.webp')">
       <div class="container">
         <ol class="crumbs">
           <li><a routerLink="/doors-windows">Home</a></li>
@@ -19,7 +19,7 @@ import { SiteNewsService } from '../../shared/site-news.service';
       </div>
     </section>
 
-    <section class="section">
+    <section class="section offers-section">
       <div class="container">
         @if (!site.ready()) {
           <p class="none">Loading the offers…</p>
@@ -39,6 +39,13 @@ import { SiteNewsService } from '../../shared/site-news.service';
     .none { text-align: center; padding: 40px 0; color: var(--muted); display: grid; gap: 12px; justify-items: center; }
     .none h2 { margin: 0; font-family: var(--display); font-weight: 400; color: var(--ink); }
     .none p { margin: 0; max-width: 520px; }
+    /* phones: a short banner, so the first poster is in view straight away */
+    @media (max-width: 720px) {
+      .offers-banner { min-height: 0; }
+      .offers-banner .container { padding-block: 28px 22px; }
+      .offers-banner p { font-size: .92rem; }
+      .offers-section { padding-block: 20px 48px; }
+    }
   `,
 })
 export class Offers implements OnInit {

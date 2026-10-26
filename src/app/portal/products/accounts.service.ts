@@ -1,10 +1,10 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { inject, Injectable, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
 import { toIsoDate } from '../portal.models';
-import { BankBalance, BankStatement, EntryBody, EntryLinks, GroupBy, MoneyEntry, ReconcileReport } from './accounts.models';
+import { BankBalance, BankStatement, EntryBody, EntryLinks, GroupBy, MoneyEntry, MoneyType, MoneyTypeBody, ReconcileReport } from './accounts.models';
 
 const A = `${API_BASE}/api/accounts`;
 
@@ -36,6 +36,18 @@ export class AccountsService {
 
   deleteEntry(id: number): Observable<void> {
     return this.http.delete<void>(`${A}/entries/${id}`);
+  }
+
+  categories(): Observable<MoneyType[]> {
+    return this.http.get<MoneyType[]>(`${A}/categories`);
+  }
+
+  saveCategory(code: string | null, body: MoneyTypeBody): Observable<MoneyType> {
+    return code ? this.http.put<MoneyType>(`${A}/categories/${encodeURIComponent(code)}`, body) : this.http.post<MoneyType>(`${A}/categories`, body);
+  }
+
+  deleteCategory(code: string): Observable<void> {
+    return this.http.delete<void>(`${A}/categories/${encodeURIComponent(code)}`);
   }
 
   links(brandId: number | null): Observable<EntryLinks> {
@@ -76,5 +88,24 @@ export class AccountsService {
 
   deleteBalance(id: number): Observable<void> {
     return this.http.delete<void>(`${A}/bank/balances/${id}`);
+  }
+}
+
+/** The income and expense categories, loaded once and shared by the pages and the entry dialog. */
+@Injectable({ providedIn: 'root' })
+export class MoneyTypes {
+  private readonly accounts = inject(AccountsService);
+  readonly list = signal<MoneyType[]>([]);
+  private loaded = false;
+
+  load(force = false): void {
+    if (this.loaded && !force) return;
+    this.loaded = true;
+    this.accounts.categories().subscribe({ next: (l) => this.list.set(l), error: () => (this.loaded = false) });
+  }
+
+  /** After a change in the categories dialog. */
+  refresh(): Observable<MoneyType[]> {
+    return this.accounts.categories().pipe(tap((l) => this.list.set(l)));
   }
 }

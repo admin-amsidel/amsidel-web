@@ -702,3 +702,15 @@
 }
 
 
+
+/* small phones (≤ 400px): logo, Offers and the menu button share the row without pushing the page sideways */
+@media (max-width: 400px) {
+  .header__inner { gap: 10px; }
+  .header__actions { gap: 8px; }
+  .logo { gap: 8px; min-width: 0; flex: 0 1 auto; }
+  .logo img { height: 28px; }
+  .logo__text strong { font-size: 1.05rem; letter-spacing: 0.1em; }
+  .logo__text small { font-size: 0.56rem; letter-spacing: 0.14em; }
+  .offers-btn, .burger { width: 40px; min-width: 40px; height: 40px; min-height: 40px; }
+  .offers-btn { padding: 0; }
+}

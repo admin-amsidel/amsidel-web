@@ -83,6 +83,8 @@ import { PhoneInput, phoneProblem } from '../phone-input';
                 @if (b.upiId) { <span class="block-line">UPI {{ b.upiId }}</span> }
               } @else { — }
             </dd>
+            <dt>Online pay</dt>
+            <dd>{{ b.razorpayReady ? 'Razorpay ' + (b.razorpayKeyId?.startsWith('rzp_live_') ? 'live' : 'test') + ' · ' + b.razorpayKeyId : 'Not set up' }}</dd>
           </dl>
         </article>
       } @empty {
@@ -173,6 +175,29 @@ import { PhoneInput, phoneProblem } from '../phone-input';
             }
           </div>
         </fieldset>
+        <fieldset class="bank span">
+          <legend>Online payments (Razorpay)</legend>
+          @if (editing(); as b) {
+            <p class="hint span rz-note">Bills of {{ b.code }} paid online (cards and UPI, Product portal › Pay bill) go to this brand's Razorpay account, and settle to the
+              bank account linked to it in Razorpay. Keys: Razorpay Dashboard › Account & Settings › API keys. The secret is saved, never shown again.</p>
+            <div class="pf"><label for="b-rzk">Key ID</label>
+              <input pInputText id="b-rzk" maxlength="40" autocomplete="off" spellcheck="false" placeholder="rzp_live_…"
+                     [ngModel]="rzKey()" (ngModelChange)="rzKey.set($event.trim())" /></div>
+            <div class="pf"><label for="b-rzs">Key secret</label>
+              <input pInputText id="b-rzs" type="password" maxlength="60" autocomplete="new-password" spellcheck="false"
+                     [placeholder]="b.razorpayReady ? 'Saved; type to change' : 'From the same page'" [ngModel]="rzSecret()" (ngModelChange)="rzSecret.set($event.trim())" /></div>
+            <div class="span qr-acts">
+              <p-button [label]="b.razorpayReady ? 'Save keys' : 'Turn on online payments'" icon="pi pi-lock" [outlined]="true" size="small"
+                        [loading]="rzBusy()" (onClick)="saveRazorpay()" />
+              @if (b.razorpayReady) {
+                <p-button label="Turn off" icon="pi pi-power-off" [text]="true" severity="danger" size="small" (onClick)="saveRazorpay(true)" />
+                <p-tag [value]="b.razorpayKeyId?.startsWith('rzp_live_') ? 'Live' : 'Test mode'" [severity]="b.razorpayKeyId?.startsWith('rzp_live_') ? 'success' : 'warn'" />
+              }
+            </div>
+          } @else {
+            <small class="hint block span">Save the brand first, then add its Razorpay keys here.</small>
+          }
+        </fieldset>
         <div class="pf"><span class="pf-label">Status</span>
           <label class="check" for="b-active"><p-toggleswitch inputId="b-active" [ngModel]="active()" (ngModelChange)="active.set($event)" />
             {{ active() ? 'Active' : 'Inactive' }}</label></div>
@@ -216,6 +241,7 @@ import { PhoneInput, phoneProblem } from '../phone-input';
     .qr-acts { display: flex; gap: 6px; flex-wrap: wrap; }
     .bank { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; padding: 12px 14px 14px; border: 1px solid var(--line);
       border-radius: 12px; }
+    .rz-note { margin: 0; }
     .bank legend { padding: 0 6px; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--pine); }
     .block-line { display: block; }
     .block { display: block; margin-top: 6px; }
@@ -259,6 +285,9 @@ export class Brands implements OnInit {
   protected readonly ownerList = computed(() => this.ownersOf(this.owners()));
   protected readonly qrUrl = signal<string | null>(null);
   protected readonly qrBusy = signal(false);
+  protected readonly rzKey = signal('');
+  protected readonly rzSecret = signal('');
+  protected readonly rzBusy = signal(false);
   protected readonly preview = computed(() => this.fileUrl() ?? (this.editing() ? this.logo(this.editing()!) : null));
 
   ngOnInit(): void {
@@ -291,6 +320,8 @@ export class Brands implements OnInit {
     this.clearFile();
     this.formError.set('');
     this.showQr(b);
+    this.rzKey.set(b?.razorpayKeyId ?? '');
+    this.rzSecret.set('');
     this.open.set(true);
   }
 
@@ -323,6 +354,32 @@ export class Brands implements OnInit {
       },
       error: (err) => {
         this.qrBusy.set(false);
+        this.formError.set(apiProblem(err).message);
+      },
+    });
+  }
+
+  /** The brand's Razorpay keys, saved on their own (off = both cleared). */
+  protected saveRazorpay(off = false): void {
+    const b = this.editing();
+    if (!b) return;
+    const keyId = off ? '' : this.rzKey();
+    const secret = off ? '' : this.rzSecret();
+    if (!off && !/^rzp_(test|live)_[A-Za-z0-9]{6,30}$/.test(keyId)) return this.formError.set('The key ID starts with rzp_live_ (or rzp_test_ for trying out).');
+    if (!off && !secret && (!b.razorpayReady || keyId !== b.razorpayKeyId)) return this.formError.set('Give the key secret that goes with this key ID.');
+    this.formError.set('');
+    this.rzBusy.set(true);
+    this.staff.saveBrandRazorpay(b.id, keyId, secret).subscribe({
+      next: (saved) => {
+        this.rzBusy.set(false);
+        this.editing.set(saved);
+        this.rzKey.set(saved.razorpayKeyId ?? '');
+        this.rzSecret.set('');
+        this.toast.add({ severity: 'success', summary: saved.razorpayReady ? 'Online payments on' : 'Online payments off', detail: saved.name });
+        this.load();
+      },
+      error: (err) => {
+        this.rzBusy.set(false);
         this.formError.set(apiProblem(err).message);
       },
     });

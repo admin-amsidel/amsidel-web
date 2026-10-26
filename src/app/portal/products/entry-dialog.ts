@@ -13,8 +13,8 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TextareaModule } from 'primeng/textarea';
 import { rupees } from '../payroll/payroll.models';
 import { apiProblem, toIsoDate } from '../portal.models';
-import { CATEGORIES, EntryBody, EntryLinks, MoneyCategory, MoneyEntry } from './accounts.models';
-import { AccountsService } from './accounts.service';
+import { CATEGORY_HINTS, DISCOUNT, EntryBody, EntryLinks, MoneyCategory, MoneyEntry } from './accounts.models';
+import { AccountsService, MoneyTypes } from './accounts.service';
 import { HistoryList } from './history-list';
 import { TradeBrand } from './trade-brand';
 import { PAY_MODES, PayMode } from './trade.models';
@@ -162,6 +162,7 @@ const NONE = 'NONE';
 })
 export class EntryDialog {
   private readonly accounts = inject(AccountsService);
+  private readonly types = inject(MoneyTypes);
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
   protected readonly brand = inject(TradeBrand);
@@ -200,8 +201,11 @@ export class EntryDialog {
   protected readonly busy = signal(false);
 
   protected readonly title = computed(() => this.editing() ? `${this.editing()!.number} · ${this.editing()!.categoryLabel}` : this.income() ? 'Add income' : 'Add an expense');
-  protected readonly categories = computed(() => CATEGORIES.filter((c) => c.income === this.income()));
-  protected readonly modes = computed(() => this.category() === 'DISCOUNT'
+  /** Active categories of this side; an entry keeps its own even when it was switched off since. */
+  protected readonly categories = computed(() => this.types.list()
+    .filter((t) => t.income === this.income() && (t.active || t.code === this.editing()?.category))
+    .map((t) => ({ value: t.code, label: t.label + (t.active ? '' : ' (switched off)'), funding: t.funding, hint: CATEGORY_HINTS[t.code] ?? '' })));
+  protected readonly modes = computed(() => this.category() === DISCOUNT
     ? [...PAY_MODES, { label: 'No money moved', value: NONE }] : PAY_MODES);
   protected readonly invoice = computed(() => this.links()?.invoices.find((i) => i.id === this.invoiceId()) ?? null);
   protected readonly invoiceOptions = computed(() => (this.links()?.invoices ?? []).map((i) => ({
@@ -225,6 +229,7 @@ export class EntryDialog {
 
   /** A new entry, maybe with a few things filled in. */
   add(preset: EntryPreset = {}): void {
+    this.types.load();
     this.editing.set(null);
     this.source.set(preset.source ?? '');
     this.income.set(preset.income ?? false);
@@ -247,6 +252,7 @@ export class EntryDialog {
 
   /** An existing entry, to change (or delete). */
   edit(id: number): void {
+    this.types.load();
     this.accounts.entry(id).subscribe({
       next: (e) => {
         this.editing.set(e);
@@ -320,7 +326,7 @@ export class EntryDialog {
 
   protected setCategory(c: MoneyCategory | null): void {
     this.category.set(c);
-    if (c !== 'DISCOUNT' && this.mode() === NONE) this.mode.set('BANK');
+    if (c !== DISCOUNT && this.mode() === NONE) this.mode.set('BANK');
   }
 
   protected setInvoice(id: number | null): void {
