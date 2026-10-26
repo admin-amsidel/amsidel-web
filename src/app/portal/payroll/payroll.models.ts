@@ -63,6 +63,8 @@ export interface SalaryRow {
   editable: boolean;
   updatedByName: string | null;
   updatedAt: string | null;
+  /** null when no salary is set. */
+  taxRegime: TaxRegime | null;
 }
 
 export interface PayrollYear {
@@ -101,6 +103,46 @@ export interface Salary {
   editable: boolean;
   updatedByName: string | null;
   updatedAt: string | null;
+  tax: TaxView;
+}
+
+/** NEW / OLD: the income tax is worked out from the salary; MANUAL: typed in (needs the Manual income tax access). */
+export type TaxRegime = 'NEW' | 'OLD' | 'MANUAL';
+
+export const TAX_REGIMES: { value: TaxRegime; label: string; hint: string }[] = [
+  { value: 'NEW', label: 'New regime', hint: 'Lower slab rates, few deductions: standard deduction only' },
+  { value: 'OLD', label: 'Old regime', hint: 'Higher rates, with 80C, 80D, HRA and other deductions' },
+  { value: 'MANUAL', label: 'Manual', hint: 'The income tax is typed in by hand' },
+];
+
+/** How the tax was worked out, all yearly except monthlyTax. */
+export interface TaxCalc {
+  regime: TaxRegime;
+  rules: string;
+  income: number;
+  standardDeduction: number;
+  professionalTax: number;
+  declared: number;
+  taxable: number;
+  slabTax: number;
+  rebate: number;
+  surcharge: number;
+  cess: number;
+  annualTax: number;
+  months: number;
+  monthlyTax: number;
+}
+
+export interface TaxView {
+  regime: TaxRegime;
+  declared: number | null;
+  chosen: TaxCalc | null;
+  newRegime: TaxCalc;
+  oldRegime: TaxCalc;
+  /** I may choose Manual and type the tax. */
+  canManual: boolean;
+  /** The pay component the tax goes in (Income Tax). */
+  taxComponentName: string | null;
 }
 
 export interface SalaryBody {
@@ -112,10 +154,48 @@ export interface SalaryBody {
   bankAccount: string;
   ifsc: string;
   upi: string;
+  taxRegime: TaxRegime;
+  taxDeclared: number | null;
 }
 
 const RUPEES = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const RUPEES_ROUND = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+/** A brand's currency on its documents: the symbol only, no conversion. Rupees by default. */
+export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP' | 'JPY' | 'AED' | 'AUD' | 'NZD' | 'CNY' | 'CHF' | 'CAD';
+
+/** The same symbols as the PDFs: en-US shows A$, NZ$, CA$, CN¥, AED and CHF; the yen has no decimals. */
+export const CURRENCIES: { code: CurrencyCode; symbol: string; label: string; locale: string; decimals: number }[] = [
+  { code: 'INR', symbol: '₹', label: 'Indian Rupee (₹)', locale: 'en-IN', decimals: 2 },
+  { code: 'USD', symbol: '$', label: 'US Dollar ($)', locale: 'en-US', decimals: 2 },
+  { code: 'EUR', symbol: '€', label: 'Euro (€)', locale: 'en-IE', decimals: 2 },
+  { code: 'GBP', symbol: '£', label: 'British Pound (£)', locale: 'en-GB', decimals: 2 },
+  { code: 'JPY', symbol: '¥', label: 'Japanese Yen (¥)', locale: 'en-US', decimals: 0 },
+  { code: 'AED', symbol: 'AED', label: 'UAE Dirham (AED)', locale: 'en-US', decimals: 2 },
+  { code: 'AUD', symbol: 'A$', label: 'Australian Dollar (A$)', locale: 'en-US', decimals: 2 },
+  { code: 'NZD', symbol: 'NZ$', label: 'New Zealand Dollar (NZ$)', locale: 'en-US', decimals: 2 },
+  { code: 'CNY', symbol: 'CN¥', label: 'Chinese Renminbi (CN¥)', locale: 'en-US', decimals: 2 },
+  { code: 'CHF', symbol: 'CHF', label: 'Swiss Franc (CHF)', locale: 'en-US', decimals: 2 },
+  { code: 'CAD', symbol: 'CA$', label: 'Canadian Dollar (CA$)', locale: 'en-US', decimals: 2 },
+];
+
+const FORMATS = new Map<string, Intl.NumberFormat>();
+
+/** 214945 in USD -> "$214,945.00"; rupees keep the Indian grouping. */
+export function formatMoney(v: number | null | undefined, code: string | null | undefined): string {
+  const c = CURRENCIES.find((x) => x.code === code) ?? CURRENCIES[0];
+  let f = FORMATS.get(c.code);
+  if (!f) {
+    f = new Intl.NumberFormat(c.locale, { style: 'currency', currency: c.code, minimumFractionDigits: c.decimals, maximumFractionDigits: c.decimals });
+    FORMATS.set(c.code, f);
+  }
+  return f.format(Number(v ?? 0));
+}
+
+/** The locale a currency's amounts are typed in (p-inputnumber). */
+export function currencyLocale(code: string | null | undefined): string {
+  return (CURRENCIES.find((x) => x.code === code) ?? CURRENCIES[0]).locale;
+}
 
 /** 214945 -> "₹2,14,945.00" (Indian grouping). */
 export function rupees(v: number | null | undefined): string {
@@ -237,6 +317,8 @@ export interface Payslip {
   company: {
     name: string; address: string | null; gstNumber: string | null; brandId: number | null; logoUpdatedAt: string | null;
     phone: string | null; email: string | null;
+    /** The brand's currency (INR, USD, EUR, GBP). */
+    currency: string; currencySymbol: string;
   };
   editable: boolean;
   publishedByName: string | null;
@@ -355,4 +437,40 @@ export function rupeesInWords(v: number): string {
   const rupees = Math.floor(a);
   const paise = Math.round((a - rupees) * 100);
   return `Indian Rupee ${rupees ? words(rupees) : 'Zero'}${paise ? ` and ${below100(paise)} Paise` : ''} Only`;
+}
+
+const W_ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen',
+  'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const W_TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+const W_UNITS: Record<string, [string, string]> = {
+  USD: ['US Dollar', 'Cents'], EUR: ['Euro', 'Cents'], GBP: ['British Pound', 'Pence'], JPY: ['Japanese Yen', ''],
+  AED: ['UAE Dirham', 'Fils'], AUD: ['Australian Dollar', 'Cents'], NZD: ['New Zealand Dollar', 'Cents'],
+  CNY: ['Chinese Yuan Renminbi', 'Fen'], CHF: ['Swiss Franc', 'Rappen'], CAD: ['Canadian Dollar', 'Cents'],
+};
+
+function wBelow100(n: number): string {
+  return n < 20 ? W_ONES[n] : W_TENS[Math.floor(n / 10)] + (n % 10 ? '-' + W_ONES[n % 10] : '');
+}
+
+function wBelow1000(n: number): string {
+  const h = Math.floor(n / 100);
+  const r = n % 100;
+  return [h ? W_ONES[h] + ' Hundred' : '', r ? wBelow100(r) : ''].filter(Boolean).join(' ');
+}
+
+/** An amount in words in a brand's currency: rupees the Indian way, others with thousand / million / billion. */
+export function moneyInWords(v: number, code: string | null | undefined): string {
+  const unit = code ? W_UNITS[code] : undefined;
+  if (!unit) return rupeesInWords(v);
+  // the yen has no smaller unit: whole yen
+  const cents = unit[1] ? Math.round(Math.abs(v) * 100) : Math.round(Math.abs(v)) * 100;
+  let whole = Math.floor(cents / 100);
+  const sub = cents % 100;
+  const scale = ['', ' Thousand', ' Million', ' Billion'];
+  const parts: string[] = [];
+  for (let i = 0; whole > 0 && i < scale.length; i++, whole = Math.floor(whole / 1000)) {
+    const chunk = whole % 1000;
+    if (chunk) parts.unshift(wBelow1000(chunk) + scale[i]);
+  }
+  return `${unit[0]} ${parts.join(' ') || 'Zero'}${sub ? ' and ' + wBelow100(sub) + ' ' + unit[1] : ''} Only`;
 }

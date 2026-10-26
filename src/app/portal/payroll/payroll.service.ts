@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
-import { MyPay, PaymentMode, PayComponent, PayKind, PayrollYear, Payslip, PayslipMonth, PayslipSave, Salary, SalaryBody } from './payroll.models';
+import { MyPay, PaymentMode, PayComponent, PayKind, PayrollYear, Payslip, PayslipMonth, PayslipSave, Salary, SalaryBody, TaxCalc } from './payroll.models';
 
 const PAY = `${API_BASE}/api/payroll`;
 
@@ -30,6 +31,12 @@ export class PayrollService {
 
   salary(employeeId: number, fy: number): Observable<Salary> {
     return this.http.get<Salary>(`${PAY}/salaries/${employeeId}`, { params: { fy } });
+  }
+
+  /** The income tax under both regimes for the salary being typed. */
+  taxPreview(fy: number, body: { effectiveFrom: string; monthlyGross: number; monthlyProfessionalTax: number; declared: number | null }):
+    Observable<{ NEW: TaxCalc; OLD: TaxCalc }> {
+    return this.http.post<{ NEW: TaxCalc; OLD: TaxCalc }>(`${PAY}/tax-preview`, body, { params: { fy }, context: silent() });
   }
 
   save(employeeId: number, fy: number, body: SalaryBody): Observable<Salary> {

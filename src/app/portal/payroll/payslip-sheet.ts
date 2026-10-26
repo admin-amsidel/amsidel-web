@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { brandLogoUrl } from '../portal.models';
 import { API_BASE } from '../portal.config';
-import { employedFor, paymentLabel, PayKind, Payslip, PayslipLine, rupees, rupeesInWords } from './payroll.models';
+import { currencyLocale, employedFor, formatMoney, moneyInWords, paymentLabel, PayKind, Payslip, PayslipLine } from './payroll.models';
 
 /**
  * A payslip in the portal's own salary-statement design (the same as the PDF, in blue): the brand's logo, name,
@@ -62,7 +62,7 @@ import { employedFor, paymentLabel, PayKind, Payslip, PayslipLine, rupees, rupee
                   <td class="num muted">{{ money(l.fullAmount) }}</td>
                   <td class="num">
                     @if (editable()) {
-                      <p-inputnumber [inputId]="'pl-' + l.id" mode="currency" currency="INR" locale="en-IN" [min]="0" [maxFractionDigits]="2"
+                      <p-inputnumber [inputId]="'pl-' + l.id" mode="currency" [currency]="payslip().company.currency || 'INR'" [locale]="curLocale()" [min]="0" [maxFractionDigits]="2"
                                      styleClass="amt" [ariaLabel]="l.name + ' this month'" [ngModel]="amount(l)" (ngModelChange)="set(l, $event)" />
                     } @else { {{ money(l.amount) }} }
                   </td>
@@ -151,7 +151,8 @@ export class PayslipSheet {
     { kind: 'DEDUCTION', title: 'Deductions', total: 'Total deductions' },
     { kind: 'REIMBURSEMENT', title: 'Reimbursements', total: 'Total reimbursements' },
   ];
-  protected readonly money = rupees;
+  protected readonly money = (v: number | null | undefined) => formatMoney(v, this.payslip().company.currency);
+  protected readonly curLocale = computed(() => currencyLocale(this.payslip().company.currency));
   protected readonly mode = paymentLabel;
   /** The brand's logo, or the group logo. */
   protected readonly logo = computed(() => {
@@ -162,7 +163,7 @@ export class PayslipSheet {
   protected readonly workingDays = computed(() => this.days() ?? this.payslip().workingDays);
   protected readonly paidDays = computed(() => employedFor(this.payslip(), this.workingDays()) - this.lopDays());
   protected readonly net = computed(() => this.sum('EARNING') - this.sum('DEDUCTION') + this.sum('REIMBURSEMENT'));
-  protected readonly words = computed(() => rupeesInWords(this.net()));
+  protected readonly words = computed(() => moneyInWords(this.net(), this.payslip().company.currency));
 
   protected of(kind: PayKind): PayslipLine[] {
     return this.payslip().lines.filter((l) => l.kind === kind);

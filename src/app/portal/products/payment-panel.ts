@@ -11,7 +11,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { Observable } from 'rxjs';
-import { rupees } from '../payroll/payroll.models';
+import { formatMoney, currencyLocale } from '../payroll/payroll.models';
 import { apiProblem, toIsoDate } from '../portal.models';
 import { PAY_MODES, PayKind, PayMode, Payment, PaymentBody, PurchaseBill, SalesDoc, Totals } from './trade.models';
 import { TradeService } from './trade.service';
@@ -75,7 +75,7 @@ import { TradeService } from './trade.service';
       <div class="form">
         <div class="two">
           <div class="pf"><label for="pp-amt">Amount *</label>
-            <p-inputnumber inputId="pp-amt" mode="currency" currency="INR" locale="en-IN" [min]="0" [ngModel]="amount()" (ngModelChange)="amount.set($event)" />
+            <p-inputnumber inputId="pp-amt" mode="currency" [currency]="currency()" [locale]="curLocale()" [min]="0" [ngModel]="amount()" (ngModelChange)="amount.set($event)" />
             <small class="hint">{{ kind() === 'REFUND' ? 'Up to ' + money(totals().paid) + ' paid' : money(totals().due) + ' still due' }}</small></div>
           <div class="pf"><label for="pp-date">Date *</label>
             <p-datepicker inputId="pp-date" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [maxDate]="today" [showOnFocus]="false"
@@ -139,6 +139,8 @@ import { TradeService } from './trade.service';
 export class PaymentPanel {
   private readonly trade = inject(TradeService);
 
+  /** The document's currency (INR, USD, EUR, GBP). */
+  readonly currency = input('INR');
   readonly docId = input.required<number>();
   readonly party = input.required<'CUSTOMER' | 'SUPPLIER'>();
   readonly payments = input<Payment[]>([]);
@@ -148,7 +150,8 @@ export class PaymentPanel {
   readonly payeeUpi = input<string | null>(null);
   readonly changed = output<SalesDoc | PurchaseBill>();
 
-  protected readonly money = rupees;
+  protected readonly money = (v: number | null | undefined) => formatMoney(v, this.currency());
+  protected readonly curLocale = computed(() => currencyLocale(this.currency()));
   protected readonly modes = PAY_MODES;
   /** The end of today, so a date picked today is still allowed as the latest. */
   protected readonly today = new Date(new Date().setHours(23, 59, 59, 999));

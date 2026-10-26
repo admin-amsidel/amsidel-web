@@ -111,6 +111,8 @@ export interface Brand {
   /** The UPI payment QR printed on invoices: when uploaded (null = none) and the UPI ID it pays to (null = not read). */
   upiQrUpdatedAt: string | null;
   upiQrPayee: string | null;
+  /** The currency its invoices, quotations and payslips show (INR, USD, EUR, GBP). */
+  currency: string;
   /** The brand's Razorpay account for bills paid online (the secret is never sent back). */
   razorpayKeyId: string | null;
   razorpayReady: boolean;
@@ -140,6 +142,7 @@ export interface BrandBody {
   bankAccount: string;
   ifsc: string;
   upi: string;
+  currency: string;
 }
 
 /** Suggested brand categories; any other text is allowed too. */

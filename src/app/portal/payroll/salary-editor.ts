@@ -9,12 +9,13 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { Avatar } from '../avatar';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { TouchDatePicker } from '../touch-datepicker';
-import { currentFy, DEFAULT_WORKING_DAYS, fyLabel, KINDS, monthsPaid, PayKind, rupees, rupeesRound, Salary, SalaryLine } from './payroll.models';
+import { currentFy, DEFAULT_WORKING_DAYS, fyLabel, KINDS, monthsPaid, PayKind, rupees, rupeesRound, Salary, SalaryLine, TAX_REGIMES, TaxCalc, TaxRegime } from './payroll.models';
 import { PayrollService } from './payroll.service';
 
 /**
@@ -25,7 +26,7 @@ import { PayrollService } from './payroll.service';
   selector: 'app-salary-editor',
   imports: [
     FormsModule, DatePipe, RouterLink, Avatar, ButtonModule, DatePickerModule, TouchDatePicker, InputNumberModule,
-    InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule,
+    InputTextModule, MessageModule, SelectModule, SelectButtonModule, TagModule, TextareaModule,
   ],
   template: `
     @if (salary(); as s) {
@@ -85,10 +86,15 @@ import { PayrollService } from './payroll.service';
                   <label [for]="'amt-' + l.componentId">{{ l.name }}
                     @if (!l.active) { <p-tag value="Retired" severity="secondary" styleClass="tiny" /> }
                   </label>
-                  <p-inputnumber [inputId]="'amt-' + l.componentId" mode="currency" currency="INR" locale="en-IN"
-                                 [minFractionDigits]="0" [maxFractionDigits]="2" [min]="0" [max]="9999999999" placeholder="₹0"
-                                 [disabled]="!s.editable" styleClass="amt" [ngModel]="amounts()[l.componentId]"
-                                 (ngModelChange)="setAmount(l.componentId, $event)" />
+                  @if (isTaxLine(l) && regime() !== 'MANUAL') {
+                    <span class="num auto-tax" [title]="'Worked out under the ' + regimeLabel() + ' (see Income tax)'">{{ money(autoTax()) }}
+                      <small class="block muted">{{ regimeLabel() }}</small></span>
+                  } @else {
+                    <p-inputnumber [inputId]="'amt-' + l.componentId" mode="currency" currency="INR" locale="en-IN"
+                                   [minFractionDigits]="0" [maxFractionDigits]="2" [min]="0" [max]="9999999999" placeholder="₹0"
+                                   [disabled]="!s.editable || (isTaxLine(l) && !s.tax.canManual)" styleClass="amt" [ngModel]="amounts()[l.componentId]"
+                                   (ngModelChange)="setAmount(l.componentId, $event)" />
+                  }
                   <span class="num yearly">{{ money(amount(l.componentId) * 12) }}</span>
                 </div>
               } @empty {
@@ -101,6 +107,54 @@ import { PayrollService } from './payroll.service';
               </div>
             </div>
           }
+
+          <fieldset class="tax">
+            <legend>Income tax</legend>
+            <div class="pf span">
+              <span class="pf-label" id="s-regime">Tax regime</span>
+              <p-selectbutton [options]="regimeOptions()" optionLabel="label" optionValue="value" optionDisabled="disabled" [allowEmpty]="false"
+                              ariaLabelledBy="s-regime" [disabled]="!s.editable" [ngModel]="regime()" (ngModelChange)="regime.set($event)" />
+              <small class="hint">{{ regimeHint() }}@if (!s.tax.canManual) { · Manual entry needs the Manual income tax access. }</small>
+            </div>
+            @if (regime() === 'OLD') {
+              <div class="pf">
+                <label for="s-declared">Deductions &amp; exemptions for the year</label>
+                <p-inputnumber inputId="s-declared" mode="currency" currency="INR" locale="en-IN" [maxFractionDigits]="0" [min]="0" [max]="99999999"
+                               placeholder="₹0" [disabled]="!s.editable" [ngModel]="declared()" (ngModelChange)="declared.set($event)" />
+                <small class="hint">80C (EPF, PPF, LIC, ELSS…), 80D, HRA exemption, home-loan interest and so on, as the employee declared.</small>
+              </div>
+            }
+            <div class="compare span" role="table" aria-label="Tax under each regime">
+              <div class="cmp-row cmp-head" role="row"><span role="columnheader"></span><span role="columnheader" class="num">New regime</span><span role="columnheader" class="num">Old regime</span></div>
+              <div class="cmp-row" role="row"><span role="rowheader">Taxable income</span>
+                <span class="num">{{ round(preview()?.NEW?.taxable) }}</span><span class="num">{{ round(preview()?.OLD?.taxable) }}</span></div>
+              <div class="cmp-row" role="row"><span role="rowheader">Tax for {{ s.fyLabel }} ({{ months() }} mo)</span>
+                <span class="num" [class.pick]="regime() === 'NEW'">{{ round(preview()?.NEW?.annualTax) }}</span>
+                <span class="num" [class.pick]="regime() === 'OLD'">{{ round(preview()?.OLD?.annualTax) }}</span></div>
+              <div class="cmp-row strong" role="row"><span role="rowheader">A month</span>
+                <span class="num" [class.pick]="regime() === 'NEW'">{{ money(preview()?.NEW?.monthlyTax) }}</span>
+                <span class="num" [class.pick]="regime() === 'OLD'">{{ money(preview()?.OLD?.monthlyTax) }}</span></div>
+            </div>
+            @if (better(); as b) { <small class="hint span"><i class="pi pi-info-circle" aria-hidden="true"></i> {{ b }}</small> }
+            @if (chosenCalc(); as c) {
+              <details class="span workings">
+                <summary>How the {{ regimeLabel() }} tax is worked out ({{ c.rules }})</summary>
+                <dl>
+                  <dt>Gross earnings in {{ s.fyLabel }}</dt><dd>{{ money(c.income) }}</dd>
+                  <dt>− Standard deduction</dt><dd>{{ money(c.standardDeduction) }}</dd>
+                  @if (c.professionalTax) { <dt>− Professional tax</dt><dd>{{ money(c.professionalTax) }}</dd> }
+                  @if (c.declared) { <dt>− Deductions &amp; exemptions</dt><dd>{{ money(c.declared) }}</dd> }
+                  <dt class="strong">Taxable income</dt><dd class="strong">{{ money(c.taxable) }}</dd>
+                  <dt>Tax on the slabs</dt><dd>{{ money(c.slabTax) }}</dd>
+                  @if (c.rebate) { <dt>− Rebate (section 87A)</dt><dd>{{ money(c.rebate) }}</dd> }
+                  @if (c.surcharge) { <dt>+ Surcharge</dt><dd>{{ money(c.surcharge) }}</dd> }
+                  <dt>+ Health &amp; education cess (4%)</dt><dd>{{ money(c.cess) }}</dd>
+                  <dt class="strong">Tax for the year</dt><dd class="strong">{{ money(c.annualTax) }}</dd>
+                  <dt>÷ {{ c.months }} month{{ c.months === 1 ? '' : 's' }} = {{ s.tax.taxComponentName ?? 'Income tax' }} a month</dt><dd>{{ money(c.monthlyTax) }}</dd>
+                </dl>
+              </details>
+            }
+          </fieldset>
 
           <fieldset class="details">
             <legend>Bank &amp; tax details</legend>
@@ -187,6 +241,20 @@ import { PayrollService } from './payroll.service';
     @media (max-width: 760px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
     .details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; padding: 12px 14px 14px;
       border: 1px solid var(--line); border-radius: 12px; }
+    .tax { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; padding: 12px 14px 14px; border: 1px solid var(--line); border-radius: 12px; }
+    .tax legend { padding: 0 6px; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--pine); }
+    .tax .span { grid-column: 1 / -1; }
+    .compare { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .cmp-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px; gap: 10px; padding: 7px 12px; font-size: .9rem; }
+    .cmp-row + .cmp-row { border-top: 1px solid var(--line); }
+    .cmp-head { background: var(--accent-softer); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--pine); }
+    .cmp-row.strong { font-weight: 700; }
+    .pick { color: #1d5fa3; font-weight: 700; }
+    .workings summary { cursor: pointer; font-size: .88rem; color: var(--pine); font-weight: 600; }
+    .workings dl { margin-top: 10px; max-width: 520px; }
+    .auto-tax { text-align: right; font-weight: 600; }
+    .block { display: block; }
+    .muted { color: var(--muted); font-weight: 400; font-size: .74rem; }
     .details legend { padding: 0 6px; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--pine); }
     .pay-sec { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
     .sec-head, .line, .sec-total {
@@ -224,7 +292,8 @@ import { PayrollService } from './payroll.service';
       .summary { position: static; grid-row: 1; }
     }
     @media (max-width: 600px) {
-      .details { grid-template-columns: 1fr; }
+      .details, .tax { grid-template-columns: 1fr; }
+      .cmp-row { grid-template-columns: minmax(0, 1fr) 96px 96px; padding: 7px 10px; font-size: .84rem; }
       .sec-head { grid-template-columns: minmax(0, 1fr) auto; }
       .sec-head .num:last-child { display: none; }
       .line { grid-template-columns: 1fr; gap: 4px; padding: 10px 12px; }
@@ -266,6 +335,24 @@ export class SalaryEditor {
   protected readonly busy = signal(false);
   protected readonly copying = signal(false);
   protected readonly formError = signal('');
+  protected readonly regime = signal<TaxRegime>('NEW');
+  protected readonly declared = signal<number | null>(null);
+  protected readonly preview = signal<{ NEW: TaxCalc; OLD: TaxCalc } | null>(null);
+  private previewTimer: ReturnType<typeof setTimeout> | null = null;
+  protected readonly regimeOptions = computed(() => TAX_REGIMES.map((r) => ({ ...r,
+    disabled: r.value === 'MANUAL' && !this.salary()?.tax.canManual && this.salary()?.tax.regime !== 'MANUAL' })));
+  protected readonly regimeLabel = computed(() => TAX_REGIMES.find((r) => r.value === this.regime())!.label.toLowerCase());
+  protected readonly regimeHint = computed(() => TAX_REGIMES.find((r) => r.value === this.regime())!.hint);
+  protected readonly chosenCalc = computed(() => this.regime() === 'MANUAL' ? null : this.preview()?.[this.regime() as 'NEW' | 'OLD'] ?? null);
+  /** The worked-out monthly tax (the Income Tax line under a regime). */
+  protected readonly autoTax = computed(() => this.chosenCalc()?.monthlyTax ?? 0);
+  protected readonly better = computed(() => {
+    const p = this.preview();
+    if (!p) return '';
+    const diff = p.OLD.annualTax - p.NEW.annualTax;
+    if (Math.abs(diff) < 1) return 'Both regimes come to the same tax.';
+    return `${diff > 0 ? 'The new' : 'The old'} regime saves ${rupeesRound(Math.abs(diff))} a year for this salary.`;
+  });
 
   private readonly year = computed(() => Number(this.fy()) || currentFy());
   protected readonly fyStart = computed(() => new Date(this.year(), 3, 1));
@@ -285,6 +372,29 @@ export class SalaryEditor {
       const fy = this.year();
       untracked(() => this.load(id, fy));
     });
+    // the tax under both regimes, again a moment after the pay, the date or the deductions change
+    effect(() => {
+      const s = this.salary();
+      const from = this.from();
+      const gross = this.sum('EARNING');
+      const pt = this.ptMonthly();
+      const declared = this.declared();
+      if (!s || !from) return;
+      untracked(() => {
+        if (this.previewTimer) clearTimeout(this.previewTimer);
+        this.previewTimer = setTimeout(() => this.payroll.taxPreview(s.fyStartYear, {
+          effectiveFrom: toIsoDate(from)!, monthlyGross: gross, monthlyProfessionalTax: pt, declared,
+        }).subscribe({ next: (p) => this.preview.set(p), error: () => undefined }), 350);
+      });
+    });
+  }
+
+  protected isTaxLine(l: SalaryLine): boolean {
+    return l.code.toUpperCase() === 'TDS';
+  }
+
+  private ptMonthly(): number {
+    return (this.salary()?.lines ?? []).filter((l) => l.code.toUpperCase() === 'PT').reduce((t, l) => t + this.amount(l.componentId), 0);
   }
 
   protected linesOf(kind: PayKind): SalaryLine[] {
@@ -296,7 +406,8 @@ export class SalaryEditor {
   }
 
   protected sum(kind: PayKind): number {
-    return this.linesOf(kind).reduce((t, l) => t + this.amount(l.componentId), 0);
+    // under a regime the tax line is the worked-out amount
+    return this.linesOf(kind).reduce((t, l) => t + (this.isTaxLine(l) && this.regime() !== 'MANUAL' ? this.autoTax() : this.amount(l.componentId)), 0);
   }
 
   protected setAmount(componentId: number, value: number | null): void {
@@ -352,11 +463,14 @@ export class SalaryEditor {
         effectiveFrom: toIsoDate(this.from())!,
         workingDays: days,
         notes: this.notes().trim(),
-        lines: s.lines.map((l) => ({ componentId: l.componentId, monthly: this.amount(l.componentId) })),
+        lines: s.lines.map((l) => ({ componentId: l.componentId,
+          monthly: this.isTaxLine(l) && this.regime() !== 'MANUAL' ? this.autoTax() : this.amount(l.componentId) })),
         pan,
         bankAccount: bank,
         ifsc,
         upi,
+        taxRegime: this.regime(),
+        taxDeclared: this.regime() === 'OLD' ? this.declared() ?? 0 : null,
       })
       .subscribe({
         next: (saved) => {
@@ -413,5 +527,8 @@ export class SalaryEditor {
     this.bank.set(s.employee.bankAccount ?? '');
     this.ifsc.set(s.employee.ifsc ?? '');
     this.upi.set(s.employee.upi ?? '');
+    this.regime.set(s.tax.regime);
+    this.declared.set(s.tax.declared);
+    this.preview.set({ NEW: s.tax.newRegime, OLD: s.tax.oldRegime });
   }
 }

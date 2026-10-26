@@ -15,7 +15,7 @@ import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { forkJoin, of, switchMap } from 'rxjs';
-import { rupees } from '../payroll/payroll.models';
+import { CURRENCIES, currencyLocale, formatMoney } from '../payroll/payroll.models';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { PaymentPanel } from './payment-panel';
 import { TradeBrand } from './trade-brand';
@@ -116,7 +116,7 @@ const GST_RATES = [0, 5, 12, 18, 28].map((r) => ({ label: r + '%', value: r }));
                     <div class="pf"><label [for]="'pq' + l.key">Qty</label>
                       <p-inputnumber [inputId]="'pq' + l.key" [min]="0" [maxFractionDigits]="2" [disabled]="!editable()" [ngModel]="l.quantity" (ngModelChange)="patch(l.key, { quantity: $event })" /></div>
                     <div class="pf"><label [for]="'pr' + l.key">Price each</label>
-                      <p-inputnumber [inputId]="'pr' + l.key" mode="currency" currency="INR" locale="en-IN" [min]="0" [disabled]="!editable()" [ngModel]="l.rate" (ngModelChange)="patch(l.key, { rate: $event })" /></div>
+                      <p-inputnumber [inputId]="'pr' + l.key" mode="currency" [currency]="cur()" [locale]="curLocale()" [min]="0" [disabled]="!editable()" [ngModel]="l.rate" (ngModelChange)="patch(l.key, { rate: $event })" /></div>
                     <div class="amt"><span>Amount</span><b>{{ money(amount(l)) }}</b></div>
                   </div>
                   @if (editable()) {
@@ -131,7 +131,7 @@ const GST_RATES = [0, 5, 12, 18, 28].map((r) => ({ label: r + '%', value: r }));
 
           @if (bill(); as b) {
             @if (b.status !== 'CANCELLED' || b.payments.length) {
-              <app-payment-panel [docId]="b.id" party="SUPPLIER" [payments]="b.payments" [totals]="b.totals" [canAdd]="b.status !== 'CANCELLED'"
+              <app-payment-panel [currency]="b.company.currency" [docId]="b.id" party="SUPPLIER" [payments]="b.payments" [totals]="b.totals" [canAdd]="b.status !== 'CANCELLED'"
                                  [payeeUpi]="supplier()?.upi ?? null" (changed)="paid($event)" />
             }
           }
@@ -146,13 +146,13 @@ const GST_RATES = [0, 5, 12, 18, 28].map((r) => ({ label: r + '%', value: r }));
         <aside class="side">
           <section class="p-card sum">
             <h2>Total</h2>
-            <div class="pf"><label for="pe-disc">Discount (₹)</label>
-              <p-inputnumber inputId="pe-disc" mode="currency" currency="INR" locale="en-IN" [min]="0" [disabled]="!editable()" [ngModel]="discount()" (ngModelChange)="discount.set($event ?? 0); dirty.set(true)" /></div>
+            <div class="pf"><label for="pe-disc">Discount ({{ curSymbol() }})</label>
+              <p-inputnumber inputId="pe-disc" mode="currency" [currency]="cur()" [locale]="curLocale()" [min]="0" [disabled]="!editable()" [ngModel]="discount()" (ngModelChange)="discount.set($event ?? 0); dirty.set(true)" /></div>
             <div class="misc">
               <div class="pf"><label for="pe-ml">Other charges</label>
                 <input pInputText id="pe-ml" maxlength="100" placeholder="e.g. Freight" [disabled]="!editable()" [ngModel]="miscLabel()" (ngModelChange)="miscLabel.set($event); dirty.set(true)" /></div>
-              <div class="pf"><label for="pe-ma">₹</label>
-                <p-inputnumber inputId="pe-ma" mode="currency" currency="INR" locale="en-IN" [min]="0" [disabled]="!editable()" [ngModel]="miscAmount()" (ngModelChange)="miscAmount.set($event ?? 0); dirty.set(true)" /></div>
+              <div class="pf"><label for="pe-ma">{{ curSymbol() }}</label>
+                <p-inputnumber inputId="pe-ma" mode="currency" [currency]="cur()" [locale]="curLocale()" [min]="0" [disabled]="!editable()" [ngModel]="miscAmount()" (ngModelChange)="miscAmount.set($event ?? 0); dirty.set(true)" /></div>
             </div>
             <div class="gst">
               <div class="pf"><label for="pe-gst">GST</label>
@@ -252,7 +252,11 @@ export class PurchaseEditor implements OnInit {
   private readonly confirm = inject(ConfirmationService);
   protected readonly brand = inject(TradeBrand);
   private readonly auth = inject(AuthService);
-  protected readonly money = rupees;
+  /** The brand's currency: the saved bill's, else the brand chosen. */
+  protected readonly cur = computed(() => this.bill()?.company.currency ?? this.brand.brands().find((b) => b.id === this.brandId())?.currency ?? 'INR');
+  protected readonly curLocale = computed(() => currencyLocale(this.cur()));
+  protected readonly curSymbol = computed(() => CURRENCIES.find((c) => c.code === this.cur())?.symbol ?? '₹');
+  protected readonly money = (v: number | null | undefined) => formatMoney(v, this.cur());
   protected readonly gstRates = GST_RATES;
 
   protected readonly bill = signal<PurchaseBill | null>(null);
@@ -371,10 +375,10 @@ export class PurchaseEditor implements OnInit {
   protected note(l: Line): string {
     const i = l.itemId ? this.itemById().get(l.itemId) : null;
     if (!i) return '';
-    const parts = [`${i.typeName}`, `supplier price ${rupees(i.supplierPrice)}`];
+    const parts = [`${i.typeName}`, `supplier price ${this.money(i.supplierPrice)}`];
     if (i.trackStock) parts.push(`${qty(i.onHand)} ${i.unit} in stock`);
     if (l.rate !== null && i.supplierPrice && l.rate !== i.supplierPrice) {
-      parts.push(l.rate > i.supplierPrice ? `↑ ${rupees(l.rate - i.supplierPrice)} more than last time` : `↓ ${rupees(i.supplierPrice - l.rate)} less than last time`);
+      parts.push(l.rate > i.supplierPrice ? `↑ ${this.money(l.rate - i.supplierPrice)} more than last time` : `↓ ${this.money(i.supplierPrice - l.rate)} less than last time`);
     }
     return parts.join(' · ');
   }

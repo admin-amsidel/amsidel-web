@@ -4,6 +4,8 @@ export interface BrandRef {
   id: number;
   code: string;
   name: string;
+  /** What its documents show: INR, USD, EUR, GBP. */
+  currency: string;
 }
 
 export interface Balance {
@@ -353,6 +355,9 @@ export interface Company {
   ifsc: string | null;
   upi: string | null;
   logoUpdatedAt: string | null;
+  /** The brand's currency (INR, USD, EUR, GBP) and its symbol. */
+  currency: string;
+  currencySymbol: string;
 }
 
 export interface PartyRef {

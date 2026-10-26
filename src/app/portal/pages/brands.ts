@@ -12,6 +12,7 @@ import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { AuthService } from '../auth.service';
+import { CURRENCIES } from '../payroll/payroll.models';
 import { apiProblem, Brand, BRAND_CATEGORIES, brandLogoUrl, fromIsoDate, toIsoDate } from '../portal.models';
 import { API_BASE } from '../portal.config';
 import { StaffService } from '../staff.service';
@@ -83,6 +84,7 @@ import { PhoneInput, phoneProblem } from '../phone-input';
                 @if (b.upiId) { <span class="block-line">UPI {{ b.upiId }}</span> }
               } @else { — }
             </dd>
+            <dt>Currency</dt><dd>{{ currencyLabel(b.currency) }}</dd>
             <dt>Online pay</dt>
             <dd>{{ b.razorpayReady ? 'Razorpay ' + (b.razorpayKeyId?.startsWith('rzp_live_') ? 'live' : 'test') + ' · ' + b.razorpayKeyId : 'Not set up' }}</dd>
           </dl>
@@ -135,6 +137,10 @@ import { PhoneInput, phoneProblem } from '../phone-input';
         <div class="pf span"><label for="b-addr">Address</label>
           <textarea pTextarea id="b-addr" rows="2" maxlength="500" [autoResize]="true" placeholder="Building, street, city, state, PIN"
                     [ngModel]="address()" (ngModelChange)="address.set($event)"></textarea></div>
+        <div class="pf"><label for="b-cur">Currency</label>
+          <p-select inputId="b-cur" [options]="currencies" optionLabel="label" optionValue="code" appendTo="body"
+                    [ngModel]="currency()" (ngModelChange)="currency.set($event)" />
+          <small class="hint">The symbol on its invoices, quotations and payslips; amounts are not converted. UPI is offered for rupees only.</small></div>
         <fieldset class="bank span">
           <legend>Bank details for invoices</legend>
           <div class="pf"><label for="b-acc">Bank account no</label>
@@ -285,6 +291,8 @@ export class Brands implements OnInit {
   protected readonly ownerList = computed(() => this.ownersOf(this.owners()));
   protected readonly qrUrl = signal<string | null>(null);
   protected readonly qrBusy = signal(false);
+  protected readonly currency = signal('INR');
+  protected readonly currencies = CURRENCIES;
   protected readonly rzKey = signal('');
   protected readonly rzSecret = signal('');
   protected readonly rzBusy = signal(false);
@@ -296,6 +304,10 @@ export class Brands implements OnInit {
 
   protected logo(b: Brand): string | null {
     return brandLogoUrl(b.id, b.logoUpdatedAt, API_BASE);
+  }
+
+  protected currencyLabel(code: string | null | undefined): string {
+    return (CURRENCIES.find((c) => c.code === code) ?? CURRENCIES[0]).label;
   }
 
   protected ownersOf(s: string | null): string[] {
@@ -321,6 +333,7 @@ export class Brands implements OnInit {
     this.formError.set('');
     this.showQr(b);
     this.rzKey.set(b?.razorpayKeyId ?? '');
+    this.currency.set(b?.currency ?? 'INR');
     this.rzSecret.set('');
     this.open.set(true);
   }
@@ -446,7 +459,7 @@ export class Brands implements OnInit {
     const body = {
       name: this.name().trim(), code: this.code().trim(), active: this.active(), address: this.address().trim(),
       launchedDate: toIsoDate(this.launched()), owners: this.owners(), gstNumber: gst, category: (this.category() ?? '').trim(),
-      contactNumber: phone, email, bankAccount, ifsc, upi,
+      contactNumber: phone, email, bankAccount, ifsc, upi, currency: this.currency(),
     };
     this.staff.saveBrand(body, this.editing()?.id).subscribe({
       next: (b) => {
