@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, inject, input, signal, effect, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -34,6 +34,8 @@ import { apiProblem } from '../portal.models';
 
           @if (reason() === 'expired') {
             <p-message severity="info">Your session has ended. Please sign in again.</p-message>
+          } @else if (reason() === 'pin-changed') {
+            <p-message severity="success">Your PIN was changed. Sign in with your new PIN.</p-message>
           }
 
           <div class="pf">
@@ -97,6 +99,8 @@ export class Login {
   /** Query params (?next=/portal/...&reason=expired), bound by withComponentInputBinding. */
   readonly next = input<string>();
   readonly reason = input<string>();
+  /** ?user= : the user ID to fill in (after a PIN change). */
+  readonly user = input<string>();
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     userId: ['', Validators.required],
@@ -105,6 +109,14 @@ export class Login {
   protected readonly busy = signal(false);
   protected readonly submitted = signal(false);
   protected readonly error = signal('');
+
+  constructor() {
+    // after a PIN change: the user ID is filled in, the new PIN is typed
+    effect(() => {
+      const u = this.user();
+      if (u) untracked(() => this.form.controls.userId.setValue(u));
+    });
+  }
 
   protected show(name: 'userId' | 'password'): boolean {
     const c = this.form.controls[name];

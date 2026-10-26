@@ -107,10 +107,16 @@ export class AuthService {
     if (s && s.user.id === user.id) this.save({ ...s, user });
   }
 
-  /** Called on "Sign out" and by the interceptor when the backend no longer accepts the token. */
-  logout(reason?: 'expired'): void {
+  /**
+   * Called on "Sign out", by the interceptor when the backend no longer accepts the token, and after a PIN change
+   * (reason pin-changed, with the user ID to fill in): the new PIN is used to sign in again.
+   */
+  logout(reason?: 'expired' | 'pin-changed', userId?: string): void {
     this.save(null);
-    this.router.navigate(['/login'], reason ? { queryParams: { reason } } : {});
+    const queryParams: Record<string, string> = {};
+    if (reason) queryParams['reason'] = reason;
+    if (userId) queryParams['user'] = userId;
+    this.router.navigate(['/login'], { queryParams });
   }
 
   private store(r: LoginResponse): void {

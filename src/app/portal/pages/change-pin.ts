@@ -111,15 +111,11 @@ export class ChangePin {
     this.busy.set(true);
     const { current, next } = this.form.getRawValue();
     this.auth.changePin(current, next).subscribe({
-      next: () => {
+      next: (user) => {
         this.busy.set(false);
-        this.toast.add({ severity: 'success', summary: 'PIN changed', detail: 'Other devices you were signed in on are now signed out.' });
-        if (this.firstTime()) {
-          this.router.navigateByUrl('/portal/profile');
-          return;
-        }
-        this.form.reset();
-        this.submitted.set(false);
+        this.toast.add({ severity: 'success', summary: 'PIN changed', detail: 'Sign in again with your new PIN. Other devices are signed out too.' });
+        // a fresh sign-in with the new PIN, here as on every other device
+        this.auth.logout('pin-changed', user.userId);
       },
       error: (err) => {
         const p = apiProblem(err);
