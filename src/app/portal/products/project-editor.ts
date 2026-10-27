@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, effect, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -21,6 +21,7 @@ import { phoneSearchText } from '../phone-input';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { CustomerForm } from './customer-form';
 import { HistoryList } from './history-list';
+import { ProjectStatusService, ProjectStatusView } from './project-status.service';
 import { TradeBrand } from './trade-brand';
 import {
   Customer, DOC_STATUS, PAY_MODES, payLabel, PersonRef, Project, PROJECT_STATUS, PROJECT_STATUS_OPTIONS, ProjectBody, ProjectStatus,
@@ -217,6 +218,31 @@ import { TradeService } from './trade.service';
                 } @empty { <li class="muted">No payments yet. Record them on the project's invoices.</li> }
               </ul>
             </section>
+
+            <!-- status updates for the customer -->
+            <section class="p-card">
+              <div class="su-head">
+                <h2>Status updates for the customer</h2>
+                @if (auth.can('PROD_PROJECT_STATUS')) {
+                  <a class="su-open" [routerLink]="'/portal/products/project-status'" [queryParams]="{ project: x.id }">
+                    Post or share <i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+                }
+              </div>
+              <p class="muted su-share">
+                @if (updates()?.sharePath) { <i class="pi pi-link" aria-hidden="true"></i> Shared with {{ x.customer.name }}: they follow it on their link. }
+                @else { <i class="pi pi-lock" aria-hidden="true"></i> Not shared with the customer yet. }
+              </p>
+              <ul class="su">
+                @for (u of (updates()?.updates ?? []).slice(0, 4); track u.id) {
+                  <li>
+                    <p-tag [value]="statusLabel(u.status)" [severity]="statusSeverity(u.status)" />
+                    <span class="su-main"><b>{{ u.title }}</b>
+                      <small class="muted block">{{ u.happenedAt | date: 'd MMM y, h:mm a' }} · {{ u.createdByName ?? '—' }}{{ u.photoIds.length ? ' · ' + u.photoIds.length + ' photo' + (u.photoIds.length === 1 ? '' : 's') : '' }}</small></span>
+                  </li>
+                } @empty { <li class="muted">No status updates yet.</li> }
+              </ul>
+              @if ((updates()?.updates?.length ?? 0) > 4) { <small class="muted">and {{ updates()!.updates.length - 4 }} more</small> }
+            </section>
           }
         </div>
 
@@ -316,6 +342,12 @@ import { TradeService } from './trade.service';
     </p-dialog>
   `,
   styles: `
+    .su-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .su-open { font-size: .86rem; font-weight: 600; color: #1d5fa3; text-decoration: none; white-space: nowrap; }
+    .su-share { margin: 0 0 10px; font-size: .85rem; }
+    .su { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .su li { display: flex; gap: 10px; align-items: flex-start; }
+    .su-main { min-width: 0; }
     .tags { display: inline-flex; gap: 6px; vertical-align: middle; margin-left: 8px; font-size: .9rem; }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
     .main > .p-card:first-child, .side > .p-card:first-child { margin-top: 0; }
@@ -367,7 +399,7 @@ export class ProjectEditor implements OnInit {
   private readonly router = inject(Router);
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   protected readonly brand = inject(TradeBrand);
   protected readonly money = rupees;
   protected readonly statusOptions = PROJECT_STATUS_OPTIONS;
@@ -433,6 +465,23 @@ export class ProjectEditor implements OnInit {
     const m = this.p()?.money;
     return m && m.toPay > 0 ? Math.min(100, Math.round(((m.paid + m.writtenOff) / m.toPay) * 100)) : 0;
   });
+
+  /** The project's status updates for the customer (read here; posted on the Project status page). */
+  protected readonly updates = signal<ProjectStatusView | null>(null);
+  private readonly statusApi = inject(ProjectStatusService);
+  private readonly loadUpdates = effect(() => {
+    const id = this.p()?.id;
+    if (!id) return;
+    untracked(() => this.statusApi.of(id).subscribe({ next: (v) => this.updates.set(v), error: () => this.updates.set(null) }));
+  });
+
+  protected statusLabel(s: ProjectStatus): string {
+    return PROJECT_STATUS[s].label;
+  }
+
+  protected statusSeverity(s: ProjectStatus) {
+    return PROJECT_STATUS[s].severity;
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

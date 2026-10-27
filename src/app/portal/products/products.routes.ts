@@ -98,6 +98,13 @@ export const PRODUCT_ROUTES: Routes = [
     loadComponent: () => import('./project-editor').then((m) => m.ProjectEditor),
   },
   {
+    path: 'project-status',
+    title: 'Project status' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_PROJECT_STATUS' },
+    loadComponent: () => import('./project-status').then((m) => m.ProjectStatusPage),
+  },
+  {
     path: 'ledger',
     title: 'Income & expenses' + T,
     canActivate: [menuGuard],

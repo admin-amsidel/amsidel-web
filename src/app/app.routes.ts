@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { providePortalUi } from './portal/portal-ui';
 
 export const routes: Routes = [
   {
@@ -55,6 +56,14 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/contact/contact').then((m) => m.Contact),
       },
     ],
+  },
+  // a customer's project status link: no sign-in, outside the portal and the site
+  {
+    path: 'track/:code/:token',
+    title: 'Project progress',
+    // the PrimeNG theme, as in the portal (but nothing of the portal itself)
+    providers: [providePortalUi()],
+    loadComponent: () => import('./pages/track/track').then((m) => m.Track),
   },
   // Staff portal (employees and owners of every brand); its own chunks, so the public site never loads it
   { path: 'login', loadChildren: () => import('./portal/portal.routes').then((m) => m.LOGIN_ROUTES) },
