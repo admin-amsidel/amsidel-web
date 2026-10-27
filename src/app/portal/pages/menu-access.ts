@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -9,8 +9,25 @@ import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { AuthService } from '../auth.service';
 import { AccessSubject, MenuAccessEntry, MenuAccessService } from '../menu-access.service';
-import { apiProblem, Employee, MenuNode, ROLE_LABELS } from '../portal.models';
+import { apiProblem, Employee, MenuNode, ROLE_LABELS, UserType } from '../portal.models';
+import { UserTypesDialog } from './user-types-dialog';
 import { StaffService } from '../staff.service';
+
+const HINTS: Record<string, string> = {
+  OWNER: 'Always every menu', ADMIN: 'Runs a brand or the group', MANAGER: 'Leads a team', EMPLOYEE: 'Everyone else',
+};
+
+const BUILT_IN_SUBJECTS: Subject[] = (['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'] as const).map((r) => ({
+  type: 'ROLE' as const, key: r, label: ROLE_LABELS[r], hint: HINTS[r], locked: r === 'OWNER',
+}));
+
+/** The user types as subjects: built-in first, then the added ones with their level. */
+function typeSubjects(types: UserType[]): Subject[] {
+  return types.map((t) => ({
+    type: 'ROLE' as const, key: t.code, label: t.name, locked: t.baseRole === 'OWNER',
+    hint: t.builtIn ? HINTS[t.code] ?? '' : `${ROLE_LABELS[t.baseRole]} level · ${t.employees} ${t.employees === 1 ? 'person' : 'people'}${t.active ? '' : ' · switched off'}`,
+  }));
+}
 
 interface Subject {
   type: AccessSubject;
@@ -31,7 +48,7 @@ const ALL = '*';
  */
 @Component({
   selector: 'app-menu-access',
-  imports: [FormsModule, ButtonModule, CheckboxModule, MessageModule, SelectModule, ToggleSwitchModule],
+  imports: [FormsModule, ButtonModule, CheckboxModule, MessageModule, SelectModule, ToggleSwitchModule, UserTypesDialog],
   template: `
     <div class="p-head">
       <div>
@@ -48,7 +65,8 @@ const ALL = '*';
 
     <div class="ma">
       <section class="p-card who">
-        <h2>User types</h2>
+        <div class="h2row"><h2>User types</h2>
+          @if (canSave()) { <p-button label="Manage" ariaLabel="Manage user types" icon="pi pi-cog" size="small" [text]="true" (onClick)="typesDialog().show()" /> }</div>
         <div class="list">
           @for (s of roleSubjects(); track s.key) {
             <button type="button" class="subj" [class.on]="isSelected(s)" (click)="select(s)">
@@ -144,8 +162,12 @@ const ALL = '*';
         }
       </section>
     </div>
+  
+    <app-user-types-dialog (changed)="reloadTypes()" />
   `,
   styles: `
+    .h2row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .h2row h2 { margin: 0; }
     .ma { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
     .ma > .p-card { margin-top: 0; }
     .who h2 { font-size: 1rem; margin-bottom: 8px; }
@@ -202,12 +224,8 @@ export class MenuAccessPage implements OnInit {
       .filter((e) => e.active && e.role !== 'OWNER' && !listed.has(String(e.id)))
       .map((e) => ({ value: e.id, label: `${e.name} · ${e.userId} · ${e.empNumber}` }));
   });
-  protected readonly roleSubjects = signal<Subject[]>([
-    { type: 'ROLE', key: 'OWNER', label: ROLE_LABELS.OWNER, hint: 'Always every menu', locked: true },
-    { type: 'ROLE', key: 'ADMIN', label: ROLE_LABELS.ADMIN, hint: 'Runs a brand or the group' },
-    { type: 'ROLE', key: 'MANAGER', label: ROLE_LABELS.MANAGER, hint: 'Leads a team' },
-    { type: 'ROLE', key: 'EMPLOYEE', label: ROLE_LABELS.EMPLOYEE, hint: 'Everyone else' },
-  ]);
+  protected readonly roleSubjects = signal<Subject[]>(BUILT_IN_SUBJECTS);
+  protected readonly typesDialog = viewChild.required(UserTypesDialog);
   protected readonly error = signal('');
   protected readonly selected = signal<Subject | null>(null);
   /** The ticked checkpoints of the selected subject, not yet saved. */
@@ -230,8 +248,10 @@ export class MenuAccessPage implements OnInit {
       entries: this.service.entries(),
       designations: this.staff.designations(),
       people: this.staff.employees(),
+      types: this.staff.userTypes(),
     }).subscribe({
-      next: ({ menus, entries, designations, people }) => {
+      next: ({ menus, entries, designations, people, types }) => {
+        this.roleSubjects.set(typeSubjects(types));
         this.menus.set(menus);
         this.setEntries(entries);
         this.people.set(people);
@@ -244,6 +264,17 @@ export class MenuAccessPage implements OnInit {
         this.select(this.roleSubjects()[1]);
       },
       error: (err) => this.error.set(apiProblem(err).message),
+    });
+  }
+
+  /** After the user types changed: the list again (a deleted one that was chosen is let go). */
+  protected reloadTypes(): void {
+    this.staff.userTypes().subscribe({
+      next: (types) => {
+        this.roleSubjects.set(typeSubjects(types));
+        const sel = this.selected();
+        if (sel?.type === 'ROLE' && !types.some((t) => t.code === sel.key)) this.select(this.roleSubjects()[1]);
+      },
     });
   }
 

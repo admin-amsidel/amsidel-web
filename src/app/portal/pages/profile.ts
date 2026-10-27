@@ -23,7 +23,7 @@ import { designationLabel, ROLE_LABELS } from '../portal.models';
           <h1>{{ me.name }}</h1>
           @if (me.designationName) { <p class="title">{{ me.designationName }} · Level {{ me.levelCode }}</p> }
           <p class="tags">
-            <p-tag [value]="roleLabels[me.role]" />
+            <p-tag [value]="me.userTypeName ?? roleLabels[me.role]" />
             <p-tag [value]="me.empNumber" severity="secondary" />
           </p>
         </div>

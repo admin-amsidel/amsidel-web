@@ -108,7 +108,6 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
           }
         }
       </ul>
-      <p class="keep"><i class="pi pi-clock" aria-hidden="true"></i> Messages are cleared after {{ store.retentionDays() }} days.</p>
     </ng-template>
 
     <!-- one chat -->
@@ -274,7 +273,6 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
     .skeleton div { flex: 1; display: flex; flex-direction: column; gap: 6px; justify-content: center; }
     .skeleton i { display: block; height: 10px; border-radius: 6px; background: var(--c-surface-2); width: 70%; }
     .skeleton i + i { width: 45%; }
-    .keep { margin: 0; padding: 8px 14px 10px; font-size: 11.5px; color: var(--c-muted); border-top: 1px solid var(--c-border); display: flex; gap: 6px; align-items: center; flex: none; }
 
     .head { display: flex; align-items: center; gap: 10px; padding: 8px 12px; min-height: 58px; background: var(--c-surface); border-bottom: 1px solid var(--c-border); flex: none; }
     .back { border: 0; background: none; color: var(--c-brand); padding: 4px; margin-left: -4px; display: grid; place-items: center; }

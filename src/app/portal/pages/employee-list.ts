@@ -193,7 +193,7 @@ export class EmployeeList implements OnInit {
   }
 
   protected roleOf(e: Employee): string {
-    return ROLE_LABELS[e.role];
+    return e.userTypeName ?? ROLE_LABELS[e.role];
   }
 
   protected open(e: Employee): void {

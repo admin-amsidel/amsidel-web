@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -50,6 +50,8 @@ interface Row extends Omit<Designation, 'id'> {
             <td data-label="In use"><p-checkbox [binary]="true" [(ngModel)]="row.active" (ngModelChange)="touch(row)" ariaLabel="In use" /></td>
             <td class="act stack-end">
               @if (row.dirty) { <p-button label="Save" size="small" [loading]="row.saving" (onClick)="save(row)" /> }
+              @if (row.id) { <p-button icon="pi pi-trash" size="small" [text]="true" severity="danger" [ariaLabel]="'Delete ' + row.name" title="Delete" (onClick)="remove(row)" /> }
+              @else if (!row.saving) { <p-button icon="pi pi-times" size="small" [text]="true" ariaLabel="Drop this new row" (onClick)="drop(row)" /> }
               @if (row.error) { <small class="err">{{ row.error }}</small> }
             </td>
           </tr>
@@ -60,7 +62,8 @@ interface Row extends Omit<Designation, 'id'> {
       </div>
       <p class="note">
         Level number decides seniority and sorting; Level is what people see (e.g. 6.1 belongs to level number 6).
-        A designation no longer used stays on the people who have it.
+        A designation no longer used stays on the people who have it. One that nobody has can be deleted (its menu access goes too);
+        while employees have it, give them another one first, or switch it off.
       </p>
     </section>
   `,
@@ -77,6 +80,7 @@ interface Row extends Omit<Designation, 'id'> {
 export class Designations implements OnInit {
   private readonly staff = inject(StaffService);
   private readonly toast = inject(MessageService);
+  private readonly confirm = inject(ConfirmationService);
 
   protected readonly rows = signal<Row[]>([]);
   protected readonly error = signal('');
@@ -85,6 +89,24 @@ export class Designations implements OnInit {
     this.staff.designations().subscribe({
       next: (list) => this.rows.set(list.map(toRow)),
       error: (err) => this.error.set(apiProblem(err).message),
+    });
+  }
+
+  protected drop(row: Row): void {
+    this.rows.update((list) => list.filter((r) => r !== row));
+  }
+
+  protected remove(row: Row): void {
+    this.confirm.confirm({
+      header: 'Delete designation', message: `Delete “${row.name}”? This works only while no employee has it.`, icon: 'pi pi-trash',
+      acceptLabel: 'Delete', rejectLabel: 'Keep', acceptButtonProps: { severity: 'danger' }, rejectButtonProps: { outlined: true },
+      accept: () => this.staff.deleteDesignation(row.id!).subscribe({
+        next: () => {
+          this.rows.update((list) => list.filter((r) => r !== row));
+          this.toast.add({ severity: 'success', summary: 'Designation deleted', detail: row.name });
+        },
+        error: (err) => this.rows.update((list) => list.map((r) => (r === row ? { ...r, error: apiProblem(err).message } : r))),
+      }),
     });
   }
 

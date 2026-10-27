@@ -87,7 +87,7 @@ function isProduct(path: string): boolean {
           <app-avatar [name]="me.name" [employeeId]="me.id" [photoVersion]="me.photoUpdatedAt" [photoPath]="me.photoPath" [size]="34" />
           <span class="p-me__text">
             <b>{{ me.name }}</b>
-            <small>{{ me.designationName ?? roleLabels[me.role] }}{{ me.brandCode ? ' · ' + me.brandCode : '' }}</small>
+            <small>{{ me.designationName ?? me.userTypeName ?? roleLabels[me.role] }}{{ me.brandCode ? ' · ' + me.brandCode : '' }}</small>
           </span>
           <i class="pi pi-angle-down p-me__caret" aria-hidden="true"></i>
         </button>
@@ -126,7 +126,7 @@ function isProduct(path: string): boolean {
             <app-avatar [name]="me.name" [employeeId]="me.id" [photoVersion]="me.photoUpdatedAt" [photoPath]="me.photoPath" [size]="44" />
             <span>
               <b>{{ me.name }}</b>
-              <small>{{ me.designationName ?? roleLabels[me.role] }}{{ me.brandCode ? ' · ' + me.brandCode : '' }}</small>
+              <small>{{ me.designationName ?? me.userTypeName ?? roleLabels[me.role] }}{{ me.brandCode ? ' · ' + me.brandCode : '' }}</small>
             </span>
           </div>
         </ng-template>

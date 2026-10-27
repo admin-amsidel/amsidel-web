@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from './portal.config';
-import { BankDetails, Brand, BrandBody, Designation, Employee, EmployeeRequest } from './portal.models';
+import { BankDetails, Brand, BrandBody, Designation, Employee, EmployeeRequest, UserType } from './portal.models';
 
 /** Employee and brand records (owners and admins; the backend applies brand limits). */
 @Injectable({ providedIn: 'root' })
@@ -81,6 +81,24 @@ export class StaffService {
   /** Most junior first. */
   designations(): Observable<Designation[]> {
     return this.http.get<Designation[]>(`${API_BASE}/api/designations`);
+  }
+
+  /** Only one no employee has. */
+  deleteDesignation(id: number): Observable<void> {
+    return this.http.delete<void>(`${API_BASE}/api/designations/${id}`);
+  }
+
+  userTypes(): Observable<UserType[]> {
+    return this.http.get<UserType[]>(`${API_BASE}/api/user-types`);
+  }
+
+  saveUserType(body: { name: string; baseRole: string; description: string | null; active: boolean }, id?: number): Observable<UserType> {
+    return id ? this.http.put<UserType>(`${API_BASE}/api/user-types/${id}`, body) : this.http.post<UserType>(`${API_BASE}/api/user-types`, body);
+  }
+
+  /** Only one nobody has, and not a built-in one. */
+  deleteUserType(id: number): Observable<void> {
+    return this.http.delete<void>(`${API_BASE}/api/user-types/${id}`);
   }
 
   saveDesignation(body: Omit<Designation, 'id'>, id?: number): Observable<Designation> {

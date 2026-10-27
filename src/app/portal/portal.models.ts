@@ -9,6 +9,24 @@ export const ROLE_LABELS: Record<Role, string> = {
   EMPLOYEE: 'Employee',
 };
 
+/** A user type (portal access): built in (code = the role) or added by owners and admins, on an access level. */
+export interface UserType {
+  id: number;
+  code: string;
+  name: string;
+  baseRole: Role;
+  builtIn: boolean;
+  active: boolean;
+  description: string | null;
+  /** How many employees have it (none: it may be deleted). */
+  employees: number;
+}
+
+/** The user type's name, else the role's. */
+export function userTypeLabel(e: { role: Role; userTypeName?: string | null }): string {
+  return e.userTypeName ?? ROLE_LABELS[e.role];
+}
+
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 /** Matches EmployeeResponse in amsidel-backend. Dates are "YYYY-MM-DD". */
@@ -44,6 +62,9 @@ export interface Employee {
   mustChangePassword: boolean;
   locked: boolean;
   lastLoginAt: string | null;
+  /** The user type (portal access) given; null = the built-in one of role. */
+  userTypeId: number | null;
+  userTypeName: string | null;
 }
 
 /** A portal menu with its sub-menus (from the menus table). */
@@ -74,6 +95,8 @@ export interface EmployeeRequest {
   userId: string;
   password?: string;
   role: Role;
+  /** The user type; its access level is taken as role. */
+  userTypeId: number | null;
   brandId: number | null;
   designationId: number | null;
   reportsToId: number | null;

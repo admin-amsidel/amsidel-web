@@ -5,7 +5,7 @@
     @if (employee(); as e) {
       <div class="badges">
         @if (e.designationName) { <p-tag [value]="designationLabel(e)" severity="contrast" /> }
-        <p-tag [value]="roleLabels[e.role]" />
+        <p-tag [value]="e.userTypeName ?? roleLabels[e.role]" />
         <p-tag [value]="e.empNumber" severity="secondary" />
         @if (statusOf(e).label !== 'Active') { <p-tag [value]="statusOf(e).label" [severity]="statusOf(e).severity" /> }
       </div>
@@ -50,8 +50,10 @@
 
         <div class="pf">
           <label for="f-role">Role (portal access) *</label>
-          <p-select inputId="f-role" formControlName="role" [options]="roleOptions()" optionLabel="label" optionValue="value" />
+          <p-select inputId="f-role" formControlName="userTypeId" [options]="roleOptions()" optionLabel="label" optionValue="value"
+                    (onChange)="pickUserType($event.value)" placeholder="Choose the user type" />
           @if (isSelf()) { <small class="hint">You cannot change your own role.</small> }
+          @else { <small class="hint">User types are managed (added, removed) on the Menu access page.</small> }
         </div>
 
         <div class="pf">

@@ -20,18 +20,7 @@ import { PhotoEditor } from '../photo-editor';
 import { BankDetailsCard } from './bank-details-card';
 import { pinChecks, pinValidator } from '../pin-policy';
 import {
-  accountStatus,
-  apiProblem,
-  BLOOD_GROUPS,
-  Brand,
-  Designation,
-  designationLabel,
-  Employee,
-  EmployeeRequest,
-  fromIsoDate,
-  Role,
-  ROLE_LABELS,
-  toIsoDate,
+  accountStatus, apiProblem, BLOOD_GROUPS, Brand, Designation, designationLabel, Employee, EmployeeRequest, fromIsoDate, Role, ROLE_LABELS, toIsoDate, UserType,
 } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { PhoneInput, phoneValidator } from '../phone-input';
@@ -90,6 +79,7 @@ export class EmployeeForm implements OnInit {
       userId: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50), Validators.pattern(/^[A-Za-z0-9._-]+$/)]],
       password: [''],
       role: ['EMPLOYEE' as Role, Validators.required],
+      userTypeId: this.fb.control<number | null>(null),
       brandId: this.fb.control<number | null>(null),
       designationId: this.fb.control<number | null>(null),
       reportsToId: this.fb.control<number | null>(null),
@@ -140,12 +130,25 @@ export class EmployeeForm implements OnInit {
     return this.auth.isAdmin() && (!target || this.me()?.role === 'OWNER' || target.role === 'MANAGER' || target.role === 'EMPLOYEE');
   });
 
+  /** The user types I may give: owners all, admins those on the manager and employee levels; active ones, plus the person's own. */
+  protected readonly userTypes = signal<UserType[]>([]);
   protected readonly roleOptions = computed(() => {
-    const roles: Role[] = this.me()?.role === 'OWNER' ? ['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'] : ['MANAGER', 'EMPLOYEE'];
-    const current = this.employee()?.role;
-    if (current && !roles.includes(current)) roles.push(current);
-    return roles.map((r) => ({ label: ROLE_LABELS[r], value: r }));
+    const owner = this.me()?.role === 'OWNER';
+    const current = this.employee()?.userTypeId ?? this.builtIn(this.employee()?.role)?.id;
+    return this.userTypes()
+      .filter((t) => t.id === current || (t.active && (owner || t.baseRole === 'MANAGER' || t.baseRole === 'EMPLOYEE')))
+      .map((t) => ({ value: t.id, label: t.builtIn ? t.name : `${t.name} · ${ROLE_LABELS[t.baseRole]} level` }));
   });
+
+  private builtIn(role: Role | undefined | null): UserType | undefined {
+    return role ? this.userTypes().find((t) => t.builtIn && t.code === role) : undefined;
+  }
+
+  /** A user type chosen: its access level becomes the role (brand rules follow it). */
+  protected pickUserType(id: number | null): void {
+    const t = this.userTypes().find((x) => x.id === id);
+    if (t) this.form.controls.role.setValue(t.baseRole);
+  }
 
   /** Designations in use, plus the one this person already has. */
   protected readonly designationOptions = computed(() => {
@@ -179,6 +182,16 @@ export class EmployeeForm implements OnInit {
   });
 
   ngOnInit(): void {
+
+    this.staff.userTypes().subscribe({
+      next: (t) => {
+        this.userTypes.set(t);
+        const e = this.employee();
+        if (e && this.form.controls.userTypeId.value == null) this.form.controls.userTypeId.setValue(e.userTypeId ?? this.builtIn(e.role)?.id ?? null, { emitEvent: false });
+        if (!e && this.form.controls.userTypeId.value == null) this.form.controls.userTypeId.setValue(this.builtIn(this.form.controls.role.value as Role)?.id ?? null);
+      },
+      error: () => undefined,
+    });
     if (this.isNew()) {
       this.form.controls.password.setValidators([Validators.required, pinValidator]);
     }
@@ -249,6 +262,7 @@ export class EmployeeForm implements OnInit {
       empNumber: v.empNumber,
       userId: v.userId,
       role: v.role,
+      userTypeId: v.userTypeId,
       brandId: v.brandId,
       designationId: v.designationId,
       reportsToId: v.reportsToId,
@@ -330,6 +344,7 @@ export class EmployeeForm implements OnInit {
       userId: e.userId,
       password: '',
       role: e.role,
+      userTypeId: e.userTypeId ?? this.builtIn(e.role)?.id ?? null,
       brandId: e.brandId,
       designationId: e.designationId,
       reportsToId: e.reportsToId,
@@ -350,6 +365,7 @@ export class EmployeeForm implements OnInit {
     } else if (this.isSelf()) {
       // nobody changes their own role or disables themselves
       this.form.controls.role.disable();
+      this.form.controls.userTypeId.disable();
       this.form.controls.active.disable();
     }
   }
