@@ -82,6 +82,8 @@ export interface MenuNode {
   path: string | null;
   icon: string | null;
   children: MenuNode[];
+  /** A tick on its parent menu does not give it: it needs its own tick (e.g. Approve scanned stock). */
+  ownTick?: boolean;
 }
 
 /** The menus the signed-in person may open. */

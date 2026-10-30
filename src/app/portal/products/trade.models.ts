@@ -283,7 +283,7 @@ export interface Item {
   updatedAt: string | null;
 }
 
-export type StockKind = 'OPENING' | 'PURCHASE' | 'PURCHASE_CANCEL' | 'SALE' | 'SALE_CANCEL' | 'ADJUST_IN' | 'ADJUST_OUT';
+export type StockKind = 'OPENING' | 'PURCHASE' | 'PURCHASE_CANCEL' | 'SALE' | 'SALE_CANCEL' | 'ADJUST_IN' | 'ADJUST_OUT' | 'RETURN_OUT' | 'RETURN_IN';
 
 export const STOCK_KIND_LABELS: Record<StockKind, string> = {
   OPENING: 'Opening stock',
@@ -293,6 +293,9 @@ export const STOCK_KIND_LABELS: Record<StockKind, string> = {
   SALE_CANCEL: 'Sale cancelled',
   ADJUST_IN: 'Added by hand',
   ADJUST_OUT: 'Removed by hand',
+  RETURN_OUT: 'Returned to supplier',
+  /** Old entries only: a return that was added back into stock. */
+  RETURN_IN: 'Returned (added back)',
 };
 
 export interface StockMove {
@@ -742,4 +745,40 @@ export function workOut(amounts: number[], discount: number, misc: number, gstRa
   const exact = money(taxable + gst);
   const total = Math.round(exact);
   return { subtotal, taxable, gst, roundOff: money(total - exact), total };
+}
+
+// ---- QR labels and stock received by scanning ----
+
+/** One item code of a scanned stock receipt; exists: the brand has it (stock is added), else a new item is made on approval. */
+export interface StockReceiptLine {
+  id: number;
+  code: string;
+  name: string;
+  typeName: string | null;
+  unit: string | null;
+  quantity: number;
+  approvedQuantity: number | null;
+  itemId: number | null;
+  exists: boolean;
+  onHand: number | null;
+  showroomPrice: number | null;
+  createdItem: boolean;
+}
+
+export interface StockReceipt {
+  id: number;
+  number: string;
+  brandId: number;
+  brandCode: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  note: string | null;
+  lines: StockReceiptLine[];
+  totalQuantity: number;
+  createdByName: string | null;
+  createdAt: string;
+  decidedByName: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  /** I may approve or turn it down. */
+  canDecide: boolean;
 }

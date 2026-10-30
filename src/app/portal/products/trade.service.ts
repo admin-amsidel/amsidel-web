@@ -9,7 +9,7 @@ import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
 import { toIsoDate } from '../portal.models';
 import {
-  BrandRef, Customer, HistoryEntry, PersonRef, Project, ProjectBody, ProjectRow, ProjectStatus, TaskBody, TaskStatus, TradeSubject, DocKind, DocStatus, Item, ItemDetail, OwedReport, Overview, PaymentBody, PaymentReport, ProductType,
+  BrandRef, Customer, HistoryEntry, PersonRef, Project, ProjectBody, ProjectRow, ProjectStatus, StockReceipt, TaskBody, TaskStatus, TradeSubject, DocKind, DocStatus, Item, ItemDetail, OwedReport, Overview, PaymentBody, PaymentReport, ProductType,
   PurchaseBill, PurchaseBody, PurchaseReport, PurchaseRow, SalesBody, SalesDoc, SalesReport, SalesRow, StockKind, StockReport,
   Supplier,
 } from './trade.models';
@@ -47,6 +47,32 @@ export class TradeService {
 
   items(brandId: number | null): Observable<Item[]> {
     return this.http.get<Item[]>(`${T}/items`, { params: params({ brandId }) });
+  }
+
+  /** What an item's QR label holds. */
+  itemQr(id: number): Observable<{ payload: string }> {
+    return this.http.get<{ payload: string }>(`${T}/items/${id}/qr`);
+  }
+
+  /** A sheet of QR labels (A4 PDF): each item as many times as asked. */
+  qrLabels(items: { itemId: number; copies: number }[], showPrice: boolean): Observable<Blob> {
+    return this.http.post(`${T}/items/qr-labels`, { items, showPrice }, { responseType: 'blob' });
+  }
+
+  stockReceipts(brandId: number | null): Observable<StockReceipt[]> {
+    return this.http.get<StockReceipt[]>(`${T}/stock-receipts`, { params: brandId ? { brandId } : {} });
+  }
+
+  submitStockReceipt(body: { brandId: number | null; note: string | null; lines: { payload: string; quantity: number }[] }): Observable<StockReceipt> {
+    return this.http.post<StockReceipt>(`${T}/stock-receipts`, body);
+  }
+
+  approveStockReceipt(id: number, lines: { id: number; quantity: number }[], note: string | null): Observable<StockReceipt> {
+    return this.http.post<StockReceipt>(`${T}/stock-receipts/${id}/approve`, { lines, note });
+  }
+
+  rejectStockReceipt(id: number, note: string): Observable<StockReceipt> {
+    return this.http.post<StockReceipt>(`${T}/stock-receipts/${id}/reject`, { note });
   }
 
   item(id: number): Observable<ItemDetail> {

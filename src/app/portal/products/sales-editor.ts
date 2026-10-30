@@ -30,6 +30,8 @@ import { saveFile, TradeService, PAPER_SIZES, PaperSize, savedPaper, savePaper }
 import { phoneSearchText } from '../phone-input';
 import { HistoryList } from './history-list';
 import { printPdf } from '../../shared/print-pdf';
+import { parseItemLabel } from './item-label';
+import { QrScanner } from './qr-scanner';
 
 interface Line {
   key: number;
@@ -57,7 +59,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
 @Component({
   selector: 'app-sales-editor',
   imports: [
-    HistoryList, FormsModule, DatePipe, RouterLink, CustomerForm, PaymentPanel, ButtonModule, DatePickerModule, DialogModule, InputNumberModule,
+    HistoryList, FormsModule, DatePipe, RouterLink, CustomerForm, PaymentPanel, ButtonModule, DatePickerModule, DialogModule, InputNumberModule, QrScanner,
     InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, ToggleSwitchModule, TooltipModule,
   ],
   template: `
@@ -171,6 +173,8 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
               <h2>Items</h2>
               @if (editable()) {
                 <div class="acts">
+                  <p-button label="Scan QR" icon="pi pi-qrcode" size="small" [outlined]="true" [disabled]="!brandId()"
+                            pTooltip="Scan item QR labels: each scan adds the item, the same item again adds one to its quantity" (onClick)="openScan()" />
                   <p-button label="Add item" icon="pi pi-plus" size="small" [disabled]="!brandId()" (onClick)="addLine(false)" />
                   <p-button label="Add other line" icon="pi pi-plus" size="small" [outlined]="true" pTooltip="Installation, transport, labour…" (onClick)="addLine(true)" />
                 </div>
@@ -305,8 +309,21 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
         <p-button label="Cancel invoice" icon="pi pi-ban" severity="danger" [loading]="busy()" (onClick)="cancel()" />
       </ng-template>
     </p-dialog>
+  
+    <p-dialog header="Scan item QR labels" [modal]="true" [visible]="scanOpen()" (visibleChange)="scanOpen.set($event)" [draggable]="false"
+              [style]="{ width: '520px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }" appendTo="body">
+      @if (scanOpen()) { <app-qr-scanner (scanned)="onScan($event)" /> }
+      <ul class="scan-log">
+        @for (x of scanLog(); track x.name) {
+          <li><span>{{ x.name }}@if (!x.known) { <small class="muted"> · other line</small> }</span><b>× {{ x.quantity }}</b></li>
+        } @empty { <li class="muted">Show a label to the camera: each scan adds the item; the same item again adds one to its quantity.</li> }
+      </ul>
+      <ng-template #footer><p-button label="Done" icon="pi pi-check" (onClick)="scanOpen.set(false)" /></ng-template>
+    </p-dialog>
   `,
   styles: `
+    .scan-log { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; max-height: 180px; overflow: auto; }
+    .scan-log li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 10px; border-radius: 6px; background: var(--soft); font-size: .9rem; }
     :host ::ng-deep .paper { min-width: 128px; }
     .tags { display: inline-flex; gap: 6px; vertical-align: middle; margin-left: 8px; }
     .tag-wrap { font-size: .9rem; }
@@ -397,6 +414,9 @@ export class SalesEditor implements OnInit {
   protected readonly brandId = signal<number | null>(null);
   protected readonly customers = signal<Customer[]>([]);
   protected readonly items = signal<Item[]>([]);
+  /** Scanning item QR labels into the lines. */
+  protected readonly scanOpen = signal(false);
+  protected readonly scanLog = signal<{ name: string; quantity: number; known: boolean }[]>([]);
   protected readonly customerId = signal<number | null>(null);
   protected readonly projectId = signal<number | null>(null);
   protected readonly projects = signal<ProjectRow[]>([]);
@@ -543,6 +563,58 @@ export class SalesEditor implements OnInit {
       quantity: 1, rate: null, unitCost: null }]);
     if (free) this.freeKeys.update((s) => new Set(s).add(key));
     this.dirty.set(true);
+  }
+
+  protected openScan(): void {
+    this.scanLog.set([]);
+    this.scanOpen.set(true);
+  }
+
+  /**
+   * A label scanned: the brand's item with that code goes in at its showroom price (the same item again: one more on
+   * its line, never a new line). A code the brand does not have goes in as another line from the label (no stock out).
+   */
+  protected onScan(text: string): void {
+    const label = parseItemLabel(text);
+    if (!label) {
+      this.toast.add({ severity: 'warn', summary: 'Not an item label', detail: 'This QR code is not one of our item labels.' });
+      return;
+    }
+    const item = this.items().find((i) => i.brand.id === this.brandId() && i.code.toUpperCase() === label.code);
+    let quantity = 1;
+    if (item) {
+      const line = this.lines().find((l) => l.itemId === item.id);
+      if (line) {
+        quantity = (line.quantity ?? 0) + 1;
+        this.patch(line.key, { quantity });
+      } else {
+        const empty = this.lines().find((l) => !l.itemId && !l.name.trim() && !this.freeKeys().has(l.key));
+        let key = empty?.key;
+        if (key === undefined) {
+          this.addLine(false);
+          key = this.lines()[this.lines().length - 1].key;
+        }
+        this.pickItem(key, item.id);
+        this.patch(key, { quantity: 1 });
+      }
+    } else {
+      const line = this.lines().find((l) => !l.itemId && this.freeKeys().has(l.key) && l.name === label.name);
+      if (line) {
+        quantity = (line.quantity ?? 0) + 1;
+        this.patch(line.key, { quantity });
+      } else {
+        this.addLine(true);
+        const key = this.lines()[this.lines().length - 1].key;
+        this.patch(key, { name: label.name, unit: label.unit ?? 'nos', hsnCode: label.hsn ?? '', rate: label.showroomPrice || null, quantity: 1,
+          size: label.sizes && !label.sizes.includes(',') ? label.sizes : '' });
+        this.toast.add({ severity: 'warn', summary: `${label.code} is not in Items & stock`, detail: 'Added as another line from its label; no stock goes out for it.' });
+      }
+    }
+    this.scanLog.update((log) => {
+      const at = log.findIndex((x) => x.name === (item?.name ?? label.name));
+      const entry = { name: item?.name ?? label.name, quantity, known: !!item };
+      return at < 0 ? [entry, ...log] : [entry, ...log.filter((_, i) => i !== at)];
+    });
   }
 
   protected removeLine(key: number): void {

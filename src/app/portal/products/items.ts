@@ -3,7 +3,7 @@
  * Designed and developed by AMSIDEL Technologies.
  */
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
@@ -29,6 +29,7 @@ import { BrandPick, TradeBrand } from './trade-brand';
 import { Item, ItemDetail, ProductType, qty, STOCK_KIND_LABELS, StockKind, Supplier } from './trade.models';
 import { TradeService } from './trade.service';
 import { HistoryList } from './history-list';
+import { QrLabelsDialog } from './qr-labels-dialog';
 
 type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
 
@@ -42,7 +43,7 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
   imports: [
     HistoryList, FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, DialogModule, DrawerModule, IconFieldModule,
     InputIconModule, InputNumberModule, InputTextModule, MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule,
-    TextareaModule, ToggleSwitchModule, TooltipModule,
+    TextareaModule, ToggleSwitchModule, TooltipModule, QrLabelsDialog,
   ],
   template: `
     <div class="p-head">
@@ -52,6 +53,8 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
       </div>
       <div class="head-actions">
         <app-brand-pick (changed)="load()" />
+        <p-button label="QR labels" icon="pi pi-qrcode" [outlined]="true" pTooltip="Print QR labels for items" (onClick)="labels().show(shown())" />
+        <p-button label="Scan stock in" icon="pi pi-camera" [outlined]="true" routerLink="/portal/products/stock-scan" />
         <p-button label="Add item" icon="pi pi-plus" (onClick)="edit(null)" />
       </div>
     </div>
@@ -222,9 +225,12 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
           <div><span>On hand</span><b [class.bad]="d.item.trackStock && d.item.onHand <= 0">{{ d.item.trackStock ? q(d.item.onHand) + ' ' + d.item.unit : 'Not tracked' }}</b></div>
           <div><span>Total in</span><b>{{ q(d.item.totalIn) }}</b></div>
           <div><span>Total out</span><b>{{ q(d.item.totalOut) }}</b></div>
+          <div><span>Returned</span><b>{{ q(returned()) }}</b></div>
           <div><span>Stock value</span><b>{{ money(d.item.stockValue) }}</b></div>
           <div><span>Supplier price</span><b>{{ money(d.item.supplierPrice) }}</b></div>
           <div><span>MRP</span><b>{{ money(d.item.mrp) }}</b></div>
+          <div class="sell"><span>Selling price</span><b>{{ money(d.item.showroomPrice) }}</b></div>
+          <div><span>Minimum price</span><b>{{ money(d.item.minSellPrice) }}</b></div>
         </div>
         @if (d.item.trackStock) {
           <div class="adjust">
@@ -238,7 +244,7 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
                 <p-datepicker inputId="adj-d" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [maxDate]="today" [ngModel]="adjDate()" (ngModelChange)="adjDate.set($event)" /></div>
             </div>
             <div class="pf"><label for="adj-n">Why</label>
-              <input pInputText id="adj-n" maxlength="300" placeholder="e.g. Counted on 31 Mar; 1 damaged in transport" [ngModel]="adjNote()" (ngModelChange)="adjNote.set($event)" /></div>
+              <input pInputText id="adj-n" maxlength="300" [placeholder]="adjKind() === 'RETURN_OUT' ? 'e.g. Sent back to Fenesta: 2 damaged, bill FN/889' : 'e.g. Counted on 31 Mar; 1 damaged in transport'" [ngModel]="adjNote()" (ngModelChange)="adjNote.set($event)" /></div>
             @if (adjError()) { <p-message severity="error">{{ adjError() }}</p-message> }
             <p-button label="Save stock change" icon="pi pi-check" size="small" [loading]="busy()" (onClick)="adjust(d)" />
           </div>
@@ -263,6 +269,8 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
         </ul>
       }
     </p-drawer>
+  
+    <app-qr-labels-dialog />
   `,
   styles: `
     .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
@@ -291,6 +299,8 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
     :host ::ng-deep .item-drawer { width: min(460px, 100vw); }
     .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
     .facts div { background: var(--accent-softer); border-radius: 8px; padding: 8px 10px; display: grid; gap: 2px; }
+    .facts .sell { background: #e8f6ee; }
+    .facts .sell b { color: #1f7a45; }
     .facts span { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
     .adjust { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; }
     .adjust h3, h3 { margin: 0 0 4px; font-size: 1rem; }
@@ -321,6 +331,7 @@ export class Items implements OnInit {
   protected readonly units = ['piece', 'set', 'pair', 'nos', 'sq ft', 'running ft', 'metre', 'sheet', 'box', 'kg', 'litre'];
 
   protected readonly rows = signal<Item[]>([]);
+  protected readonly labels = viewChild.required(QrLabelsDialog);
   protected readonly types = signal<ProductType[]>([]);
   protected readonly suppliers = signal<Supplier[]>([]);
   protected readonly loading = signal(true);
@@ -410,8 +421,12 @@ export class Items implements OnInit {
   protected readonly adjustOptions = [
     { label: 'Add', value: 'ADJUST_IN' },
     { label: 'Remove', value: 'ADJUST_OUT' },
+    { label: 'Return', value: 'RETURN_OUT' },
     { label: 'Opening stock', value: 'OPENING' },
   ];
+  /** Pieces sent back to the supplier (they come off what was received), from the item's stock moves. */
+  protected readonly returned = computed(() =>
+    (this.detail()?.moves ?? []).filter((m) => m.kind === 'RETURN_OUT').reduce((t, m) => t - m.quantity, 0));
 
   ngOnInit(): void {
     this.brand.load().subscribe({ next: () => this.load(), error: (e) => this.error.set(apiProblem(e).message) });

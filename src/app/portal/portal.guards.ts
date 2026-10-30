@@ -29,8 +29,9 @@ export const pinChangedGuard: CanActivateChildFn = (_route, state) => {
 export const menuGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const code = route.data['menu'] as string;
-  return auth.ensureAccess().pipe(map(() => auth.can(code) || router.createUrlTree(['/portal/profile'])));
+  // data.menu, or data.menus: any one of them opens the page
+  const codes = (route.data['menus'] as string[] | undefined) ?? [route.data['menu'] as string];
+  return auth.ensureAccess().pipe(map(() => codes.some((c) => auth.can(c)) || router.createUrlTree(['/portal/profile'])));
 };
 
 /**

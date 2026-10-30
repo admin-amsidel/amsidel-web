@@ -143,9 +143,9 @@ const ALL = '*';
                       <li>
                         <label class="row" [for]="'ma-' + c.code">
                           <p-checkbox [inputId]="'ma-' + c.code" [binary]="true" [ngModel]="covers(c, m)" (ngModelChange)="toggle(c, $event)"
-                                      [disabled]="readOnly() || all() || has(m)" />
+                                      [disabled]="readOnly() || all() || (has(m) && !c.ownTick)" />
                           <i [class]="'pi ' + (c.icon ?? 'pi-circle')" aria-hidden="true"></i>
-                          <span class="name"><b>{{ c.name }}</b><small>{{ c.description }}</small></span>
+                          <span class="name"><b>{{ c.name }}</b>@if (c.ownTick) { <small class="own">its own tick</small> }<small>{{ c.description }}</small></span>
                           <code>{{ c.checkpoint }}</code>
                         </label>
                       </li>
@@ -170,6 +170,7 @@ const ALL = '*';
     <app-user-types-dialog (changed)="reloadTypes()" />
   `,
   styles: `
+    .own { color: #b45309; font-weight: 600; }
     .h2row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .h2row h2 { margin: 0; }
     .ma { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
@@ -323,9 +324,9 @@ export class MenuAccessPage implements OnInit {
     return `${pages} ${pages === 1 ? 'menu' : 'menus'}`;
   }
 
-  /** Ticked: given directly, through its parent menu, or by "*". */
+  /** Ticked: given directly, through its parent menu (not one with its own tick), or by "*". */
   protected covers(m: MenuNode, parent?: MenuNode): boolean {
-    return this.all() || this.has(m) || (!!parent && this.has(parent));
+    return this.all() || this.has(m) || (!!parent && !m.ownTick && this.has(parent));
   }
 
   protected has(m: MenuNode): boolean {
@@ -337,8 +338,8 @@ export class MenuAccessPage implements OnInit {
       const next = new Set(d);
       if (on) {
         next.add(String(m.checkpoint));
-        // the parent's checkpoint covers its sub-menus
-        m.children.forEach((c) => next.delete(String(c.checkpoint)));
+        // the parent's checkpoint covers its sub-menus (but not one with its own tick)
+        m.children.filter((c) => !c.ownTick).forEach((c) => next.delete(String(c.checkpoint)));
       } else {
         next.delete(String(m.checkpoint));
       }
@@ -391,7 +392,7 @@ export class MenuAccessPage implements OnInit {
     for (const m of this.menus()) {
       const whole = given.has(String(m.checkpoint));
       if (m.path && whole) n++;
-      for (const c of m.children) if (c.path && (whole || given.has(String(c.checkpoint)))) n++;
+      for (const c of m.children) if (c.path && ((whole && !c.ownTick) || given.has(String(c.checkpoint)))) n++;
     }
     return n;
   }

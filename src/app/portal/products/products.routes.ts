@@ -25,6 +25,13 @@ export const PRODUCT_ROUTES: Routes = [
     loadComponent: () => import('./items').then((m) => m.Items),
   },
   {
+    path: 'stock-scan',
+    title: 'Scan stock in' + T,
+    canActivate: [menuGuard],
+    data: { menus: ['PROD_ITEMS', 'PROD_STOCK_APPROVE'] },
+    loadComponent: () => import('./stock-scan').then((m) => m.StockScan),
+  },
+  {
     path: 'types',
     title: 'Product types' + T,
     canActivate: [menuGuard],
