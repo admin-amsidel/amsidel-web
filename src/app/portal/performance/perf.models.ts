@@ -45,6 +45,14 @@ export interface Skill {
   validatedAt: string | null;
 }
 
+/** GENERAL: progress moved by hand and rated in stars; SALES: a target amount, progress and stars follow what is achieved. */
+export type GoalType = 'GENERAL' | 'SALES';
+
+export const GOAL_TYPES: { value: GoalType; label: string; icon: string }[] = [
+  { value: 'GENERAL', label: 'General', icon: 'pi pi-flag' },
+  { value: 'SALES', label: 'Sales & marketing', icon: 'pi pi-chart-line' },
+];
+
 export interface GoalTask {
   id: number;
   title: string;
@@ -52,6 +60,31 @@ export interface GoalTask {
   startDate: string;
   endDate: string;
   progress: number;
+  /** Sales goals: the sub-task's target and what was achieved towards it. */
+  targetAmount: number | null;
+  achievedAmount: number | null;
+}
+
+/** What the person achieved towards a sales goal. */
+export interface SalesEntry {
+  id: number;
+  taskId: number | null;
+  taskTitle: string | null;
+  amount: number;
+  fromDate: string;
+  toDate: string;
+  invoiceNumbers: string[];
+  description: string | null;
+  createdAt: string;
+}
+
+export interface SalesEntryBody {
+  taskId: number | null;
+  amount: number;
+  fromDate: string;
+  toDate: string;
+  invoiceNumbers: string | null;
+  description: string | null;
 }
 
 export interface Goal {
@@ -75,6 +108,14 @@ export interface Goal {
   canManagerRate: boolean;
   /** A manager until they rate it; an owner or admin always. */
   canEdit: boolean;
+  type: GoalType;
+  /** Sales goals: the target, what was achieved (the entries added up) and achieved / target in % (can pass 100). */
+  targetAmount: number | null;
+  achievedAmount: number | null;
+  achievedPercent: number | null;
+  salesEntries: SalesEntry[];
+  /** The person may record what they achieved (sales goals, until the manager rates). */
+  canRecord: boolean;
 }
 
 export interface Achievement {
@@ -109,6 +150,8 @@ export interface ReviewView {
   achievements: Achievement[];
   totals: Totals;
   today: string;
+  /** The person's brand currency, for sales amounts. */
+  currencySymbol: string;
 }
 
 export interface TeamRow {
@@ -121,9 +164,13 @@ export interface TeamRow {
 
 export interface GoalBody {
   title: string;
+  type: GoalType;
+  /** Sales goals only. */
+  targetAmount: number | null;
   description: string | null;
   weightage: number;
   startDate: string;
   endDate: string;
-  tasks: { id: number | null; title: string; weightage: number; startDate: string; endDate: string }[];
+  /** General: weightage; sales: targetAmount (the weights follow the targets). */
+  tasks: { id: number | null; title: string; weightage: number | null; targetAmount: number | null; startDate: string; endDate: string }[];
 }

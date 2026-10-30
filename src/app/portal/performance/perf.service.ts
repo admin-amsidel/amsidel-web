@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../portal.config';
-import { Achievement, Cycle, Goal, GoalBody, ReviewView, Skill, SkillCategory, TeamRow } from './perf.models';
+import { Achievement, Cycle, Goal, GoalBody, ReviewView, Skill, SkillCategory, TeamRow, SalesEntryBody } from './perf.models';
 
 const PERF = `${API_BASE}/api/performance`;
 
@@ -67,6 +67,15 @@ export class PerfService {
 
   taskProgress(goalId: number, taskId: number, progress: number): Observable<Goal> {
     return this.http.put<Goal>(`${PERF}/goals/${goalId}/tasks/${taskId}/progress`, { progress });
+  }
+
+  /** Sales goals: what the person achieved (amount, dates, invoice numbers, note). */
+  saveSalesEntry(goalId: number, body: SalesEntryBody, id?: number): Observable<Goal> {
+    return id ? this.http.put<Goal>(`${PERF}/sales-entries/${id}`, body) : this.http.post<Goal>(`${PERF}/goals/${goalId}/sales-entries`, body);
+  }
+
+  deleteSalesEntry(id: number): Observable<Goal> {
+    return this.http.delete<Goal>(`${PERF}/sales-entries/${id}`);
   }
 
   rate(goalId: number, who: 'self' | 'manager', rating: number, comment: string): Observable<Goal> {

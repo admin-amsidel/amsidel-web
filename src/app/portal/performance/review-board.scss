@@ -8,7 +8,8 @@
 .muted { color: var(--muted); }
 .small { font-size: .85rem; }
 .lbl { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-:host ::ng-deep .bar { height: 8px; }
+:host ::ng-deep .p-progressbar.bar { height: 8px; }
+:host ::ng-deep .p-progressbar.bar.mini { height: 5px; margin-top: 10px; }
 :host ::ng-deep .dlg-msg, :host ::ng-deep .inline-msg { margin: 0; }
 :host ::ng-deep .dlg-msg { margin-top: 12px; }
 
@@ -104,3 +105,42 @@ textarea[rows="4"] { min-height: 6.7rem; }
   .trow { grid-template-columns: 1fr 90px; }
   .trow p-datepicker { grid-column: span 1; }
 }
+
+/* minimise / expand goals and their sub-tasks */
+.bar__acts { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+.goal__head { align-items: center; }
+.fold { flex: none; width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+.fold:hover { background: var(--soft); color: var(--ink); }
+.goal__titles { flex: 1; min-width: 0; cursor: pointer; }
+.goal--min { padding-bottom: 12px; }
+.tasks-head { display: inline-flex; align-items: center; gap: 6px; margin: 12px 0 2px; padding: 4px 6px; border: 0; background: none;
+  font: inherit; font-weight: 600; font-size: .88rem; color: var(--ink); cursor: pointer; border-radius: 6px; }
+.tasks-head:hover { background: var(--soft); }
+
+/* sales & marketing goals */
+.goal--sales { border-left: 4px solid #2f80d6; }
+.sales-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 2px 0 10px; font-size: .9rem; }
+.sales-sum small { flex-basis: 100%; }
+.sales-sum .over { color: #1f7a45; }
+.tasks--sales li { grid-template-columns: minmax(0, 1.3fr) minmax(120px, 1fr) 110px auto; }
+.t-amt { display: grid; justify-items: end; line-height: 1.2; }
+.t-entries { grid-column: 1 / -1; }
+.entries { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.entries li { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 10px;
+  background: #fff; border: 1px solid var(--line); border-radius: 6px; font-size: .85rem; }
+.e-amt { display: grid; line-height: 1.25; }
+.e-main { display: grid; gap: 3px; min-width: 0; }
+.e-main small { color: var(--ink); overflow-wrap: anywhere; }
+.invoices { display: flex; flex-wrap: wrap; gap: 4px; }
+.inv { padding: 1px 7px; border-radius: 999px; background: #eef5fd; color: #1d5fa3; font-size: .75rem; font-weight: 600; }
+.e-acts { display: flex; }
+.no-entries { margin: 4px 0 0; }
+.warn { color: #b45309; }
+.trow.trow--sales { grid-template-columns: minmax(0, 1fr) 160px 130px 130px auto; }
+@media (max-width: 760px) {
+  .tasks--sales li { grid-template-columns: 1fr auto; }
+  .tasks--sales li .t-title { grid-column: 1 / -1; }
+  .entries li { grid-template-columns: 1fr auto; }
+  .entries li .e-main { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 760px) { .trow.trow--sales { grid-template-columns: 1fr 140px; } }

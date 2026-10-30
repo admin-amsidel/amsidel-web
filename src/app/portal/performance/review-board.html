@@ -39,103 +39,165 @@
   <p-tabpanels>
     <!-- ================= goals ================= -->
     <p-tabpanel value="goals">
-      @if (manager()) {
+      @if (manager() || r.goals.length) {
         <div class="bar">
-          @if (r.totals.weightTotal < 100) {
-            <p-message severity="warn" styleClass="inline-msg">Goals add up to {{ r.totals.weightTotal }}%: {{ weightLeft() }}% still to set.</p-message>
-          } @else {
-            <span class="muted">Goals add up to 100%.</span>
-          }
-          <p-button label="New goal" icon="pi pi-plus" size="small" [disabled]="weightLeft() <= 0" (onClick)="newGoal()" />
+          @if (manager()) {
+            @if (r.totals.weightTotal < 100) {
+              <p-message severity="warn" styleClass="inline-msg">Goals add up to {{ r.totals.weightTotal }}%: {{ weightLeft() }}% still to set.</p-message>
+            } @else {
+              <span class="muted">Goals add up to 100%.</span>
+            }
+          } @else { <span></span> }
+          <span class="bar__acts">
+            @if (r.goals.length) {
+              <p-button label="Expand all" icon="pi pi-angle-double-down" size="small" [text]="true" (onClick)="expandAll(true)" />
+              <p-button label="Minimise all" icon="pi pi-angle-double-up" size="small" [text]="true" (onClick)="expandAll(false)" />
+            }
+            @if (manager()) {
+              <p-button label="New goal" icon="pi pi-plus" size="small" [disabled]="weightLeft() <= 0" (onClick)="newGoal()" />
+            }
+          </span>
         </div>
       }
       @for (g of r.goals; track g.id) {
-        <article class="goal">
+        @let open = isGoalOpen(g);
+        @let sales = g.type === 'SALES';
+        <article class="goal" [class.goal--sales]="sales" [class.goal--min]="!open">
           <header class="goal__head">
-            <div>
+            <button type="button" class="fold" [attr.aria-expanded]="open" [attr.aria-label]="(open ? 'Minimise ' : 'Expand ') + g.title" (click)="toggleGoal(g)">
+              <i [class]="open ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" aria-hidden="true"></i>
+            </button>
+            <div class="goal__titles" (click)="toggleGoal(g)">
               <h3>{{ g.title }}</h3>
-              <span class="muted">{{ date(g.startDate) }} – {{ date(g.endDate) }}</span>
+              <span class="muted">{{ date(g.startDate) }} – {{ date(g.endDate) }}
+                @if (sales) { · target {{ money(g.targetAmount) }} }
+                @if (!open) { · {{ sales ? money(g.achievedAmount) + ' achieved, ' + g.achievedPercent + '%' : g.progress + '% done' }} }</span>
             </div>
             <div class="goal__right">
+              @if (sales) { <p-tag value="Sales & marketing" icon="pi pi-chart-line" severity="info" /> }
               <p-tag [value]="g.weightage + '%'" severity="secondary" />
               @if (g.canEdit) {
                 <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Edit goal" (onClick)="editGoal(g)" />
               }
-              @if (manager() && g.selfRating === null) {
+              @if (manager() && g.selfRating === null && !g.salesEntries.length) {
                 <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove goal" (onClick)="removeGoal(g)" />
               }
             </div>
           </header>
-          @if (g.description) { <p class="goal__desc">{{ g.description }}</p> }
+          @if (!open) {
+            <p-progressbar [value]="g.progress" [showValue]="false" styleClass="bar mini" />
+          } @else {
+            @if (g.description) { <p class="goal__desc">{{ g.description }}</p> }
 
-          <div class="goal__progress">
-            <span class="lbl">Goal progress</span>
-            <p-progressbar [value]="g.progress" [showValue]="false" styleClass="bar" />
-            <b>{{ g.progress }}%</b>
-          </div>
-
-          @if (g.tasks.length) {
-            <ul class="tasks">
-              @for (t of g.tasks; track t.id) {
-                <li>
-                  <span class="t-title"><b>{{ t.title }}</b><small class="muted">{{ t.weightage }}% · {{ date(t.startDate) }} – {{ date(t.endDate) }}</small></span>
-                  @if (canMove(g)) {
-                    <p-slider [ngModel]="t.progress" [step]="5" [min]="0" [max]="100" styleClass="slider"
-                              (onSlideEnd)="saveTask(g, t, $event.value)" [ariaLabel]="'Progress of ' + t.title" />
-                  } @else {
-                    <p-progressbar [value]="t.progress" [showValue]="false" styleClass="bar" />
-                  }
-                  <b class="pct">{{ t.progress }}%</b>
-                </li>
+            <div class="goal__progress">
+              <span class="lbl">Goal progress</span>
+              <p-progressbar [value]="g.progress" [showValue]="false" styleClass="bar" />
+              <b>{{ g.progress }}%</b>
+            </div>
+            @if (sales) {
+              <p class="sales-sum">
+                <b>{{ money(g.achievedAmount) }}</b> achieved of <b>{{ money(g.targetAmount) }}</b> target
+                · <b [class.over]="(g.achievedPercent ?? 0) > 100">{{ g.achievedPercent }}%</b>
+                @if ((g.achievedPercent ?? 0) > 100) { <p-tag value="Target passed" severity="success" /> }
+                <small class="muted">Worked out from the amounts recorded: nothing to move by hand.</small>
+              </p>
+              @if (g.canRecord && !g.tasks.length) {
+                <p-button label="Record achievement" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="newEntry(g, null)" />
               }
-            </ul>
-          } @else if (canMove(g)) {
-            <div class="tasks one">
-              <span class="muted">No sub-tasks: move the goal's own progress.</span>
-              <p-slider [ngModel]="g.progress" [step]="5" [min]="0" [max]="100" styleClass="slider"
-                        (onSlideEnd)="saveGoalProgress(g, $event.value)" ariaLabel="Goal progress" />
+              @if (!g.tasks.length) {
+                <ng-container *ngTemplateOutlet="entryList; context: { g: g, list: entriesOf(g, null) }" />
+              }
+            }
+
+            @if (g.tasks.length) {
+              <button type="button" class="tasks-head" [attr.aria-expanded]="tasksOpen(g)" (click)="toggleTasks(g)">
+                <i [class]="tasksOpen(g) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" aria-hidden="true"></i>
+                Sub-tasks ({{ g.tasks.length }})
+              </button>
+              @if (tasksOpen(g)) {
+                <ul class="tasks" [class.tasks--sales]="sales">
+                  @for (t of g.tasks; track t.id) {
+                    <li>
+                      @if (sales) {
+                        <span class="t-title"><b>{{ t.title }}</b>
+                          <small class="muted">target {{ money(t.targetAmount) }} · {{ date(t.startDate) }} – {{ date(t.endDate) }}</small></span>
+                        <p-progressbar [value]="t.progress" [showValue]="false" styleClass="bar" />
+                        <span class="t-amt"><b>{{ money(t.achievedAmount) }}</b><small class="muted">{{ t.progress }}%</small></span>
+                        @if (g.canRecord) {
+                          <p-button icon="pi pi-plus" label="Record" size="small" [text]="true" [ariaLabel]="'Record achievement for ' + t.title" (onClick)="newEntry(g, t)" />
+                        }
+                        <div class="t-entries">
+                          <ng-container *ngTemplateOutlet="entryList; context: { g: g, list: entriesOf(g, t) }" />
+                        </div>
+                      } @else {
+                        <span class="t-title"><b>{{ t.title }}</b><small class="muted">{{ t.weightage }}% · {{ date(t.startDate) }} – {{ date(t.endDate) }}</small></span>
+                        @if (canMove(g)) {
+                          <p-slider [ngModel]="t.progress" [step]="5" [min]="0" [max]="100" styleClass="slider"
+                                    (onSlideEnd)="saveTask(g, t, $event.value)" [ariaLabel]="'Progress of ' + t.title" />
+                        } @else {
+                          <p-progressbar [value]="t.progress" [showValue]="false" styleClass="bar" />
+                        }
+                        <b class="pct">{{ t.progress }}%</b>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            } @else if (!sales && canMove(g)) {
+              <div class="tasks one">
+                <span class="muted">No sub-tasks: move the goal's own progress.</span>
+                <p-slider [ngModel]="g.progress" [step]="5" [min]="0" [max]="100" styleClass="slider"
+                          (onSlideEnd)="saveGoalProgress(g, $event.value)" ariaLabel="Goal progress" />
+              </div>
+            }
+
+            <div class="ratings">
+              <div class="rating">
+                <span class="lbl">Self rating</span>
+                @if (sales) {
+                  @if (g.selfRating) {
+                    <span class="given"><app-stars [value]="g.selfRating" [decimals]="1" /></span>
+                    <small class="muted">From the amounts: {{ g.achievedPercent }}% of the target (5 stars = target met).</small>
+                  } @else {
+                    <span class="muted">Shows once achievements are recorded.</span>
+                  }
+                } @else if (editingRating(g, 'self')) {
+                  @let d = draft(g, 'self');
+                  <app-star-input [(ngModel)]="d.rating" ariaLabel="Self rating" />
+                  <textarea pTextarea rows="2" [autoResize]="true" maxlength="2000" placeholder="How did it go? (optional)" [(ngModel)]="d.comment"></textarea>
+                  <span class="acts">
+                    <p-button [label]="g.selfRating ? 'Save change' : 'Save my rating'" size="small" (onClick)="rate(g, 'self')" />
+                    @if (g.selfRating) { <p-button label="Cancel" size="small" [text]="true" (onClick)="change(g, 'self', false)" /> }
+                  </span>
+                } @else if (g.selfRating) {
+                  <span class="given"><app-stars [value]="g.selfRating" [decimals]="0" />
+                    @if (g.canSelfRate) { <p-button label="Change" size="small" [text]="true" (onClick)="change(g, 'self', true)" /> }</span>
+                  @if (g.selfComment) { <p class="cmt">“{{ g.selfComment }}”</p> }
+                } @else {
+                  <span class="muted">{{ r.today < g.endDate ? 'Opens on ' + date(g.endDate) : 'Not rated yet' }}</span>
+                }
+              </div>
+              <div class="rating">
+                <span class="lbl">Manager rating</span>
+                @if (editingRating(g, 'manager')) {
+                  @let m = draft(g, 'manager');
+                  <app-star-input [(ngModel)]="m.rating" ariaLabel="Manager rating" />
+                  <textarea pTextarea rows="2" [autoResize]="true" maxlength="2000" placeholder="Your feedback (required)" [(ngModel)]="m.comment"></textarea>
+                  <span class="acts">
+                    <p-button [label]="g.managerRating ? 'Save change' : 'Save rating'" size="small" (onClick)="rate(g, 'manager')" />
+                    @if (g.managerRating) { <p-button label="Cancel" size="small" [text]="true" (onClick)="change(g, 'manager', false)" /> }
+                  </span>
+                } @else if (g.managerRating) {
+                  <span class="given"><app-stars [value]="g.managerRating" [decimals]="0" />
+                    @if (g.canManagerRate) { <p-button label="Change" size="small" [text]="true" (onClick)="change(g, 'manager', true)" /> }</span>
+                  @if (g.managerComment) { <p class="cmt">“{{ g.managerComment }}”</p> }
+                  <small class="muted">by {{ g.managerRatedBy }}</small>
+                } @else {
+                  <span class="muted">{{ sales ? 'Once achievements are recorded, or from ' + date(g.endDate) : 'After the self-rating' }}</span>
+                }
+              </div>
             </div>
           }
-
-          <div class="ratings">
-            <div class="rating">
-              <span class="lbl">Self rating</span>
-              @if (editingRating(g, 'self')) {
-                @let d = draft(g, 'self');
-                <app-star-input [(ngModel)]="d.rating" ariaLabel="Self rating" />
-                <textarea pTextarea rows="2" [autoResize]="true" maxlength="2000" placeholder="How did it go? (optional)" [(ngModel)]="d.comment"></textarea>
-                <span class="acts">
-                  <p-button [label]="g.selfRating ? 'Save change' : 'Save my rating'" size="small" (onClick)="rate(g, 'self')" />
-                  @if (g.selfRating) { <p-button label="Cancel" size="small" [text]="true" (onClick)="change(g, 'self', false)" /> }
-                </span>
-              } @else if (g.selfRating) {
-                <span class="given"><app-stars [value]="g.selfRating" [decimals]="0" />
-                  @if (g.canSelfRate) { <p-button label="Change" size="small" [text]="true" (onClick)="change(g, 'self', true)" /> }</span>
-                @if (g.selfComment) { <p class="cmt">“{{ g.selfComment }}”</p> }
-              } @else {
-                <span class="muted">{{ r.today < g.endDate ? 'Opens on ' + date(g.endDate) : 'Not rated yet' }}</span>
-              }
-            </div>
-            <div class="rating">
-              <span class="lbl">Manager rating</span>
-              @if (editingRating(g, 'manager')) {
-                @let m = draft(g, 'manager');
-                <app-star-input [(ngModel)]="m.rating" ariaLabel="Manager rating" />
-                <textarea pTextarea rows="2" [autoResize]="true" maxlength="2000" placeholder="Your feedback (required)" [(ngModel)]="m.comment"></textarea>
-                <span class="acts">
-                  <p-button [label]="g.managerRating ? 'Save change' : 'Save rating'" size="small" (onClick)="rate(g, 'manager')" />
-                  @if (g.managerRating) { <p-button label="Cancel" size="small" [text]="true" (onClick)="change(g, 'manager', false)" /> }
-                </span>
-              } @else if (g.managerRating) {
-                <span class="given"><app-stars [value]="g.managerRating" [decimals]="0" />
-                  @if (g.canManagerRate) { <p-button label="Change" size="small" [text]="true" (onClick)="change(g, 'manager', true)" /> }</span>
-                @if (g.managerComment) { <p class="cmt">“{{ g.managerComment }}”</p> }
-                <small class="muted">by {{ g.managerRatedBy }}</small>
-              } @else {
-                <span class="muted">After the self-rating</span>
-              }
-            </div>
-          </div>
         </article>
       } @empty {
         <p class="p-empty">{{ manager() ? 'No goals yet. Set the first one with "New goal".' : 'No goals yet. Your manager sets them.' }}</p>
@@ -223,22 +285,69 @@
   </p-tabpanels>
 </p-tabs>
 
+<!-- one sales goal's (or sub-task's) achievement records -->
+<ng-template #entryList let-g="g" let-list="list">
+  @if (list.length) {
+    <ul class="entries">
+      @for (e of list; track e.id) {
+        <li>
+          <span class="e-amt"><b>{{ money(e.amount) }}</b><small class="muted">{{ period(e.fromDate, e.toDate) }}</small></span>
+          <span class="e-main">
+            @if (e.invoiceNumbers.length) {
+              <span class="invoices">@for (n of e.invoiceNumbers; track n) { <span class="inv">{{ n }}</span> }</span>
+            }
+            @if (e.description) { <small>{{ e.description }}</small> }
+          </span>
+          @if (g.canRecord) {
+            <span class="e-acts">
+              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Edit achievement" (onClick)="editEntry(g, e)" />
+              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Remove achievement" (onClick)="removeEntry(e)" />
+            </span>
+          }
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="muted small no-entries">Nothing recorded yet.</p>
+  }
+</ng-template>
+
 <!-- goal dialog (manager) -->
 <p-dialog [header]="goalId() ? 'Edit goal' : 'New goal for ' + r.employee.name" [modal]="true" [visible]="goalOpen()"
           (visibleChange)="goalOpen.set($event)" [style]="{ width: '760px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }" [draggable]="false">
   <div class="gform">
     <div class="pf span">
+      <span class="pf-label" id="g-type">Type of evaluation *</span>
+      <p-selectbutton [options]="goalTypes" optionLabel="label" optionValue="value" [allowEmpty]="false" ariaLabelledBy="g-type"
+                      [disabled]="gLocked()" [ngModel]="gType()" (ngModelChange)="gType.set($event)">
+        <ng-template #item let-o><i [class]="o.icon" aria-hidden="true"></i>&nbsp;{{ o.label }}</ng-template>
+      </p-selectbutton>
+      <small class="hint">
+        @if (gType() === 'SALES') { A target amount; {{ r.employee.name }} records what they achieved (amount, dates, invoice numbers) and the progress and self rating follow on their own. }
+        @else { Progress moved by hand; {{ r.employee.name }} rates it in stars after the end date. }
+        @if (gLocked()) { Achievements are recorded, so it stays a sales goal. }
+      </small>
+    </div>
+    <div class="pf span">
       <label for="g-title">Goal *</label>
-      <input pInputText id="g-title" maxlength="150" placeholder="e.g. Close 10 site projects on time" [ngModel]="gTitle()" (ngModelChange)="gTitle.set($event)" />
+      <input pInputText id="g-title" maxlength="150" [placeholder]="gType() === 'SALES' ? 'e.g. Window & door sales, first half' : 'e.g. Close 10 site projects on time'"
+             [ngModel]="gTitle()" (ngModelChange)="gTitle.set($event)" />
     </div>
     <div class="pf span">
       <label for="g-desc">Description</label>
       <textarea pTextarea id="g-desc" rows="2" [autoResize]="true" maxlength="2000" [ngModel]="gDescription()" (ngModelChange)="gDescription.set($event)"></textarea>
     </div>
+    @if (gType() === 'SALES') {
+      <div class="pf span">
+        <label for="g-target">Target amount *</label>
+        <p-inputnumber inputId="g-target" [min]="0" [maxFractionDigits]="2" [prefix]="r.currencySymbol + ' '" locale="en-IN"
+                       [ngModel]="gTarget()" (ngModelChange)="gTarget.set($event)" />
+      </div>
+    }
     <div class="pf">
       <label for="g-weight">Weightage *</label>
       <p-inputnumber inputId="g-weight" [min]="1" [max]="100" suffix="%" [ngModel]="gWeight()" (ngModelChange)="gWeight.set($event)" />
-      <small class="hint">{{ weightLeft() + (goalId() ? (review().goals.find(x => x.id === goalId())?.weightage ?? 0) : 0) }}% available</small>
+      <small class="hint">{{ weightLeft() + (goalId() ? (review().goals.find(x => x.id === goalId())?.weightage ?? 0) : 0) }}% of the review available</small>
     </div>
     <div class="pf">
       <label for="g-start">From *</label>
@@ -253,25 +362,65 @@
   </div>
 
   <div class="bar sub">
-    <h4>Sub-tasks <small class="muted">({{ taskTotal() }}% of 100%)</small></h4>
+    <h4>Sub-tasks
+      @if (gType() === 'SALES') { <small class="muted" [class.warn]="gTasks().length && taskTargetTotal() !== (gTarget() ?? 0)">({{ money(taskTargetTotal()) }} of {{ money(gTarget()) }})</small> }
+      @else { <small class="muted">({{ taskTotal() }}% of 100%)</small> }</h4>
     <p-button label="Add sub-task" icon="pi pi-plus" size="small" [text]="true" (onClick)="addTask()" />
   </div>
   @for (t of gTasks(); track $index; let i = $index) {
-    <div class="trow">
+    <div class="trow" [class.trow--sales]="gType() === 'SALES'">
       <input pInputText maxlength="150" placeholder="Sub-task" [(ngModel)]="t.title" (ngModelChange)="touchTasks()" [attr.aria-label]="'Sub-task ' + (i + 1)" />
-      <p-inputnumber [min]="1" [max]="100" suffix="%" [(ngModel)]="t.weightage" (ngModelChange)="touchTasks()" [ariaLabel]="'Weightage of sub-task ' + (i + 1)" styleClass="w" />
+      @if (gType() === 'SALES') {
+        <p-inputnumber [min]="0" [maxFractionDigits]="2" [prefix]="r.currencySymbol + ' '" locale="en-IN" placeholder="Target" [(ngModel)]="t.target"
+                       (ngModelChange)="touchTasks()" [ariaLabel]="'Target amount of sub-task ' + (i + 1)" styleClass="w w--amt" />
+      } @else {
+        <p-inputnumber [min]="1" [max]="100" suffix="%" [(ngModel)]="t.weightage" (ngModelChange)="touchTasks()" [ariaLabel]="'Weightage of sub-task ' + (i + 1)" styleClass="w" />
+      }
       <p-datepicker dateFormat="dd/mm/yy" appendTo="body" [minDate]="gStart()" [maxDate]="gEnd()" [(ngModel)]="t.start" placeholder="From" styleClass="d" />
       <p-datepicker dateFormat="dd/mm/yy" appendTo="body" [minDate]="t.start ?? gStart()" [maxDate]="gEnd()" [(ngModel)]="t.end" placeholder="To" styleClass="d" />
       <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" ariaLabel="Remove sub-task" (onClick)="removeTask(i)" />
     </div>
   } @empty {
-    <p class="muted small">No sub-tasks: the goal's own progress is used. With sub-tasks, their weights must add up to 100%.</p>
+    <p class="muted small">{{ gType() === 'SALES' ? 'No sub-tasks: achievements are recorded against the goal itself. With sub-tasks, their targets must add up to the goal\'s target.'
+      : 'No sub-tasks: the goal\'s own progress is used. With sub-tasks, their weights must add up to 100%.' }}</p>
   }
   @if (gRated()) { <p-message severity="info" styleClass="dlg-msg">This goal is already rated. The ratings, comments and progress stay as they are.</p-message> }
   @if (gError()) { <p-message severity="error" styleClass="dlg-msg">{{ gError() }}</p-message> }
   <ng-template #footer>
     <p-button label="Cancel" [text]="true" (onClick)="goalOpen.set(false)" />
     <p-button [label]="goalId() ? 'Save goal' : 'Set goal'" icon="pi pi-check" [loading]="gBusy()" (onClick)="saveGoal()" />
+  </ng-template>
+</p-dialog>
+
+<!-- achievement record dialog (the person, sales goals) -->
+<p-dialog [header]="(entryId() ? 'Edit achievement' : 'Record achievement') + (entryGoal() ? ' · ' + entryGoal()!.title : '')" [modal]="true"
+          [visible]="entryOpen()" (visibleChange)="entryOpen.set($event)" [style]="{ width: '560px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }" [draggable]="false">
+  <div class="gform">
+    @if (entryGoal()?.tasks?.length) {
+      <div class="pf span"><label for="e-task">Sub-task *</label>
+        <p-select inputId="e-task" [options]="eTaskOptions()" optionLabel="label" optionValue="value" appendTo="body" placeholder="Choose the sub-task"
+                  [ngModel]="eTask()" (ngModelChange)="eTask.set($event)" /></div>
+    }
+    <div class="pf span"><label for="e-amount">Amount achieved *</label>
+      <p-inputnumber inputId="e-amount" [min]="0" [maxFractionDigits]="2" [prefix]="r.currencySymbol + ' '" locale="en-IN"
+                     [ngModel]="eAmount()" (ngModelChange)="eAmount.set($event)" /></div>
+    <div class="pf"><label for="e-from">From *</label>
+      <p-datepicker inputId="e-from" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [minDate]="eMin()" [maxDate]="eMax()"
+                    [ngModel]="eFrom()" (ngModelChange)="eFrom.set($event)" /></div>
+    <div class="pf"><label for="e-to">To *</label>
+      <p-datepicker inputId="e-to" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [minDate]="eFrom() ?? eMin()" [maxDate]="eMax()"
+                    [ngModel]="eTo()" (ngModelChange)="eTo.set($event)" /></div>
+    <div class="pf span"><label for="e-inv">Invoice numbers</label>
+      <input pInputText id="e-inv" maxlength="1000" placeholder="e.g. DWINV-1001, DWINV-1002" [ngModel]="eInvoices()" (ngModelChange)="eInvoices.set($event)" />
+      <small class="hint">Comma separated.</small></div>
+    <div class="pf span"><label for="e-desc">Description</label>
+      <textarea pTextarea id="e-desc" rows="2" [autoResize]="true" maxlength="1000" placeholder="e.g. Kumar villa: 14 windows and 3 doors"
+                [ngModel]="eDescription()" (ngModelChange)="eDescription.set($event)"></textarea></div>
+  </div>
+  @if (eError()) { <p-message severity="error" styleClass="dlg-msg">{{ eError() }}</p-message> }
+  <ng-template #footer>
+    <p-button label="Cancel" [text]="true" (onClick)="entryOpen.set(false)" />
+    <p-button [label]="entryId() ? 'Save' : 'Record'" icon="pi pi-check" [loading]="eBusy()" (onClick)="saveEntry()" />
   </ng-template>
 </p-dialog>
 

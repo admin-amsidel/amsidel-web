@@ -2,6 +2,7 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -22,7 +23,11 @@ import { TextareaModule } from 'primeng/textarea';
 import { Avatar } from '../avatar';
 import { shortDate } from '../leave/leave.models';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
-import { ACHIEVEMENT_KINDS, Achievement, Goal, GoalBody, GoalTask, ReviewView, SKILL_CATEGORIES, Skill, SkillCategory } from './perf.models';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import {
+  ACHIEVEMENT_KINDS, Achievement, GOAL_TYPES, Goal, GoalBody, GoalTask, GoalType, ReviewView, SKILL_CATEGORIES, SalesEntry, Skill,
+  SkillCategory,
+} from './perf.models';
 import { PerfService } from './perf.service';
 import { StarInput } from './star-input';
 import { Stars } from './stars';
@@ -30,7 +35,10 @@ import { Stars } from './stars';
 interface TaskDraft {
   id: number | null;
   title: string;
+  /** General goals. */
   weightage: number | null;
+  /** Sales goals. */
+  target: number | null;
   start: Date | null;
   end: Date | null;
 }
@@ -40,12 +48,15 @@ interface TaskDraft {
  * and achievements. What can be changed follows review.rights: the person (self) edits their intro and skills,
  * moves progress and rates finished goals; their manager sets goals, moves progress, rates after the person,
  * validates skills and gives achievements. (changed) asks the page to load the review again.
+ * A sales & marketing goal has a target amount (split over its sub-tasks); the person records what they achieved
+ * (amount, dates, invoice numbers, note) and the progress and self rating follow on their own.
+ * Each goal, and its sub-tasks, can be minimised and expanded.
  */
 @Component({
   selector: 'app-review-board',
   imports: [
-    FormsModule, Avatar, Stars, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputNumberModule, InputTextModule, MessageModule,
-    ProgressBarModule, ProgressTone, SelectModule, StarInput, SliderModule, TabsModule, TagModule, TextareaModule,
+    FormsModule, NgTemplateOutlet, Avatar, Stars, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputNumberModule, InputTextModule, MessageModule,
+    ProgressBarModule, ProgressTone, SelectModule, SelectButtonModule, StarInput, SliderModule, TabsModule, TagModule, TextareaModule,
   ],
   templateUrl: './review-board.html',
   styleUrl: './review-board.scss',
@@ -66,6 +77,158 @@ export class ReviewBoard {
   protected readonly technical = computed(() => this.review().skills.filter((s) => s.category === 'TECHNICAL'));
   protected readonly nonTechnical = computed(() => this.review().skills.filter((s) => s.category === 'NON_TECHNICAL'));
   protected readonly weightLeft = computed(() => 100 - this.review().totals.weightTotal);
+  protected readonly goalTypes = GOAL_TYPES;
+
+  /** "₹1,25,000" in the person's brand currency. */
+  protected money(v: number | null | undefined): string {
+    const n = v ?? 0;
+    return this.review().currencySymbol + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  }
+
+  // ---- goals and sub-tasks: minimised or expanded ----
+
+  /** Goals opened (all minimised at first, to their heading and progress), and goals whose sub-tasks are hidden. */
+  protected readonly openGoals = signal<ReadonlySet<number>>(new Set());
+  protected readonly closedTasks = signal<ReadonlySet<number>>(new Set());
+
+  protected isGoalOpen(g: Goal): boolean {
+    return this.openGoals().has(g.id);
+  }
+
+  protected tasksOpen(g: Goal): boolean {
+    return !this.closedTasks().has(g.id);
+  }
+
+  protected toggleGoal(g: Goal): void {
+    this.openGoals.update((s) => toggled(s, g.id));
+  }
+
+  protected toggleTasks(g: Goal): void {
+    this.closedTasks.update((s) => toggled(s, g.id));
+  }
+
+  /** Every goal and its sub-tasks open, or every goal minimised. */
+  protected expandAll(open: boolean): void {
+    this.closedTasks.set(new Set());
+    this.openGoals.set(open ? new Set(this.review().goals.map((g) => g.id)) : new Set());
+  }
+
+  /** "30 Oct 2026", or "30 Oct – 2 Nov 2026" for a period. */
+  protected period(from: string, to: string): string {
+    const f = (iso: string, year: boolean) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...(year ? { year: 'numeric' } : {}) });
+    };
+    if (from === to) return f(from, true);
+    return `${f(from, from.slice(0, 4) !== to.slice(0, 4))} – ${f(to, true)}`;
+  }
+
+  protected entriesOf(g: Goal, t: GoalTask | null): SalesEntry[] {
+    return g.salesEntries.filter((e) => (t ? e.taskId === t.id : e.taskId === null));
+  }
+
+  // ---- sales goals: what the person achieved ----
+
+  protected readonly entryOpen = signal(false);
+  protected readonly entryGoal = signal<Goal | null>(null);
+  protected readonly entryId = signal<number | null>(null);
+  protected readonly eTask = signal<number | null>(null);
+  protected readonly eAmount = signal<number | null>(null);
+  protected readonly eFrom = signal<Date | null>(null);
+  protected readonly eTo = signal<Date | null>(null);
+  protected readonly eInvoices = signal('');
+  protected readonly eDescription = signal('');
+  protected readonly eError = signal('');
+  protected readonly eBusy = signal(false);
+  protected readonly eTaskOptions = computed(() =>
+    (this.entryGoal()?.tasks ?? []).map((t) => ({ value: t.id, label: `${t.title} · target ${this.money(t.targetAmount)}` })));
+  /** The dates allowed: the chosen sub-task's, else the goal's. */
+  protected readonly eMin = computed(() => {
+    const g = this.entryGoal();
+    const t = g?.tasks.find((x) => x.id === this.eTask());
+    return fromIsoDate(t?.startDate ?? g?.startDate ?? null);
+  });
+  protected readonly eMax = computed(() => {
+    const g = this.entryGoal();
+    const t = g?.tasks.find((x) => x.id === this.eTask());
+    return fromIsoDate(t?.endDate ?? g?.endDate ?? null);
+  });
+
+  protected newEntry(g: Goal, t: GoalTask | null): void {
+    this.entryGoal.set(g);
+    this.entryId.set(null);
+    this.eTask.set(t?.id ?? (g.tasks.length === 1 ? g.tasks[0].id : null));
+    this.eAmount.set(null);
+    const today = fromIsoDate(this.review().today);
+    const min = fromIsoDate((t ?? g).startDate);
+    const max = fromIsoDate((t ?? g).endDate);
+    const day = today && max && today > max ? max : today && min && today < min ? min : today;
+    this.eFrom.set(day);
+    this.eTo.set(day);
+    this.eInvoices.set('');
+    this.eDescription.set('');
+    this.eError.set('');
+    this.entryOpen.set(true);
+  }
+
+  protected editEntry(g: Goal, e: SalesEntry): void {
+    this.entryGoal.set(g);
+    this.entryId.set(e.id);
+    this.eTask.set(e.taskId);
+    this.eAmount.set(e.amount);
+    this.eFrom.set(fromIsoDate(e.fromDate));
+    this.eTo.set(fromIsoDate(e.toDate));
+    this.eInvoices.set(e.invoiceNumbers.join(', '));
+    this.eDescription.set(e.description ?? '');
+    this.eError.set('');
+    this.entryOpen.set(true);
+  }
+
+  protected saveEntry(): void {
+    const g = this.entryGoal();
+    if (!g) return;
+    this.eError.set('');
+    if (g.tasks.length && !this.eTask()) return this.eError.set('Choose the sub-task it counts for.');
+    if (!this.eAmount() || this.eAmount()! <= 0) return this.eError.set('Give the amount achieved.');
+    if (!this.eFrom() || !this.eTo()) return this.eError.set('Give the start and end dates.');
+    if (this.eTo()! < this.eFrom()!) return this.eError.set('The end date must be on or after the start date.');
+    this.eBusy.set(true);
+    const body = {
+      taskId: g.tasks.length ? this.eTask() : null,
+      amount: this.eAmount()!,
+      fromDate: toIsoDate(this.eFrom())!,
+      toDate: toIsoDate(this.eTo())!,
+      invoiceNumbers: this.eInvoices().trim() || null,
+      description: this.eDescription().trim() || null,
+    };
+    this.perf.saveSalesEntry(g.id, body, this.entryId() ?? undefined).subscribe({
+      next: (saved) => {
+        this.eBusy.set(false);
+        this.entryOpen.set(false);
+        this.toast.add({ severity: 'success', summary: this.entryId() ? 'Achievement updated' : 'Achievement recorded',
+          detail: `${this.money(saved.achievedAmount)} of ${this.money(saved.targetAmount)} · ${saved.achievedPercent}%` });
+        this.changed.emit();
+      },
+      error: (err) => {
+        this.eBusy.set(false);
+        const p = apiProblem(err);
+        this.eError.set(Object.values(p.fields)[0] ?? p.message);
+      },
+    });
+  }
+
+  protected removeEntry(e: SalesEntry): void {
+    this.confirm.confirm({
+      header: 'Remove achievement',
+      message: `Remove ${this.money(e.amount)} (${this.date(e.fromDate)} – ${this.date(e.toDate)})${e.taskTitle ? ' from "' + e.taskTitle + '"' : ''}?`,
+      icon: 'pi pi-trash',
+      acceptLabel: 'Remove',
+      rejectLabel: 'Keep',
+      acceptButtonProps: { severity: 'danger' },
+      rejectButtonProps: { outlined: true },
+      accept: () => this.perf.deleteSalesEntry(e.id).subscribe({ next: () => this.changed.emit(), error: (err) => this.fail(err) }),
+    });
+  }
 
   // ---- goals: progress and ratings ----
 
@@ -140,11 +303,18 @@ export class ReviewBoard {
   protected readonly gStart = signal<Date | null>(null);
   protected readonly gEnd = signal<Date | null>(null);
   protected readonly gTasks = signal<TaskDraft[]>([]);
+  protected readonly gType = signal<GoalType>('GENERAL');
+  /** Sales goals: the amount to achieve. */
+  protected readonly gTarget = signal<number | null>(null);
+  /** Editing a sales goal with achievements recorded: it stays a sales goal. */
+  protected readonly gLocked = signal(false);
   protected readonly gError = signal('');
   /** Editing a goal that already has a rating. */
   protected readonly gRated = signal(false);
   protected readonly gBusy = signal(false);
   protected readonly taskTotal = computed(() => this.gTasks().reduce((s, t) => s + (t.weightage ?? 0), 0));
+  /** Sales goals: the sub-task targets added up (they must make the goal's target). */
+  protected readonly taskTargetTotal = computed(() => this.gTasks().reduce((s, t) => s + (t.target ?? 0), 0));
   protected readonly cycleMin = computed(() => fromIsoDate(this.review().cycle.startDate));
   protected readonly cycleMax = computed(() => fromIsoDate(this.review().cycle.endDate));
 
@@ -157,6 +327,9 @@ export class ReviewBoard {
     this.gStart.set(today);
     this.gEnd.set(this.cycleMax());
     this.gTasks.set([]);
+    this.gType.set('GENERAL');
+    this.gTarget.set(null);
+    this.gLocked.set(false);
     this.gRated.set(false);
     this.gError.set('');
     this.goalOpen.set(true);
@@ -170,14 +343,18 @@ export class ReviewBoard {
     this.gWeight.set(g.weightage);
     this.gStart.set(fromIsoDate(g.startDate));
     this.gEnd.set(fromIsoDate(g.endDate));
-    this.gTasks.set(g.tasks.map((t) => ({ id: t.id, title: t.title, weightage: t.weightage, start: fromIsoDate(t.startDate), end: fromIsoDate(t.endDate) })));
+    this.gTasks.set(g.tasks.map((t) => ({ id: t.id, title: t.title, weightage: t.weightage, target: t.targetAmount, start: fromIsoDate(t.startDate), end: fromIsoDate(t.endDate) })));
+    this.gType.set(g.type ?? 'GENERAL');
+    this.gTarget.set(g.targetAmount);
+    this.gLocked.set(g.salesEntries.length > 0);
     this.gError.set('');
     this.goalOpen.set(true);
   }
 
   protected addTask(): void {
     const left = Math.max(0, 100 - this.taskTotal());
-    this.gTasks.update((list) => [...list, { id: null, title: '', weightage: left || null, start: this.gStart(), end: this.gEnd() }]);
+    const targetLeft = Math.max(0, (this.gTarget() ?? 0) - this.taskTargetTotal());
+    this.gTasks.update((list) => [...list, { id: null, title: '', weightage: left || null, target: targetLeft || null, start: this.gStart(), end: this.gEnd() }]);
   }
 
   protected removeTask(i: number): void {
@@ -191,22 +368,32 @@ export class ReviewBoard {
   protected saveGoal(): void {
     this.gError.set('');
     const tasks = this.gTasks();
+    const sales = this.gType() === 'SALES';
     if (!this.gTitle().trim() || !this.gWeight() || !this.gStart() || !this.gEnd()) {
       return this.gError.set('Give the goal a title, a weightage and its dates.');
     }
-    if (tasks.some((t) => !t.title.trim() || !t.weightage || !t.start || !t.end)) {
-      return this.gError.set('Every sub-task needs a title, a weightage and dates.');
+    if (sales && !(this.gTarget()! > 0)) {
+      return this.gError.set("Give the goal's target amount.");
     }
-    if (tasks.length && this.taskTotal() !== 100) {
+    if (tasks.some((t) => !t.title.trim() || !t.start || !t.end || (sales ? !(t.target! > 0) : !t.weightage))) {
+      return this.gError.set(sales ? 'Every sub-task needs a title, a target amount and dates.' : 'Every sub-task needs a title, a weightage and dates.');
+    }
+    if (!sales && tasks.length && this.taskTotal() !== 100) {
       return this.gError.set(`Sub-task weights add up to ${this.taskTotal()}%; they must make 100%.`);
+    }
+    if (sales && tasks.length && Math.abs(this.taskTargetTotal() - this.gTarget()!) > 0.001) {
+      return this.gError.set(`Sub-task targets add up to ${this.money(this.taskTargetTotal())}; they must make the goal's target of ${this.money(this.gTarget())}.`);
     }
     const body: GoalBody = {
       title: this.gTitle().trim(),
+      type: this.gType(),
+      targetAmount: sales ? this.gTarget() : null,
       description: this.gDescription().trim() || null,
       weightage: this.gWeight()!,
       startDate: toIsoDate(this.gStart())!,
       endDate: toIsoDate(this.gEnd())!,
-      tasks: tasks.map((t) => ({ id: t.id, title: t.title.trim(), weightage: t.weightage!, startDate: toIsoDate(t.start)!, endDate: toIsoDate(t.end)! })),
+      tasks: tasks.map((t) => ({ id: t.id, title: t.title.trim(), weightage: sales ? null : t.weightage!, targetAmount: sales ? t.target : null,
+        startDate: toIsoDate(t.start)!, endDate: toIsoDate(t.end)! })),
     };
     const r = this.review();
     this.gBusy.set(true);
@@ -385,4 +572,12 @@ export class ReviewBoard {
     this.toast.add({ severity: 'error', summary: 'Not saved', detail: apiProblem(err).message });
     this.changed.emit();
   }
+}
+
+/** The set with id added, or taken out when it was there. */
+function toggled(set: ReadonlySet<number>, id: number): ReadonlySet<number> {
+  const next = new Set(set);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
 }
