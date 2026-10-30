@@ -1,7 +1,7 @@
 <div class="p-head">
   <div>
     <h1>Attendance</h1>
-    <p>Check in when you start work, wherever you are. Field visits are checked in and closed one by one.</p>
+    <p>Check in when you start work, wherever you are, and out when you stop. You can check in again later the same day (office, home or a field visit).</p>
   </div>
   <div class="head-actions">
     <app-export-excel kind="attendance" />
@@ -25,7 +25,7 @@
             @if (d.entries.length > 1) { · {{ worked(dayTotal()) }} today in {{ d.entries.length }} entries }
           </p>
         } @else {
-          <h2>Day ended · {{ worked(d.workedMinutes) }}</h2>
+          <h2>Checked out · {{ worked(d.workedMinutes) }} today</h2>
           <p class="times">
             {{ d.firstIn | date: 'hh:mm a' : IST }} – {{ d.lastOut | date: 'hh:mm a' : IST }}
             @if (d.entries.length > 1) { · {{ d.entries.length }} entries }
@@ -47,7 +47,7 @@
                       [ngModel]="note()" (ngModelChange)="note.set($event)"></textarea>
           </div>
           <div class="close__act">
-            <p-button [label]="o.workMode === 'FIELD' ? 'Close visit' : 'End work today'"
+            <p-button [label]="o.workMode === 'FIELD' ? 'Close visit' : 'Check out'"
                       [icon]="o.workMode === 'FIELD' ? 'pi pi-flag' : 'pi pi-sign-out'" severity="secondary"
                       [loading]="busy()" (onClick)="close()" />
             @if (step()) { <small class="muted">{{ step() }}</small> }
@@ -55,31 +55,29 @@
         </div>
       } @else if (!startingVisit()) {
         <div class="close close--next">
-          <p class="muted">Visiting another site or client? Each visit is checked in with its own photo and location.</p>
-          <p-button label="Start a field visit" icon="pi pi-map-marker" [outlined]="true" (onClick)="startVisit()" />
+          <p class="muted">Back at work, at the office, at home or visiting a site or client? Check in again: each entry has its own time and location.</p>
+          <p-button label="Check in again" icon="pi pi-sign-in" [outlined]="true" (onClick)="startVisit()" />
         </div>
       }
     </section>
   }
 
   @if (showStart()) {
-    <!-- check in: the day's first entry, or another field visit -->
+    <!-- check in: the day's first entry, or another one (office, home or a field visit) -->
     <section class="p-card start">
       <div class="start__head">
-        <h2>{{ day() ? 'New field visit' : 'Start work' }}</h2>
+        <h2>{{ day() ? 'Check in again' : 'Start work' }}</h2>
         @if (startingVisit()) { <p-button label="Cancel" [text]="true" size="small" (onClick)="cancelVisit()" /> }
       </div>
       <div class="start__grid">
         <div class="start__form">
-          @if (!day()) {
-            <div class="pf">
-              <span class="pf-label" id="a-mode-lbl">Where are you working today? *</span>
-              <p-selectbutton [options]="modes" optionLabel="label" optionValue="value" ariaLabelledBy="a-mode-lbl" styleClass="modes"
-                              [ngModel]="mode()" (ngModelChange)="mode.set($event)">
-                <ng-template #item let-o><i [class]="o.icon" aria-hidden="true"></i><span>{{ o.label }}</span></ng-template>
-              </p-selectbutton>
-            </div>
-          }
+          <div class="pf">
+            <span class="pf-label" id="a-mode-lbl">{{ day() ? 'Where are you working now? *' : 'Where are you working today? *' }}</span>
+            <p-selectbutton [options]="modes" optionLabel="label" optionValue="value" ariaLabelledBy="a-mode-lbl" styleClass="modes"
+                            [ngModel]="mode()" (ngModelChange)="mode.set($event)">
+              <ng-template #item let-o><i [class]="o.icon" aria-hidden="true"></i><span>{{ o.label }}</span></ng-template>
+            </p-selectbutton>
+          </div>
           @if (mode() === 'FIELD') {
             <div class="pf">
               <label for="a-place">Place / client *</label>
@@ -93,7 +91,8 @@
             @if (mode() === 'FIELD') {
               <li [class.ok]="!!place().trim()"><i [class]="place().trim() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i> Place / client</li>
             }
-            <li [class.ok]="!!photo()"><i [class]="photo() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i> Live photo</li>
+            <li [class.ok]="!!photo()"><i [class]="photo() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
+              Live photo{{ photoNeeded() ? ' (needed for a field visit)' : ' (optional)' }}</li>
             <li [class.ok]="location() === 'granted'" [class.warn]="location() === 'denied'">
               <i [class]="location() === 'granted' ? 'pi pi-check-circle' : location() === 'denied' ? 'pi pi-exclamation-triangle' : 'pi pi-map-marker'" aria-hidden="true"></i>
               @switch (location()) {
@@ -106,8 +105,8 @@
 
           @if (formError()) { <p-message severity="error" styleClass="dlg-msg">{{ formError() }}</p-message> }
           <div class="p-actions">
-            <p-button [label]="day() ? 'Start visit' : 'Check in'" icon="pi pi-check"
-                      [disabled]="!mode() || !photo() || (mode() === 'FIELD' && !place().trim())" [loading]="busy()" (onClick)="checkIn()" />
+            <p-button [label]="day() && mode() === 'FIELD' ? 'Start visit' : 'Check in'" icon="pi pi-check"
+                      [disabled]="!mode() || (photoNeeded() && !photo()) || (mode() === 'FIELD' && !place().trim())" [loading]="busy()" (onClick)="checkIn()" />
             @if (step()) { <small class="muted">{{ step() }}</small> }
           </div>
         </div>
@@ -127,7 +126,8 @@
           } @else {
             <div class="cam__off">
               <i class="pi pi-camera" aria-hidden="true"></i>
-              <p>A live photo is needed to check in. Photos from the gallery are not accepted.</p>
+              <p>{{ photoNeeded() ? 'A live photo is needed for a field visit.' : 'A live photo is optional at the office or at home.' }}
+                Photos from the gallery are not accepted.</p>
               <p-button label="Open camera" icon="pi pi-video" [loading]="cameraBusy()" (onClick)="openCamera()" />
               @if (cameraError()) { <p class="cam__err">{{ cameraError() }}</p> }
             </div>

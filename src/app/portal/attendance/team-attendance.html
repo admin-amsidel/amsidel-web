@@ -66,7 +66,7 @@
             <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}</td>
             <td data-label="Entries">{{ d.entries.length }}</td>
             <td data-label="Photo">
-              <app-attendance-photo [attendanceId]="d.entries[0].id" [name]="d.name" [when]="(d.firstIn | date: 'd MMM, hh:mm a' : IST) ?? ''" />
+              <app-attendance-photo [attendanceId]="d.entries[0].id" [hasPhoto]="d.entries[0].hasPhoto" [name]="d.name" [when]="(d.firstIn | date: 'd MMM, hh:mm a' : IST) ?? ''" />
             </td>
           } @else {
             <td data-label="Mode" class="stack-full"><p-tag value="Not checked in" severity="secondary" /></td>
@@ -75,7 +75,7 @@
         </tr>
       </ng-template>
       <ng-template #expandedrow let-p>
-        <tr class="expanded"><td colspan="8"><app-attendance-entries [entries]="p.day.entries" /></td></tr>
+        <tr class="expanded"><td colspan="8"><app-attendance-entries [entries]="p.day.entries" [canDelete]="isOwner()" (deleted)="reload()" /></td></tr>
       </ng-template>
       <ng-template #emptymessage>
         <tr><td colspan="8" class="p-empty">{{ dayCounts().total ? 'Nobody here.' : 'Nobody reports to you yet.' }}</td></tr>
@@ -129,12 +129,12 @@
             <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}</td>
             <td data-label="Entries">{{ d.entries.length }}</td>
             <td data-label="Photo">
-              <app-attendance-photo [attendanceId]="d.entries[0].id" [name]="d.name" [when]="(d.firstIn | date: 'd MMM, hh:mm a' : IST) ?? ''" />
+              <app-attendance-photo [attendanceId]="d.entries[0].id" [hasPhoto]="d.entries[0].hasPhoto" [name]="d.name" [when]="(d.firstIn | date: 'd MMM, hh:mm a' : IST) ?? ''" />
             </td>
           </tr>
         </ng-template>
         <ng-template #expandedrow let-d>
-          <tr class="expanded"><td colspan="8"><app-attendance-entries [entries]="d.entries" /></td></tr>
+          <tr class="expanded"><td colspan="8"><app-attendance-entries [entries]="d.entries" [canDelete]="isOwner()" (deleted)="reload()" /></td></tr>
         </ng-template>
         <ng-template #emptymessage>
           <tr><td colspan="8" class="p-empty">No check-ins in this month.</td></tr>

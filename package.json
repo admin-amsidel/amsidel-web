@@ -9,6 +9,9 @@
     "test": "ng test"
   },
   "private": true,
+  "author": "AMSIDEL Technologies",
+  "license": "SEE LICENSE IN LICENSE",
+  "description": "Amsidel website, company portal and product portal. Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.",
   "packageManager": "npm@10.9.0",
   "dependencies": {
     "@angular/cdk": "^21.2.14",

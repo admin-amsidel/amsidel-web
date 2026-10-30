@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 // Where the staff portal finds the amsidel-backend API.
 // TODO: set PRODUCTION_API to the URL where amsidel-backend is deployed (e.g. its Render address).
 const LOCAL_API = 'http://localhost:8080';

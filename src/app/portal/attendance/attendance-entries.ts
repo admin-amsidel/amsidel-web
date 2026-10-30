@@ -1,18 +1,26 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
+import { apiProblem } from '../portal.models';
+import { AttendanceService } from './attendance.service';
 import { AttendancePhoto } from './attendance-photo';
 import { AttendanceRecord, FLAG_LABELS, IST, LocationFlag, mapLink, MODE_LABELS, worked } from './attendance.models';
 
-/** A day's entries one under the other: each visit's place, times, locations, note and photo. */
+/** A day's entries one under the other: each visit's place, times, locations, note and photo; owners may delete one. */
 @Component({
   selector: 'app-attendance-entries',
-  imports: [DatePipe, TagModule, AttendancePhoto],
+  imports: [DatePipe, ButtonModule, TagModule, AttendancePhoto],
   template: `
     <ol class="entries">
       @for (e of entries(); track e.id) {
         <li class="entry" [class.open]="!e.checkOut">
-          <app-attendance-photo [attendanceId]="e.id" [name]="e.name" [when]="(e.checkIn.at | date: 'd MMM, hh:mm a' : IST) ?? ''" [size]="44" />
+          <app-attendance-photo [attendanceId]="e.id" [hasPhoto]="e.hasPhoto" [name]="e.name" [when]="(e.checkIn.at | date: 'd MMM, hh:mm a' : IST) ?? ''" [size]="44" />
           <div class="entry__main">
             <div class="entry__top">
               <b>{{ e.place || modeLabels[e.workMode] }}</b>
@@ -36,6 +44,10 @@ import { AttendanceRecord, FLAG_LABELS, IST, LocationFlag, mapLink, MODE_LABELS,
             </div>
             @if (e.note) { <p class="entry__note"><i class="pi pi-comment" aria-hidden="true"></i> {{ e.note }}</p> }
           </div>
+          @if (canDelete()) {
+            <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small" title="Delete this attendance"
+                      [ariaLabel]="'Delete attendance of ' + e.name + ', ' + ((e.checkIn.at | date: 'd MMM, hh:mm a' : IST) ?? '')" (onClick)="remove(e)" />
+          }
         </li>
       }
     </ol>
@@ -55,10 +67,33 @@ import { AttendanceRecord, FLAG_LABELS, IST, LocationFlag, mapLink, MODE_LABELS,
   `,
 })
 export class AttendanceEntries {
+  private readonly service = inject(AttendanceService);
+  private readonly confirm = inject(ConfirmationService);
+  private readonly toast = inject(MessageService);
   readonly entries = input.required<AttendanceRecord[]>();
+  /** Owners: a delete button on each entry. */
+  readonly canDelete = input(false);
+  /** An entry was deleted: the page loads the day again. */
+  readonly deleted = output<AttendanceRecord>();
   protected readonly IST = IST;
   protected readonly modeLabels: Record<string, string> = MODE_LABELS;
   protected readonly flagLabels: Record<LocationFlag, string> = FLAG_LABELS;
   protected readonly worked = worked;
   protected readonly mapLink = mapLink;
+
+  protected remove(e: AttendanceRecord): void {
+    const when = new Date(e.checkIn.at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    this.confirm.confirm({
+      header: 'Delete attendance', icon: 'pi pi-trash',
+      message: `Delete ${e.name}'s ${e.place ? 'visit to ' + e.place : MODE_LABELS[e.workMode].toLowerCase() + ' check-in'} of ${when}${e.hasPhoto ? ', with its photo' : ''}? This cannot be undone.`,
+      acceptLabel: 'Delete', rejectLabel: 'Keep', acceptButtonProps: { severity: 'danger' }, rejectButtonProps: { outlined: true },
+      accept: () => this.service.deleteEntry(e.id).subscribe({
+        next: () => {
+          this.toast.add({ severity: 'success', summary: 'Attendance deleted', detail: `${e.name} · ${when}` });
+          this.deleted.emit(e);
+        },
+        error: (err) => this.toast.add({ severity: 'error', summary: 'Not deleted', detail: apiProblem(err).message }),
+      }),
+    });
+  }
 }

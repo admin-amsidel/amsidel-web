@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 /**
  * Country codes offered by the enquiry form's phone field. `min`/`max` are the digit counts of the
  * number without the country code or leading 0; `pattern`, when set, is checked as well.

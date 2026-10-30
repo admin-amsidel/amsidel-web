@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 /** The product portal (/api/trade): money in rupees, quantities with up to 2 decimals. Everything belongs to a brand. */
 
 export interface BrandRef {
@@ -52,16 +56,20 @@ export const HISTORY_ACTIONS: Record<string, { label: string; icon: string; tone
 
 // ---- projects ----
 
-export type ProjectStatus = 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+/** A project status code from the project_statuses table (QUEUED, QUOTATION_ISSUED ... CANCELLED); see ProjectStages. */
+export type ProjectStatus = string;
 
-export const PROJECT_STATUS: Record<ProjectStatus, { label: string; severity: 'secondary' | 'info' | 'success' | 'danger' }> = {
+/** Where a task of a project stands. */
+export type TaskStatus = 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export const TASK_STATUS: Record<TaskStatus, { label: string; severity: 'secondary' | 'info' | 'success' | 'danger' }> = {
   QUEUED: { label: 'Queued', severity: 'secondary' },
   IN_PROGRESS: { label: 'In progress', severity: 'info' },
   COMPLETED: { label: 'Completed', severity: 'success' },
   CANCELLED: { label: 'Cancelled', severity: 'danger' },
 };
 
-export const PROJECT_STATUS_OPTIONS = (Object.keys(PROJECT_STATUS) as ProjectStatus[]).map((s) => ({ value: s, label: PROJECT_STATUS[s].label }));
+export const TASK_STATUS_OPTIONS = (Object.keys(TASK_STATUS) as TaskStatus[]).map((s) => ({ value: s, label: TASK_STATUS[s].label }));
 
 export interface PersonRef {
   id: number;
@@ -88,7 +96,7 @@ export interface ProjectTask {
   id: number;
   title: string;
   description: string | null;
-  status: ProjectStatus;
+  status: TaskStatus;
   regDate: string;
   startDate: string | null;
   endDate: string | null;
@@ -174,7 +182,7 @@ export interface ProjectBody {
 export interface TaskBody {
   title: string;
   description: string | null;
-  status: ProjectStatus | null;
+  status: TaskStatus | null;
   regDate: string;
   startDate: string | null;
   endDate: string | null;

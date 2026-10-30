@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked, ViewEncapsulation } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -16,6 +20,7 @@ import { Avatar } from '../avatar';
 import { TeamChat } from '../chat/team-chat';
 import { PortalStyles } from '../portal-styles';
 import { ROLE_LABELS } from '../portal.models';
+import { CREDITS } from '../../shared/credits';
 
 interface NavLink {
   kind: 'link';
@@ -188,6 +193,7 @@ function isProduct(path: string): boolean {
           }
         }
       </nav>
+      @if (!mini) { <p class="p-credit">{{ credits.copyright }}<br />{{ credits.line }}</p> }
     </ng-template>
     <p-menu #groupMenu [model]="groupItems()" [popup]="true" appendTo="body" styleClass="p-popup-menu" />
 
@@ -265,7 +271,9 @@ function isProduct(path: string): boolean {
     .p-side {
       position: sticky; top: 60px; flex: none; width: 252px; height: calc(100dvh - 60px); overflow-y: auto;
       padding: 14px 10px; background: rgba(255,255,255,.88); border-right: 1px solid var(--line); transition: width .2s ease;
+      display: flex; flex-direction: column;
     }
+    .p-credit { margin: auto 0 0; padding: 18px 12px 4px; color: var(--muted); font-size: .7rem; line-height: 1.5; }
     .p-side.mini { width: 68px; }
 
     /* the menu */
@@ -321,6 +329,7 @@ function isProduct(path: string): boolean {
 })
 export class PortalShell {
   protected readonly auth = inject(AuthService);
+  protected readonly credits = CREDITS;
   protected readonly busy = inject(BusyService);
   private readonly router = inject(Router);
   protected readonly roleLabels = ROLE_LABELS;

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { Component, DestroyRef, effect, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -7,6 +11,7 @@ import { SITE, telHref } from '../../data/site.config';
 import { AmiChat } from '../../shared/ami-chat/ami-chat';
 import { ScrollTo } from '../../shared/scroll-to';
 import { SiteNewsService } from '../../shared/site-news.service';
+import { CREDITS } from '../../shared/credits';
 
 /** Header, footer and floating actions shared by every Doors & Windows page. */
 @Component({
@@ -19,6 +24,7 @@ import { SiteNewsService } from '../../shared/site-news.service';
 export class StoreShell {
   protected readonly site = SITE;
   protected readonly year = new Date().getFullYear();
+  protected readonly credits = CREDITS;
   protected readonly systems = CATEGORIES.filter((c) => c.group === 'doors-windows');
   protected readonly doors = CATEGORIES.filter((c) => c.group === 'doors');
   protected readonly tel = SITE.phone ? telHref(SITE.phone) : '';

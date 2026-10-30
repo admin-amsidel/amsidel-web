@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { API_BASE } from '../portal/portal.config';
 
 /** An enquiry as the backend lays it out in its mail (see EnquiryService in amsidel-backend). */

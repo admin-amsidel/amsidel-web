@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -20,7 +26,7 @@ import { Avatar } from '../avatar';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { TouchDatePicker } from '../touch-datepicker';
 import {
-  DEFAULT_WORKING_DAYS, employedFor, forDays, PAYMENT_MODES, paymentLabel, PaymentMode, Payslip, PayslipMonth, PayslipRow, rupees,
+  DEFAULT_WORKING_DAYS, employedFor, forDays, PAYMENT_MODES, paymentLabel, PaymentMode, Payslip, PayslipMonth, PayslipRow, PayslipTax, rupees,
   rupeesRound,
 } from './payroll.models';
 import { PayrollService } from './payroll.service';
@@ -199,8 +205,9 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
             <div class="pf">
               <label for="ps-date">Pay date</label>
               <p-datepicker inputId="ps-date" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [showOnFocus]="false"
-                            panelStyleClass="over-dialog" [ngModel]="payDate()"
+                            panelStyleClass="over-dialog" styleClass="pay-date" [ngModel]="payDate()"
                             (ngModelChange)="payDate.set($event)" />
+              <small class="hint">In {{ s.periodLabel }}, or up to 15 days after</small>
             </div>
             <div class="pf">
               <label for="ps-wd">Working days</label>
@@ -215,8 +222,10 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
               <small class="hint">Paid {{ employed() - lop() }} of {{ workDays() }} days{{ employed() < workDays() ? ' (from the start date)' : '' }}
                 · a day = {{ perDay() }}</small>
             </div>
-            <p-button label="Recalculate from salary" icon="pi pi-refresh" [text]="true" size="small" pTooltip="Make it again from the current salary"
-                      (onClick)="recalculate()" />
+            <div class="edit-bar__acts">
+              <p-button label="Recalculate from salary" icon="pi pi-refresh" [text]="true" size="small" pTooltip="Make it again from the current salary"
+                        (onClick)="recalculate()" />
+            </div>
           </div>
         } @else if (s.status === 'PUBLISHED') {
           @if (s.paidOn) {
@@ -265,14 +274,24 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
             </div>
           }
         }
+        @if (draft() && tax(); as t) {
+          <div class="tax-note">
+            <i class="pi pi-calculator" aria-hidden="true"></i>
+            <span><b>Income tax {{ rupees(t.monthTax) }}</b>, worked out from this month's pay ({{ t.rules }}):
+              the year's income about {{ rupees(t.yearIncome) }} has tax {{ rupees(t.yearTax) }}; {{ rupees(t.taxBefore) }} was taken in the
+              earlier months, the rest is spread over this month{{ t.monthsLeft ? ' and the ' + t.monthsLeft + ' to come' : '' }}.
+              It changes with unpaid days and the amounts.</span>
+          </div>
+        }
         <app-payslip-sheet [payslip]="s" [editable]="draft()" [(amounts)]="amounts" [lop]="draft() ? lop() : null"
-                           [days]="draft() ? workDays() : null" />
+                           [days]="draft() ? workDays() : null" [autoTax]="!!tax()" />
         @if (formError()) { <p-message severity="error" styleClass="dlg-msg">{{ formError() }}</p-message> }
       }
       <ng-template #footer>
         @if (slip(); as s) {
           <div class="dlg-foot">
             <p-button label="PDF" icon="pi pi-download" [outlined]="true" size="small" [loading]="downloading()" (onClick)="pdf(s)" />
+            <p-button label="Print" icon="pi pi-print" [outlined]="true" size="small" [loading]="printing()" (onClick)="pdf(s, true)" />
             @if (s.editable && s.status === 'DRAFT') {
               <p-button label="Delete draft" icon="pi pi-trash" severity="danger" [text]="true" size="small" (onClick)="remove(s)" />
             }
@@ -340,6 +359,9 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
     </p-dialog>
   `,
   styles: `
+    .tax-note { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #eef2ff;
+      color: #3730a3; font-size: .85rem; line-height: 1.45; }
+    .tax-note i { margin-top: 3px; }
     .tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
     .tile--ok .big { color: #1d5fa3; }
     .credit { display: inline-flex; align-items: center; gap: 8px; }
@@ -378,9 +400,14 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
     .person small { font-size: .76rem; white-space: nowrap; }
     .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .dlg-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .edit-bar { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; padding: 12px 14px;
-      background: var(--accent-softer); border: 1px solid var(--line); border-radius: 12px; }
-    .edit-bar .pf { min-width: 180px; }
+    /* pay date, working days and LOP side by side, top-aligned, each with its hint below; the button on its own row */
+    .edit-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 12px 16px; margin-bottom: 14px;
+      padding: 12px 14px; background: var(--accent-softer); border: 1px solid var(--line); border-radius: 12px; }
+    .edit-bar .pf { min-width: 0; }
+    :host ::ng-deep .edit-bar .pay-date, :host ::ng-deep .edit-bar .p-inputnumber { width: 100%; }
+    :host ::ng-deep .edit-bar .p-inputnumber-input { width: 100%; min-width: 0; }
+    .edit-bar__acts { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: -4px; }
+    @media (max-width: 640px) { .edit-bar { grid-template-columns: minmax(0, 1fr); } .edit-bar__acts { justify-content: flex-start; } }
     :host ::ng-deep .dlg-msg { margin: 0 0 12px; }
     .dlg-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
     .grow { flex: 1 1 auto; }
@@ -413,6 +440,40 @@ export class Payslips implements OnInit {
   protected readonly amounts = signal<Record<number, number | null>>({});
   protected readonly lop = signal(0);
   protected readonly workDays = signal(DEFAULT_WORKING_DAYS);
+  /** The draft's income tax (New or Old regime), worked out again as the amounts change; null when typed in. */
+  protected readonly tax = signal<PayslipTax | null>(null);
+  protected readonly rupees = rupees;
+  /** The amounts the tax depends on (all but the tax itself), while a draft with a worked-out tax is open. */
+  private readonly taxInput = computed(() => {
+    const s = this.slip();
+    if (!s?.tax || !this.draft()) return null;
+    const a = this.amounts();
+    return JSON.stringify({ id: s.id, lines: s.lines.filter((l) => l.code !== 'TDS').map((l) => ({ id: l.id, amount: Number(a[l.id] ?? l.amount) })) });
+  });
+
+  constructor() {
+    toObservable(this.taxInput)
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap((json) => {
+          if (!json) return of(null);
+          const { id, lines } = JSON.parse(json) as { id: number; lines: { id: number; amount: number }[] };
+          return this.payroll.payslipTax(id, lines);
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe({
+        next: (t) => {
+          const s = this.slip();
+          const line = s?.lines.find((l) => l.code === 'TDS');
+          if (!t || !s || !line) return;
+          this.tax.set(t);
+          this.amounts.update((a) => ({ ...a, [line.id]: t.monthTax }));
+        },
+        error: () => undefined,
+      });
+  }
   /** Working days employed for the working days chosen. */
   protected readonly employed = computed(() => {
     const s = this.slip();
@@ -433,6 +494,7 @@ export class Payslips implements OnInit {
   protected readonly payDate = signal<Date | null>(null);
   protected readonly formError = signal('');
   protected readonly downloading = signal(false);
+  protected readonly printing = signal(false);
   protected readonly modes = PAYMENT_MODES;
   /** The end of today, so a date picked today is still allowed as the latest. */
   protected readonly today = new Date(new Date().setHours(23, 59, 59, 999));
@@ -727,12 +789,14 @@ export class Payslips implements OnInit {
     });
   }
 
-  protected pdf(s: Payslip): void {
-    this.downloading.set(true);
-    this.payroll.downloadPdf(s, false).subscribe({
-      next: () => this.downloading.set(false),
+  /** The A4 payslip: downloaded, or printed. */
+  protected pdf(s: Payslip, print = false): void {
+    const busy = print ? this.printing : this.downloading;
+    busy.set(true);
+    this.payroll.downloadPdf(s, false, print).subscribe({
+      next: () => busy.set(false),
       error: (err) => {
-        this.downloading.set(false);
+        busy.set(false);
         this.formError.set(apiProblem(err).message);
       },
     });
@@ -745,6 +809,7 @@ export class Payslips implements OnInit {
     this.payRef.set('');
     this.payRemarks.set('');
     this.amounts.set({});
+    this.tax.set(p.tax);
     this.lop.set(p.lopDays);
     this.workDays.set(p.workingDays);
     this.payDate.set(fromIsoDate(p.payDate));

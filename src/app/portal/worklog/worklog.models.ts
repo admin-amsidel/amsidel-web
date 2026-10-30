@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { toIsoDate } from '../portal.models';
 
 /** One task worked on one day (matches WorkLogEntry in amsidel-backend). */

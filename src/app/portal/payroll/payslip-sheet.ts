@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -61,7 +65,9 @@ import { currencyLocale, employedFor, formatMoney, moneyInWords, paymentLabel, P
                   <td>{{ l.name }}</td>
                   <td class="num muted">{{ money(l.fullAmount) }}</td>
                   <td class="num">
-                    @if (editable()) {
+                    @if (editable() && autoTax() && l.code === 'TDS') {
+                      <span class="auto" title="Worked out from this month's pay under the salary's tax regime">{{ money(amount(l)) }} <small>auto</small></span>
+                    } @else if (editable()) {
                       <p-inputnumber [inputId]="'pl-' + l.id" mode="currency" [currency]="payslip().company.currency || 'INR'" [locale]="curLocale()" [min]="0" [maxFractionDigits]="2"
                                      styleClass="amt" [ariaLabel]="l.name + ' this month'" [ngModel]="amount(l)" (ngModelChange)="set(l, $event)" />
                     } @else { {{ money(l.amount) }} }
@@ -113,6 +119,8 @@ import { currencyLocale, employedFor, formatMoney, moneyInWords, paymentLabel, P
     .lines th.num { text-align: right; }
     .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .muted { color: #5b6878; }
+    .auto { font-variant-numeric: tabular-nums; }
+    .auto small { margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: .68rem; font-weight: 600; text-transform: uppercase; }
     :host ::ng-deep .amt input { width: 130px; text-align: right; padding: 4px 8px; font-variant-numeric: tabular-nums; }
     .close { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: end; padding: 16px 18px 0; }
     .words { display: grid; gap: 4px; }
@@ -145,6 +153,8 @@ export class PayslipSheet {
   readonly lop = input<number | null>(null);
   /** Payroll's working days for the month while editing; null = the payslip's. */
   readonly days = input<number | null>(null);
+  /** The Income Tax line is worked out (New or Old regime), so it is shown, not typed. */
+  readonly autoTax = input(false);
 
   protected readonly sections: { kind: PayKind; title: string; total: string }[] = [
     { kind: 'EARNING', title: 'Earnings', total: 'Gross earnings' },

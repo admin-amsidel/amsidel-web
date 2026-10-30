@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -7,6 +11,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -14,10 +19,11 @@ import { rupees, rupeesRound } from '../payroll/payroll.models';
 import { phoneMatches } from '../phone-input';
 import { apiProblem } from '../portal.models';
 import { BrandPick, TradeBrand } from './trade-brand';
-import { PROJECT_STATUS, ProjectRow, ProjectStatus } from './trade.models';
+import { ProjectStages } from './project-stages';
+import { ProjectRow } from './trade.models';
 import { TradeService } from './trade.service';
 
-type Show = 'OPEN' | ProjectStatus | 'SETTLED' | 'ALL';
+type Show = 'OPEN' | 'COMPLETED' | 'SETTLED' | 'CANCELLED' | 'ALL';
 
 /**
  * Projects: every customer job with its status, owner, dates, tasks done and money (to pay, paid, due). Open ones
@@ -26,7 +32,7 @@ type Show = 'OPEN' | ProjectStatus | 'SETTLED' | 'ALL';
 @Component({
   selector: 'app-projects',
   imports: [
-    FormsModule, DatePipe, BrandPick, ButtonModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule, SelectButtonModule,
+    FormsModule, DatePipe, BrandPick, ButtonModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule, SelectModule, SelectButtonModule,
     TableModule, TagModule,
   ],
   template: `
@@ -43,7 +49,7 @@ type Show = 'OPEN' | ProjectStatus | 'SETTLED' | 'ALL';
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
 
     <section class="tiles">
-      <article class="tile"><span class="lbl">Open</span><b class="big">{{ sums().open }}</b><span class="meta">{{ sums().queued }} queued · {{ sums().progress }} in progress</span></article>
+      <article class="tile"><span class="lbl">Open</span><b class="big">{{ sums().open }}</b><span class="meta">{{ sums().notStarted }} not started yet · {{ sums().progress }} started</span></article>
       <article class="tile"><span class="lbl">To be paid</span><b class="big">{{ round(sums().toPay) }}</b><span class="meta">open projects</span></article>
       <article class="tile"><span class="lbl">Paid so far</span><b class="big">{{ round(sums().paid) }}</b><span class="meta">on open projects</span></article>
       <article class="tile tile--warn"><span class="lbl">Still to receive</span><b class="big">{{ round(sums().due) }}</b><span class="meta">{{ sums().settledCount }} settled & closed</span></article>
@@ -52,6 +58,8 @@ type Show = 'OPEN' | ProjectStatus | 'SETTLED' | 'ALL';
     <section class="p-card">
       <div class="bar">
         <p-selectbutton [options]="shows" optionLabel="label" optionValue="value" [allowEmpty]="false" [ngModel]="show()" (ngModelChange)="show.set($event)" />
+        <p-select [options]="stages.options()" optionLabel="label" optionValue="value" placeholder="Any status" [showClear]="true"
+                  ariaLabel="Status" [ngModel]="stage()" (ngModelChange)="stage.set($event)" styleClass="stage-pick" />
         <p-iconfield styleClass="search">
           <p-inputicon styleClass="pi pi-search" />
           <input pInputText type="search" placeholder="Search project, number, customer, phone, owner" aria-label="Search projects"
@@ -99,6 +107,7 @@ type Show = 'OPEN' | ProjectStatus | 'SETTLED' | 'ALL';
     </section>
   `,
   styles: `
+    :host ::ng-deep .stage-pick { min-width: 190px; }
     .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
     .tile { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; }
     .tile .lbl { font-size: .74rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
@@ -127,7 +136,10 @@ export class Projects implements OnInit {
   protected readonly brand = inject(TradeBrand);
   protected readonly money = rupees;
   protected readonly round = rupeesRound;
-  protected readonly status = (p: ProjectRow) => PROJECT_STATUS[p.status];
+  protected readonly stages = inject(ProjectStages);
+  protected readonly status = (p: ProjectRow) => ({ label: this.stages.name(p.status), severity: this.stages.severity(p.status) });
+  /** One status only (with the Open / Completed / ... choice), or any. */
+  protected readonly stage = signal<string | null>(null);
 
   protected readonly rows = signal<ProjectRow[]>([]);
   protected readonly loading = signal(true);
@@ -136,8 +148,6 @@ export class Projects implements OnInit {
   protected readonly show = signal<Show>('OPEN');
   protected readonly shows = [
     { label: 'Open', value: 'OPEN' },
-    { label: 'Queued', value: 'QUEUED' },
-    { label: 'In progress', value: 'IN_PROGRESS' },
     { label: 'Completed', value: 'COMPLETED' },
     { label: 'Settled', value: 'SETTLED' },
     { label: 'Cancelled', value: 'CANCELLED' },
@@ -147,15 +157,16 @@ export class Projects implements OnInit {
     const q = this.query().trim().toLowerCase();
     const show = this.show();
     return this.rows().filter((p) =>
-      (show === 'ALL' || (show === 'OPEN' ? !p.settled && (p.status === 'QUEUED' || p.status === 'IN_PROGRESS')
+      (show === 'ALL' || (show === 'OPEN' ? !p.settled && this.stages.isOpen(p.status)
         : show === 'SETTLED' ? p.settled : p.status === show)) &&
+      (!this.stage() || p.status === this.stage()) &&
       (!q || [p.name, p.code, p.customerName, p.ownerName].some((v) => v?.toLowerCase().includes(q)) || phoneMatches(q, p.customerPhone)));
   });
   protected readonly sums = computed(() => {
     const open = this.rows().filter((p) => !p.settled && p.status !== 'CANCELLED');
     return {
-      open: open.filter((p) => p.status === 'QUEUED' || p.status === 'IN_PROGRESS').length,
-      queued: open.filter((p) => p.status === 'QUEUED').length,
+      open: open.filter((p) => this.stages.isOpen(p.status)).length,
+      notStarted: open.filter((p) => this.stages.isOpen(p.status) && p.status !== 'IN_PROGRESS').length,
       progress: open.filter((p) => p.status === 'IN_PROGRESS').length,
       toPay: open.reduce((s, p) => s + p.money.toPay, 0),
       paid: open.reduce((s, p) => s + p.money.paid, 0),
@@ -165,6 +176,7 @@ export class Projects implements OnInit {
   });
 
   ngOnInit(): void {
+    this.stages.load();
     this.brand.load().subscribe({ next: () => this.load(), error: (e) => this.error.set(apiProblem(e).message) });
   }
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { Component, HostListener, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 

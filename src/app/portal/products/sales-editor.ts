@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -22,9 +26,10 @@ import { CustomerForm } from './customer-form';
 import { PaymentPanel } from './payment-panel';
 import { TradeBrand } from './trade-brand';
 import { Customer, DOC_STATUS, DocKind, DocStatus, Item, money, payLabel, ProjectRow, qty, SalesBody, SalesDoc, workOut } from './trade.models';
-import { saveFile, TradeService } from './trade.service';
+import { saveFile, TradeService, PAPER_SIZES, PaperSize, savedPaper, savePaper } from './trade.service';
 import { phoneSearchText } from '../phone-input';
 import { HistoryList } from './history-list';
+import { printPdf } from '../../shared/print-pdf';
 
 interface Line {
   key: number;
@@ -84,7 +89,11 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
       </div>
       <div class="head-actions">
         @if (doc(); as d) {
+          <p-select [options]="papers" optionLabel="label" optionValue="value" size="small" ariaLabel="Paper size" styleClass="paper"
+                    pTooltip="Paper for the PDF and printing (remembered on this device)" tooltipPosition="bottom"
+                    [ngModel]="paper()" (ngModelChange)="setPaper($event)" />
           <p-button label="PDF" icon="pi pi-file-pdf" [outlined]="true" size="small" [loading]="pdfBusy()" (onClick)="pdf()" />
+          <p-button label="Print" icon="pi pi-print" [outlined]="true" size="small" [loading]="printBusy()" (onClick)="pdf(true)" />
           @if (d.kind === 'QUOTATION') {
             @if (d.status === 'DRAFT') { <p-button label="Mark as sent" icon="pi pi-send" [outlined]="true" size="small" (onClick)="setStatus('SENT')" /> }
             @if (d.status === 'DRAFT' || d.status === 'SENT') {
@@ -298,6 +307,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
     </p-dialog>
   `,
   styles: `
+    :host ::ng-deep .paper { min-width: 128px; }
     .tags { display: inline-flex; gap: 6px; vertical-align: middle; margin-left: 8px; }
     .tag-wrap { font-size: .9rem; }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
@@ -378,6 +388,10 @@ export class SalesEditor implements OnInit {
   protected readonly formError = signal('');
   protected readonly busy = signal(false);
   protected readonly pdfBusy = signal(false);
+  protected readonly printBusy = signal(false);
+  /** A4 or a 7 / 12 / 15 cm roll, remembered on this device (its printer). */
+  protected readonly papers = PAPER_SIZES;
+  protected readonly paper = signal<PaperSize>(savedPaper());
   protected readonly dirty = signal(false);
 
   protected readonly brandId = signal<number | null>(null);
@@ -723,19 +737,28 @@ export class SalesEditor implements OnInit {
     });
   }
 
-  protected pdf(): void {
+  protected setPaper(size: PaperSize): void {
+    this.paper.set(size);
+    savePaper(size);
+  }
+
+  /** Downloads the PDF on the paper chosen, or (print) opens the print dialog with it. */
+  protected pdf(print = false): void {
     const d = this.doc();
     if (!d) return;
+    const busy = print ? this.printBusy : this.pdfBusy;
     const get = (x: SalesDoc) => {
-      this.pdfBusy.set(true);
-      this.trade.salesPdf(x.id).subscribe({
+      busy.set(true);
+      const size = this.paper();
+      this.trade.salesPdf(x.id, size).subscribe({
         next: (blob) => {
-          this.pdfBusy.set(false);
-          saveFile(blob, `${x.kind === 'INVOICE' ? 'Invoice' : 'Quotation'}-${x.number ?? 'draft-' + x.id}.pdf`);
+          busy.set(false);
+          if (print) printPdf(blob);
+          else saveFile(blob, `${x.kind === 'INVOICE' ? 'Invoice' : 'Quotation'}-${x.number ?? 'draft-' + x.id}${size === 'A4' ? '' : '-' + size.toLowerCase()}.pdf`);
         },
         error: () => {
-          this.pdfBusy.set(false);
-          this.toast.add({ severity: 'error', summary: 'The PDF could not be made' });
+          busy.set(false);
+          this.toast.add({ severity: 'error', summary: print ? 'It could not be printed' : 'The PDF could not be made' });
         },
       });
     };

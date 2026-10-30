@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 /** Payroll set-up: pay components and each employee's salary for a financial year (April to March). */
 
 export type PayKind = 'EARNING' | 'DEDUCTION' | 'REIMBURSEMENT';
@@ -293,6 +297,20 @@ export interface PayslipLine {
   ytd: number;
 }
 
+/**
+ * This month's income tax under the salary's regime (New or Old): the year's income expected, its tax, the tax of the
+ * earlier months, and what is left spread over this and the months to come (monthsLeft after this one).
+ */
+export interface PayslipTax {
+  regime: 'NEW' | 'OLD';
+  rules: string;
+  yearIncome: number;
+  yearTax: number;
+  taxBefore: number;
+  monthsLeft: number;
+  monthTax: number;
+}
+
 export interface Payslip {
   id: number;
   employee: PayPerson;
@@ -324,6 +342,8 @@ export interface Payslip {
   publishedByName: string | null;
   publishedAt: string | null;
   updatedAt: string | null;
+  /** A draft's income tax worked out under the New or Old regime; null when typed in (Manual) or not a draft. */
+  tax: PayslipTax | null;
   /** Credited: when, how, reference (null = not yet; the employee sees it only once credited). */
   paidOn: string | null;
   paymentMode: PaymentMode | null;

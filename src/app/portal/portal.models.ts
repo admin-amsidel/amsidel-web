@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { HttpErrorResponse } from '@angular/common/http';
 
 export type Role = 'OWNER' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE';

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import type { TreeNode } from 'primeng/api';
 import type { OrgNode, ReportingLine } from '../people.service';
 

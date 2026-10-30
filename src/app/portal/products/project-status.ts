@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -10,6 +14,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
@@ -20,13 +25,10 @@ import { shrinkPicture } from '../news.service';
 import { apiProblem } from '../portal.models';
 import { ProjectPhoto, ProjectStatusService, ProjectStatusView, ProjectUpdate, StatusRow } from './project-status.service';
 import { BrandPick, TradeBrand } from './trade-brand';
-import { PROJECT_STATUS, PROJECT_STATUS_OPTIONS, ProjectStatus } from './trade.models';
+import { ProjectStages } from './project-stages';
+import { ProjectStatus } from './trade.models';
 
 type Show = 'ALL' | 'OPEN' | 'SHARED';
-
-const ICONS: Record<ProjectStatus, string> = {
-  QUEUED: 'pi pi-clock', IN_PROGRESS: 'pi pi-cog', COMPLETED: 'pi pi-check', CANCELLED: 'pi pi-times',
-};
 
 /**
  * Projects > Project status: status updates for each project's customer. People with the Project status checkpoint
@@ -37,7 +39,7 @@ const ICONS: Record<ProjectStatus, string> = {
   selector: 'app-project-status',
   imports: [
     FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, DialogModule, IconFieldModule, InputIconModule,
-    InputTextModule, MessageModule, SelectButtonModule, TagModule, TextareaModule, TimelineModule, TooltipModule, ProjectPhoto,
+    InputTextModule, MessageModule, SelectModule, SelectButtonModule, TagModule, TextareaModule, TimelineModule, TooltipModule, ProjectPhoto,
   ],
   template: `
     <div class="p-head">
@@ -119,7 +121,7 @@ const ICONS: Record<ProjectStatus, string> = {
           @if (v.updates.length) {
             <p-timeline [value]="v.updates" styleClass="tl">
               <ng-template #marker let-u>
-                <span class="mark" [class]="'mark mark--' + u.status.toLowerCase()"><i [class]="icon(u.status)" aria-hidden="true"></i></span>
+                <span class="mark" [style.background]="stages.color(u.status)"><i [class]="icon(u.status)" aria-hidden="true"></i></span>
               </ng-template>
               <ng-template #opposite let-u>
                 <span class="when"><b>{{ u.happenedAt | date: 'd MMM y' }}</b><small>{{ u.happenedAt | date: 'h:mm a' }}</small></span>
@@ -162,9 +164,16 @@ const ICONS: Record<ProjectStatus, string> = {
     <p-dialog [header]="editing() ? 'Change the update' : 'Post an update'" [modal]="true" [visible]="dlgOpen()" (visibleChange)="dlgOpen.set($event)"
               [draggable]="false" appendTo="body" [style]="{ width: '640px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }">
       <div class="form">
-        <div class="pf"><span class="pf-label" id="up-stage">Stage *</span>
-          <p-selectbutton [options]="statuses" optionLabel="label" optionValue="value" [allowEmpty]="false" ariaLabelledBy="up-stage" styleClass="stages"
-                          [ngModel]="fStatus()" (ngModelChange)="fStatus.set($event)" />
+        <div class="pf"><label for="up-stage">Stage *</label>
+          <p-select inputId="up-stage" [options]="statuses()" optionLabel="label" optionValue="value" appendTo="body" styleClass="stages"
+                    [ngModel]="fStatus()" (ngModelChange)="fStatus.set($event)">
+            <ng-template #selectedItem let-o>
+              @if (o) { <span class="st-opt"><i [class]="icon(o.value)" [style.color]="stages.color(o.value)" aria-hidden="true"></i>{{ o.label }}</span> }
+            </ng-template>
+            <ng-template #item let-o>
+              <span class="st-opt"><i [class]="icon(o.value)" [style.color]="stages.color(o.value)" aria-hidden="true"></i>{{ o.label }}</span>
+            </ng-template>
+          </p-select>
           <small class="hint">The newest update sets the project's status.</small></div>
         <div class="pf"><label for="up-title">Title *</label>
           <input pInputText id="up-title" maxlength="150" placeholder="e.g. Ground floor windows fixed" [ngModel]="fTitle()" (ngModelChange)="fTitle.set($event)" /></div>
@@ -236,10 +245,6 @@ const ICONS: Record<ProjectStatus, string> = {
     .when small { color: var(--muted); }
     .when-phone { display: none; }
     .mark { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; box-shadow: 0 0 0 4px #fff, 0 2px 8px rgba(0, 0, 0, .12); }
-    .mark--queued { background: #64748b; }
-    .mark--in_progress { background: #1d5fa3; }
-    .mark--completed { background: #1f7a45; }
-    .mark--cancelled { background: #b3261e; }
     .upd { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 8px; box-shadow: 0 4px 14px rgba(23, 59, 99, .05); }
     .upd__head { display: flex; align-items: center; gap: 10px; }
     .upd__acts { margin-left: auto; display: flex; }
@@ -252,7 +257,8 @@ const ICONS: Record<ProjectStatus, string> = {
     .empty .pi { font-size: 1.8rem; color: var(--muted); }
     .form { display: grid; gap: 14px; }
     .form input, .form textarea { width: 100%; }
-    :host ::ng-deep .stages { display: flex; flex-wrap: wrap; }
+    :host ::ng-deep .stages { width: 100%; }
+    .st-opt { display: inline-flex; align-items: center; gap: 8px; }
     .pick-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
     .thumb { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #f8fafc; }
     .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -288,11 +294,17 @@ export class ProjectStatusPage implements OnInit {
   protected readonly show = signal<Show>('ALL');
   protected readonly shows = [{ label: 'All', value: 'ALL' }, { label: 'Open', value: 'OPEN' }, { label: 'Shared', value: 'SHARED' }];
   protected readonly view = signal<ProjectStatusView | null>(null);
-  protected readonly statuses = PROJECT_STATUS_OPTIONS;
+  protected readonly stages = inject(ProjectStages);
+  /** The stages to choose from, with the one being changed even when switched off. */
+  protected readonly statuses = computed(() => {
+    const list = this.stages.options();
+    const cur = this.fStatus();
+    return list.some((o) => o.value === cur) ? list : [...list, { value: cur, label: this.stages.name(cur) }];
+  });
   protected readonly shown = computed(() => {
     const q = this.query().trim().toLowerCase();
     return this.rows().filter((p) =>
-      (this.show() === 'ALL' || (this.show() === 'SHARED' ? p.shared : p.status === 'QUEUED' || p.status === 'IN_PROGRESS')) &&
+      (this.show() === 'ALL' || (this.show() === 'SHARED' ? p.shared : this.stages.isOpen(p.status))) &&
       (!q || [p.name, p.code, p.customerName, p.customerPhone].some((v) => v?.toLowerCase().includes(q))));
   });
 
@@ -311,6 +323,7 @@ export class ProjectStatusPage implements OnInit {
   protected readonly now = signal(new Date());
 
   ngOnInit(): void {
+    this.stages.load();
     this.brand.load().subscribe({ next: () => this.load(), error: (e) => this.error.set(apiProblem(e).message) });
     const id = Number(this.project());
     if (id) this.open(id);
@@ -344,15 +357,15 @@ export class ProjectStatusPage implements OnInit {
   }
 
   protected label(s: ProjectStatus): string {
-    return PROJECT_STATUS[s].label;
+    return this.stages.name(s);
   }
 
   protected severity(s: ProjectStatus) {
-    return PROJECT_STATUS[s].severity;
+    return this.stages.severity(s);
   }
 
   protected icon(s: ProjectStatus): string {
-    return ICONS[s];
+    return this.stages.icon(s);
   }
 
   protected link(path: string): string {
@@ -414,7 +427,7 @@ export class ProjectStatusPage implements OnInit {
 
   protected startPost(v: ProjectStatusView): void {
     this.editing.set(null);
-    this.fStatus.set(v.project.status === 'QUEUED' ? 'IN_PROGRESS' : v.project.status);
+    this.fStatus.set(v.project.status);
     this.fTitle.set('');
     this.fDesc.set('');
     this.now.set(new Date());

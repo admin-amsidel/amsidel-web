@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 // Content for AMI, the chat assistant on the Doors & Windows pages (see shared/ami-chat).
 // Everything AMI says lives here so it can be reworded without touching the chat logic.
 // Product types and designs come from products.ts, so new products appear in the chat automatically.

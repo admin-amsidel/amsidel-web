@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 :host {
   display: block;
 }
@@ -713,4 +717,11 @@
   .logo__text small { font-size: 0.56rem; letter-spacing: 0.14em; }
   .offers-btn, .burger { width: 40px; min-width: 40px; height: 40px; min-height: 40px; }
   .offers-btn { padding: 0; }
+}
+
+.footer__bottom .credit {
+  flex-basis: 100%;
+  text-align: center;
+  opacity: 0.7;
+  font-size: 0.76rem;
 }

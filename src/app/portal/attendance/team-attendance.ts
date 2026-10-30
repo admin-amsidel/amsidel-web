@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -17,6 +21,7 @@ import { AttendancePhoto } from './attendance-photo';
 import {
   AttendanceDay, AttendanceDayRow, AttendanceDaySummary, FLAG_LABELS, IST, isoDay, LocationFlag, MODE_LABELS, TeamMember, worked,
 } from './attendance.models';
+import { AuthService } from '../auth.service';
 import { AttendanceService } from './attendance.service';
 
 type Show = 'ALL' | 'IN' | 'OUT' | 'FLAGGED';
@@ -37,6 +42,9 @@ type Show = 'ALL' | 'IN' | 'OUT' | 'FLAGGED';
 })
 export class TeamAttendance implements OnInit {
   private readonly service = inject(AttendanceService);
+  private readonly auth = inject(AuthService);
+  /** Owners may delete attendance. */
+  protected readonly isOwner = computed(() => this.auth.user()?.role === 'OWNER');
 
   protected readonly IST = IST;
   protected readonly modeLabels: Record<string, string> = MODE_LABELS;
@@ -139,6 +147,12 @@ export class TeamAttendance implements OnInit {
 
   protected flagLabel(f: LocationFlag): string {
     return FLAG_LABELS[f];
+  }
+
+  /** After an owner deleted an entry: the day and the person's month again. */
+  protected reload(): void {
+    this.loadDay();
+    this.loadDays();
   }
 
   private loadDay(): void {

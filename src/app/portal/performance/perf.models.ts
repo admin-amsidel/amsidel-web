@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 export type SkillCategory = 'TECHNICAL' | 'NON_TECHNICAL';
 
 export const SKILL_CATEGORIES: { value: SkillCategory; label: string }[] = [

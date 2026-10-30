@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -159,6 +163,7 @@ import { PayslipSheet } from './payslip-sheet';
       @if (slip(); as s) { <app-payslip-sheet [payslip]="s" /> }
       <ng-template #footer>
         @if (slip(); as s) {
+          <p-button label="Print" icon="pi pi-print" [outlined]="true" [loading]="printing()" (onClick)="pdf(s, true)" />
           <p-button label="Download PDF" icon="pi pi-download" [loading]="downloading()" (onClick)="pdf(s)" />
         }
       </ng-template>
@@ -225,6 +230,7 @@ export class MyPayPage implements OnInit {
   protected readonly error = signal('');
   protected readonly slip = signal<Payslip | null>(null);
   protected readonly downloading = signal(false);
+  protected readonly printing = signal(false);
 
   protected readonly yearOptions = computed(() => (this.data()?.years ?? []).map((y) => ({ value: y, label: fyLabel(y) })));
   /** The scale of the month bars: the largest month, or a full month's net when nothing is paid yet. */
@@ -247,12 +253,14 @@ export class MyPayPage implements OnInit {
     this.payroll.myPayslip(id).subscribe({ next: (p) => this.slip.set(p), error: (err) => this.error.set(apiProblem(err).message) });
   }
 
-  protected pdf(p: Payslip): void {
-    this.downloading.set(true);
-    this.payroll.downloadPdf(p, true).subscribe({
-      next: () => this.downloading.set(false),
+  /** The A4 payslip: downloaded, or printed. */
+  protected pdf(p: Payslip, print = false): void {
+    const busy = print ? this.printing : this.downloading;
+    busy.set(true);
+    this.payroll.downloadPdf(p, true, print).subscribe({
+      next: () => busy.set(false),
       error: (err) => {
-        this.downloading.set(false);
+        busy.set(false);
         this.error.set(apiProblem(err).message);
       },
     });

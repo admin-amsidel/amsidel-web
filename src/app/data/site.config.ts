@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 // Company details used across the site. Fill in the blanks before going live;
 // empty values are hidden in the UI rather than shown as placeholders.
 export const SITE = {

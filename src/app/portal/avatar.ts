@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import { AvatarModule } from 'primeng/avatar';
 import { PhotoService } from './photo.service';

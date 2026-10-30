@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, NgZone, OnInit, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';

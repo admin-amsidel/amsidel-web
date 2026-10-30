@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, computed, inject, Injectable, input } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';

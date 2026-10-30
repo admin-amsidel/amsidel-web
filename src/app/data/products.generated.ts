@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 // Generated from the source image folder. Edit names/specs in products.ts, not here.
 export const GENERATED_PRODUCTS = [
   {

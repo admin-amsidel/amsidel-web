@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { HistoryEntry, PayMode } from './trade.models';
 
 /** The code of a category of other income or expense (money_types on the server), e.g. TRANSPORT. */

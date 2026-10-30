@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, DestroyRef, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -19,9 +23,9 @@ import { AttendanceService } from './attendance.service';
 import { captureFrame, currentFix, deviceInfo, locationPermission, startCamera, stopCamera } from './capture';
 
 /**
- * My attendance: check in with a live camera photo, the work mode (Office, Work from home, Field) and the current
- * location, then close the entry ("End work today", or "Close visit" for a field visit, with an optional note).
- * Field days can have several visits, each checked in and closed on its own; an office or home day has one entry.
+ * My attendance: check in with a live camera photo (needed for a field visit, optional at the office or at home), the work mode (Office, Work from home, Field) and the current
+ * location, then close the entry ("Check out", or "Close visit" for a field visit, with an optional note).
+ * A day can have several entries (office, home or field visits), each checked in and closed on its own, one open at a time.
  * Below, my last 30 days, one row per day that opens into its entries. The server sets all times.
  */
 @Component({
@@ -64,6 +68,8 @@ export class MyAttendance implements OnInit {
   protected readonly cameraError = signal('');
   protected readonly facing = signal<'user' | 'environment'>('user');
   protected readonly photo = signal<Blob | null>(null);
+  /** Only a field visit needs the live photo. */
+  protected readonly photoNeeded = computed(() => this.mode() === 'FIELD');
   protected readonly photoUrl = signal<string | null>(null);
   protected readonly location = signal<PermissionState | null>(null);
   protected readonly busy = signal(false);
@@ -100,10 +106,10 @@ export class MyAttendance implements OnInit {
     return FLAG_LABELS[f];
   }
 
-  /** Another field visit after the day's entries are closed. */
+  /** Another entry after the day's entries are closed: office, home or a field visit. */
   protected startVisit(): void {
     this.startingVisit.set(true);
-    this.mode.set('FIELD');
+    this.mode.set(null);
     this.place.set('');
     this.formError.set('');
   }
@@ -163,7 +169,7 @@ export class MyAttendance implements OnInit {
     const place = this.place().trim();
     if (!mode) return this.formError.set('Choose where you are working today.');
     if (mode === 'FIELD' && !place) return this.formError.set('Enter the place or client you are visiting.');
-    if (!photo) return this.formError.set('Take your photo first.');
+    if (!photo && mode === 'FIELD') return this.formError.set('Take your photo first: a field visit needs one.');
     this.busy.set(true);
     this.step.set('Getting your location…');
     const fix = await currentFix();
@@ -179,7 +185,7 @@ export class MyAttendance implements OnInit {
         this.note.set('');
         this.toast.add({
           severity: r.checkIn.flags.length ? 'warn' : 'success',
-          summary: r.entryNo > 1 ? `Visit started (entry ${r.entryNo})` : 'Checked in',
+          summary: r.workMode === 'FIELD' && r.entryNo > 1 ? `Visit started (entry ${r.entryNo})` : r.entryNo > 1 ? `Checked in again (entry ${r.entryNo})` : 'Checked in',
           detail: r.checkIn.flags.includes('LOCATION_MISSING') ? 'Without location: your manager will see it flagged.'
             : r.checkIn.flags.includes('LOW_ACCURACY') ? 'Your location was not precise: it is flagged for your manager.'
               : r.place ? `At ${r.place}` : `${MODE_LABELS[r.workMode]} · have a good day!`,
@@ -195,18 +201,18 @@ export class MyAttendance implements OnInit {
     });
   }
 
-  /** Closes the open entry: the current field visit, or the whole day. */
+  /** Closes the open entry: the current field visit, or the office / home stretch. */
   protected close(): void {
     const open = this.openEntry();
     if (!open) return;
     const visit = open.workMode === 'FIELD';
     this.confirm.confirm({
-      header: visit ? 'Close visit' : 'End work today',
+      header: visit ? 'Close visit' : 'Check out',
       message: visit
-        ? `Close your visit${open.place ? ' to ' + open.place : ''} now? You can start another field visit afterwards.`
-        : 'Record the end of your working day now? You can only add field visits after this.',
+        ? `Close your visit${open.place ? ' to ' + open.place : ''} now? You can check in again afterwards.`
+        : 'Check out now? You can check in again later today (office, home or a field visit).',
       icon: visit ? 'pi pi-flag' : 'pi pi-sign-out',
-      acceptLabel: visit ? 'Close visit' : 'End work',
+      acceptLabel: visit ? 'Close visit' : 'Check out',
       rejectLabel: 'Not yet',
       rejectButtonProps: { outlined: true },
       accept: async () => {
@@ -220,7 +226,7 @@ export class MyAttendance implements OnInit {
             this.note.set('');
             this.toast.add({
               severity: 'success',
-              summary: visit ? 'Visit closed' : 'Work ended',
+              summary: visit ? 'Visit closed' : 'Checked out',
               detail: `${r.place ?? MODE_LABELS[r.workMode]} · ${worked(r.workedMinutes)}`,
             });
             this.load();

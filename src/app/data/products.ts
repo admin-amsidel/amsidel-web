@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { GENERATED_PRODUCTS } from './products.generated';
 
 export type CategoryGroup = 'doors-windows' | 'doors';

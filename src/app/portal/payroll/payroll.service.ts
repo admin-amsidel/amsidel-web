@@ -1,9 +1,14 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
-import { MyPay, PaymentMode, PayComponent, PayKind, PayrollYear, Payslip, PayslipMonth, PayslipSave, Salary, SalaryBody, TaxCalc } from './payroll.models';
+import { MyPay, PaymentMode, PayComponent, PayKind, PayrollYear, Payslip, PayslipMonth, PayslipSave, PayslipTax, Salary, SalaryBody, TaxCalc } from './payroll.models';
+import { printPdf } from '../../shared/print-pdf';
 
 const PAY = `${API_BASE}/api/payroll`;
 
@@ -66,6 +71,11 @@ export class PayrollService {
     return this.http.put<Payslip>(`${PAY}/payslips/${id}`, body);
   }
 
+  /** This month's income tax for the amounts being typed (nothing saved); null for a Manual tax salary. */
+  payslipTax(id: number, lines: { id: number; amount: number }[]): Observable<PayslipTax | null> {
+    return this.http.post<PayslipTax | null>(`${PAY}/payslips/${id}/tax`, { lines });
+  }
+
   recalculate(id: number): Observable<Payslip> {
     return this.http.post<Payslip>(`${PAY}/payslips/${id}/recalculate`, {});
   }
@@ -106,12 +116,21 @@ export class PayrollService {
     return this.http.get<Payslip>(`${API_BASE}/api/my-pay/payslips/${id}`);
   }
 
-  /** Downloads the payslip PDF (own: My pay; any in scope: payroll). The request needs the login token, so not a plain link. */
-  downloadPdf(p: Payslip, own: boolean): Observable<void> {
+  /**
+   * Downloads the payslip PDF, an A4 page (own: My pay; any in scope: payroll), or with print opens the print dialog
+   * with it. The request needs the login token, so not a plain link.
+   */
+  downloadPdf(p: Payslip, own: boolean, print = false): Observable<void> {
     const url = own ? `${API_BASE}/api/my-pay/payslips/${p.id}/pdf` : `${PAY}/payslips/${p.id}/pdf`;
     return new Observable<void>((sub) => {
       const req = this.http.get(url, { responseType: 'blob' }).subscribe({
         next: (blob) => {
+          if (print) {
+            printPdf(blob);
+            sub.next();
+            sub.complete();
+            return;
+          }
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
           a.download = `Payslip-${p.year}-${String(p.month).padStart(2, '0')}-${p.employee.empNumber}.pdf`;

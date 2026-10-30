@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { Role, toIsoDate } from '../portal.models';
 
 /** ANNUAL = days every year; GRANTED = days added per person (comp-off, paternity); UNLIMITED = no balance. */

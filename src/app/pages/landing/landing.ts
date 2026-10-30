@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import {
   afterNextRender,
   Component,
@@ -9,6 +13,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SITE } from '../../data/site.config';
+import { CREDITS } from '../../shared/credits';
 
 /** Group landing page: the Amsidel "solar system", with Doors & Windows orbiting the group logo. */
 @Component({
@@ -20,6 +25,7 @@ import { SITE } from '../../data/site.config';
 export class Landing {
   protected readonly site = SITE;
   protected readonly year = new Date().getFullYear();
+  protected readonly credits = CREDITS;
 
   protected readonly sections = [
     { id: 'top', label: 'Home', sub: 'Welcome' },

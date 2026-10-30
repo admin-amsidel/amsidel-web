@@ -1,7 +1,11 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { AsyncPipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { switchMap } from 'rxjs';
+import { switchMap, of } from 'rxjs';
 import { DialogModule } from 'primeng/dialog';
 import { AttendanceService } from './attendance.service';
 
@@ -10,7 +14,9 @@ import { AttendanceService } from './attendance.service';
   selector: 'app-attendance-photo',
   imports: [AsyncPipe, DialogModule],
   template: `
-    @if (url$ | async; as url) {
+    @if (!hasPhoto()) {
+      <span class="thumb none" [style.width.px]="size()" [style.height.px]="size()" title="No photo taken" aria-label="No photo"><i class="pi pi-camera"></i></span>
+    } @else if (url$ | async; as url) {
       <button type="button" class="thumb" [style.width.px]="size()" [style.height.px]="size()"
               [attr.aria-label]="'Check-in photo of ' + label()" (click)="open.set(true)">
         <img [src]="url" alt="" />
@@ -37,7 +43,9 @@ export class AttendancePhoto {
   readonly name = input('');
   readonly when = input('');
   readonly size = input(44);
+  /** False when no photo was taken (office or home check-in): nothing is fetched. */
+  readonly hasPhoto = input(true);
   protected readonly open = signal(false);
   protected readonly label = computed(() => [this.name(), this.when()].filter(Boolean).join(' · '));
-  protected readonly url$ = toObservable(this.attendanceId).pipe(switchMap((id) => this.service.photoUrl(id)));
+  protected readonly url$ = toObservable(this.attendanceId).pipe(switchMap((id) => (this.hasPhoto() ? this.service.photoUrl(id) : of(null))));
 }

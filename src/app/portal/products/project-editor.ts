@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, effect, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -21,10 +25,11 @@ import { phoneSearchText } from '../phone-input';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { CustomerForm } from './customer-form';
 import { HistoryList } from './history-list';
+import { ProjectStages } from './project-stages';
 import { ProjectStatusService, ProjectStatusView } from './project-status.service';
 import { TradeBrand } from './trade-brand';
 import {
-  Customer, DOC_STATUS, PAY_MODES, payLabel, PersonRef, Project, PROJECT_STATUS, PROJECT_STATUS_OPTIONS, ProjectBody, ProjectStatus,
+  Customer, DOC_STATUS, PAY_MODES, payLabel, PersonRef, Project, ProjectBody, ProjectStatus, TASK_STATUS, TASK_STATUS_OPTIONS, TaskStatus,
   ProjectTask, SalesRow, TaskBody,
 } from './trade.models';
 import { TradeService } from './trade.service';
@@ -48,7 +53,7 @@ import { TradeService } from './trade.service';
         <h1>{{ p() ? p()!.name : 'New project' }}
           @if (p(); as x) {
             <span class="tags">
-              <p-tag [value]="statusOf(x.status).label" [severity]="statusOf(x.status).severity" />
+              <p-tag [value]="stages.name(x.status)" [severity]="stages.severity(x.status)" />
               @if (x.settled) { <p-tag value="Settled & closed" icon="pi pi-lock" severity="success" /> }
             </span>
           }
@@ -64,7 +69,7 @@ import { TradeService } from './trade.service';
       @if (p(); as x) {
         <div class="head-actions">
           @if (x.editable && !x.settled) {
-            <p-select [options]="statusOptions" optionLabel="label" optionValue="value" ariaLabel="Project status" [ngModel]="x.status"
+            <p-select [options]="stageOptions(x.status)" optionLabel="label" optionValue="value" ariaLabel="Project status" [ngModel]="x.status"
                       (ngModelChange)="setStatus($event)" />
           }
           @if (!x.settled && x.editable) {
@@ -160,12 +165,12 @@ import { TradeService } from './trade.service';
                       </div>
                       <div class="task__acts">
                         @if (x.editable) {
-                          <p-select [options]="statusOptions" optionLabel="label" optionValue="value" [ariaLabel]="'Status of ' + t.title" size="small"
+                          <p-select [options]="taskOptions" optionLabel="label" optionValue="value" [ariaLabel]="'Status of ' + t.title" size="small"
                                     [ngModel]="t.status" (ngModelChange)="taskStatus(t, $event)" styleClass="st" />
                           <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" [ariaLabel]="'Change ' + t.title" (onClick)="editTask(t)" />
                           <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" [ariaLabel]="'Delete ' + t.title" (onClick)="deleteTask(t)" />
                         } @else {
-                          <p-tag [value]="statusOf(t.status).label" [severity]="statusOf(t.status).severity" />
+                          <p-tag [value]="taskOf(t.status).label" [severity]="taskOf(t.status).severity" />
                         }
                       </div>
                     </div>
@@ -302,7 +307,7 @@ import { TradeService } from './trade.service';
         <div class="pf"><label for="tk-reg">Registered on *</label>
           <p-datepicker inputId="tk-reg" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [ngModel]="t.regDate()" (ngModelChange)="t.regDate.set($event)" /></div>
         <div class="pf"><label for="tk-status">Status</label>
-          <p-select inputId="tk-status" [options]="statusOptions" optionLabel="label" optionValue="value" appendTo="body" [ngModel]="t.status()" (ngModelChange)="t.status.set($event)" /></div>
+          <p-select inputId="tk-status" [options]="taskOptions" optionLabel="label" optionValue="value" appendTo="body" [ngModel]="t.status()" (ngModelChange)="t.status.set($event)" /></div>
         <div class="pf"><label for="tk-start">Start date</label>
           <p-datepicker inputId="tk-start" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [ngModel]="t.startDate()" (ngModelChange)="t.startDate.set($event)" /></div>
         <div class="pf"><label for="tk-end">End date</label>
@@ -402,8 +407,9 @@ export class ProjectEditor implements OnInit {
   protected readonly auth = inject(AuthService);
   protected readonly brand = inject(TradeBrand);
   protected readonly money = rupees;
-  protected readonly statusOptions = PROJECT_STATUS_OPTIONS;
-  protected readonly statusOf = (s: ProjectStatus) => PROJECT_STATUS[s];
+  protected readonly stages = inject(ProjectStages);
+  protected readonly taskOptions = TASK_STATUS_OPTIONS;
+  protected readonly taskOf = (s: TaskStatus) => TASK_STATUS[s];
   protected readonly docStatus = (d: SalesRow) => DOC_STATUS[d.status];
   protected readonly pay = (d: SalesRow) => payLabel(d.payStatus);
 
@@ -441,7 +447,7 @@ export class ProjectEditor implements OnInit {
   protected readonly taskError = signal('');
   protected readonly t = {
     title: signal(''),
-    status: signal<ProjectStatus>('QUEUED'),
+    status: signal<TaskStatus>('QUEUED'),
     regDate: signal<Date | null>(new Date()),
     startDate: signal<Date | null>(null),
     endDate: signal<Date | null>(null),
@@ -476,14 +482,21 @@ export class ProjectEditor implements OnInit {
   });
 
   protected statusLabel(s: ProjectStatus): string {
-    return PROJECT_STATUS[s].label;
+    return this.stages.name(s);
   }
 
   protected statusSeverity(s: ProjectStatus) {
-    return PROJECT_STATUS[s].severity;
+    return this.stages.severity(s);
+  }
+
+  /** The statuses to choose from, with the project's own even when switched off. */
+  protected stageOptions(current: ProjectStatus) {
+    const list = this.stages.options();
+    return list.some((o) => o.value === current) ? list : [...list, { value: current, label: this.stages.name(current) }];
   }
 
   ngOnInit(): void {
+    this.stages.load();
     const id = this.route.snapshot.paramMap.get('id');
     const presetCustomer = Number(this.route.snapshot.queryParamMap.get('customer')) || null;
     this.brand.load().pipe(
@@ -567,7 +580,7 @@ export class ProjectEditor implements OnInit {
   protected setStatus(status: ProjectStatus): void {
     const x = this.p();
     if (!x || x.status === status) return;
-    this.trade.projectStatus(x.id, status, '').subscribe({ next: (r) => this.done(r, 'Status: ' + PROJECT_STATUS[status].label), error: (e) => this.failed(e) });
+    this.trade.projectStatus(x.id, status, '').subscribe({ next: (r) => this.done(r, 'Status: ' + this.stages.name(status)), error: (e) => this.failed(e) });
   }
 
   protected settle(): void {
@@ -664,9 +677,9 @@ export class ProjectEditor implements OnInit {
     });
   }
 
-  protected taskStatus(task: ProjectTask, status: ProjectStatus): void {
+  protected taskStatus(task: ProjectTask, status: TaskStatus): void {
     if (task.status === status) return;
-    this.trade.taskStatus(task.id, status).subscribe({ next: (r) => this.done(r, `${task.title}: ${PROJECT_STATUS[status].label}`), error: (e) => this.failed(e) });
+    this.trade.taskStatus(task.id, status).subscribe({ next: (r) => this.done(r, `${task.title}: ${TASK_STATUS[status].label}`), error: (e) => this.failed(e) });
   }
 
   protected deleteTask(task: ProjectTask): void {

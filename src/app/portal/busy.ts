@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { HttpContext, HttpContextToken, HttpInterceptorFn } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { finalize } from 'rxjs';

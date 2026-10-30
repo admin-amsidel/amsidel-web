@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { Role } from '../portal.models';
 
 /** Office time for every time shown (the server's calendar day is in Asia/Kolkata). */
@@ -44,6 +48,8 @@ export interface AttendanceRecord {
   note: string | null;
   workedMinutes: number | null;
   device: { platform: string | null; os: string | null; appVersion: string | null };
+  /** A photo was taken (always for a field visit; optional at the office or at home). */
+  hasPhoto: boolean;
 }
 
 /** A person's day put together from its entries. */

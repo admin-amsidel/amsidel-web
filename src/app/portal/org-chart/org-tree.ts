@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { Component, computed, effect, ElementRef, input, output, signal, viewChild } from '@angular/core';
 import { PrimeTemplate, TreeNode } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';

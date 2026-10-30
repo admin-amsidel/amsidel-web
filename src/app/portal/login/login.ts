@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { Component, inject, input, signal, effect, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -8,6 +12,7 @@ import { PasswordModule } from 'primeng/password';
 import { AuthService } from '../auth.service';
 import { PortalStyles } from '../portal-styles';
 import { apiProblem } from '../portal.models';
+import { CREDITS } from '../../shared/credits';
 
 /** Staff sign-in with user ID + PIN, opened from the group landing page. */
 @Component({
@@ -60,10 +65,12 @@ import { apiProblem } from '../portal.models';
 
           <p class="help">Forgot your PIN or locked out? Ask your admin to reset it.</p>
         </form>
+        <p class="credit">{{ credits.copyright }} · {{ credits.line }}</p>
       </section>
     </main>
   `,
   styles: `
+    .credit { margin: 24px 0 0; text-align: center; color: var(--muted); font-size: .75rem; }
     :host { display: block; background: var(--bg); }
     .login { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
     .panel { padding: 40px clamp(20px, 5vw, 64px); display: flex; flex-direction: column; }
@@ -93,6 +100,7 @@ import { apiProblem } from '../portal.models';
   `,
 })
 export class Login {
+  protected readonly credits = CREDITS;
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 

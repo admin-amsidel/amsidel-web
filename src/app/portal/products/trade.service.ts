@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -5,7 +9,7 @@ import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
 import { toIsoDate } from '../portal.models';
 import {
-  BrandRef, Customer, HistoryEntry, PersonRef, Project, ProjectBody, ProjectRow, ProjectStatus, TaskBody, TradeSubject, DocKind, DocStatus, Item, ItemDetail, OwedReport, Overview, PaymentBody, PaymentReport, ProductType,
+  BrandRef, Customer, HistoryEntry, PersonRef, Project, ProjectBody, ProjectRow, ProjectStatus, TaskBody, TaskStatus, TradeSubject, DocKind, DocStatus, Item, ItemDetail, OwedReport, Overview, PaymentBody, PaymentReport, ProductType,
   PurchaseBill, PurchaseBody, PurchaseReport, PurchaseRow, SalesBody, SalesDoc, SalesReport, SalesRow, StockKind, StockReport,
   Supplier,
 } from './trade.models';
@@ -202,7 +206,7 @@ export class TradeService {
     return this.http.put<Project>(`${T}/project-tasks/${taskId}`, body);
   }
 
-  taskStatus(taskId: number, status: ProjectStatus): Observable<Project> {
+  taskStatus(taskId: number, status: TaskStatus): Observable<Project> {
     return this.http.post<Project>(`${T}/project-tasks/${taskId}/status`, { status });
   }
 
@@ -258,8 +262,9 @@ export class TradeService {
     });
   }
 
-  salesPdf(id: number): Observable<Blob> {
-    return this.http.get(`${T}/sales/${id}/pdf`, { responseType: 'blob', context: silent() });
+  /** The quotation or invoice PDF on A4, or as a receipt on a 70, 120 or 150 mm roll. */
+  salesPdf(id: number, size: PaperSize = 'A4'): Observable<Blob> {
+    return this.http.get(`${T}/sales/${id}/pdf`, { params: { size }, responseType: 'blob', context: silent() });
   }
 }
 
@@ -274,6 +279,36 @@ export interface ReportFilter {
 }
 
 /** Saves a downloaded file under this name. */
+/** The paper a quotation or invoice is printed on: an A4 sheet, or a roll 7, 12 or 15 cm wide (no paper wasted). */
+export type PaperSize = 'A4' | '70MM' | '120MM' | '150MM';
+
+export const PAPER_SIZES: { value: PaperSize; label: string }[] = [
+  { value: 'A4', label: 'A4 sheet' },
+  { value: '70MM', label: '7 cm roll' },
+  { value: '120MM', label: '12 cm roll' },
+  { value: '150MM', label: '15 cm roll' },
+];
+
+const PAPER_KEY = 'amsidel.paper';
+
+/** The paper chosen last on this device (its printer); A4 when none. */
+export function savedPaper(): PaperSize {
+  try {
+    const v = localStorage.getItem(PAPER_KEY);
+    return PAPER_SIZES.some((p) => p.value === v) ? (v as PaperSize) : 'A4';
+  } catch {
+    return 'A4';
+  }
+}
+
+export function savePaper(size: PaperSize): void {
+  try {
+    localStorage.setItem(PAPER_KEY, size);
+  } catch {
+    // private window or storage blocked: the choice lasts for this page only
+  }
+}
+
 export function saveFile(blob: Blob, name: string): void {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

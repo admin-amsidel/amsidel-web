@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { MessageModule } from 'primeng/message';
 import { PeopleService, ReportingLine as Line } from '../people.service';

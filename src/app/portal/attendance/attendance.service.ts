@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
+ * Designed and developed by AMSIDEL Technologies.
+ */
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of, shareReplay } from 'rxjs';
@@ -9,7 +13,8 @@ export interface CheckIn {
   workMode: WorkMode;
   /** Field visits: the place or client. */
   place: string | null;
-  photo: Blob;
+  /** The live photo; needed for a field visit, optional at the office or at home. */
+  photo: Blob | null;
   fix: Fix | null;
   device: { platform: string; osVersion: string; appVersion: string };
 }
@@ -25,9 +30,14 @@ export class AttendanceService {
     return this.http.get<AttendanceToday>(`${this.base}/today`);
   }
 
+  /** Owners only: removes one entry (a day or a visit of it) and its photo. */
+  deleteEntry(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
   checkIn(c: CheckIn): Observable<AttendanceRecord> {
     const form = new FormData();
-    form.append('photo', c.photo, 'check-in.jpg');
+    if (c.photo) form.append('photo', c.photo, 'check-in.jpg');
     form.append('workMode', c.workMode);
     if (c.place) form.append('place', c.place);
     if (c.fix) {
@@ -41,7 +51,7 @@ export class AttendanceService {
     return this.http.post<AttendanceRecord>(`${this.base}/check-in`, form);
   }
 
-  /** Closes the open entry ("End work today" or the current field visit). */
+  /** Closes the open entry ("Check out", or the current field visit). */
   checkOut(fix: Fix | null, note: string): Observable<AttendanceRecord> {
     const where = fix ? { latitude: fix.latitude, longitude: fix.longitude, accuracy: Math.round(fix.accuracy) } : {};
     return this.http.post<AttendanceRecord>(`${this.base}/check-out`, { ...where, note: note.trim() || null });
