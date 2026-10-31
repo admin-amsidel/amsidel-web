@@ -319,7 +319,24 @@ export interface ItemDetail {
   history: HistoryEntry[];
 }
 
-export type DocKind = 'QUOTATION' | 'INVOICE';
+export type DocKind = 'QUOTATION' | 'SALES_ORDER' | 'INVOICE';
+
+/** Each kind of sales bill: its names, its pages and its menu. */
+export const DOC_KINDS: Record<DocKind, { one: string; many: string; route: string; menu: string }> = {
+  QUOTATION: { one: 'Quotation', many: 'Quotations', route: '/portal/products/quotations', menu: 'PROD_QUOTES' },
+  SALES_ORDER: { one: 'Sales order', many: 'Sales orders', route: '/portal/products/sales-orders', menu: 'PROD_ORDERS' },
+  INVOICE: { one: 'Invoice', many: 'Invoices', route: '/portal/products/invoices', menu: 'PROD_INVOICES' },
+};
+
+/** The page of a sales bill. */
+export function docLink(kind: DocKind | null | undefined, id: number): string {
+  return DOC_KINDS[kind ?? 'QUOTATION'].route + '/' + id;
+}
+
+/** A bill's status as shown: a sales order's ISSUED reads Confirmed. */
+export function docStatus(kind: DocKind, status: DocStatus): { label: string; severity: 'secondary' | 'info' | 'success' | 'warn' | 'danger' } {
+  return kind === 'SALES_ORDER' && status === 'ISSUED' ? { label: 'Confirmed', severity: 'success' } : DOC_STATUS[status];
+}
 export type DocStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'ISSUED' | 'CANCELLED';
 export type PurchaseStatus = 'DRAFT' | 'RECEIVED' | 'CANCELLED';
 export type PayStatus = 'UNPAID' | 'PARTLY_PAID' | 'PAID' | null;
@@ -458,6 +475,9 @@ export interface SalesDoc {
   projectName: string | null;
   /** I may delete it (owner or admin, and it can be deleted). */
   canDelete: boolean;
+  /** The kind of the bill it was made from (quotationId), and of the one made from it (invoiceId). */
+  sourceKind: DocKind | null;
+  madeKind: DocKind | null;
 }
 
 export interface SalesRow {
@@ -688,6 +708,10 @@ export interface Overview {
   months: MonthBar[];
   topSuppliers: Group[];
   topItems: Group[];
+  /** Sales orders confirmed this month (with GST), how many, and drafts still to confirm. */
+  ordersThisMonth: number;
+  ordersConfirmedThisMonth: number;
+  openOrders: number;
 }
 
 // ---- labels ----

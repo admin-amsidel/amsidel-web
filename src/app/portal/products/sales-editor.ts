@@ -25,7 +25,9 @@ import { AuthService } from '../auth.service';
 import { CustomerForm } from './customer-form';
 import { PaymentPanel } from './payment-panel';
 import { TradeBrand } from './trade-brand';
-import { Customer, DOC_STATUS, DocKind, DocStatus, Item, money, payLabel, ProjectRow, qty, SalesBody, SalesDoc, workOut } from './trade.models';
+import {
+  Customer, DOC_STATUS, DocKind, DocStatus, Item, money, payLabel, ProjectRow, qty, SalesBody, SalesDoc, workOut, DOC_KINDS, docLink, docStatus, SalesRow,
+} from './trade.models';
 import { saveFile, TradeService, PAPER_SIZES, PaperSize, savedPaper, savePaper } from './trade.service';
 import { phoneSearchText } from '../phone-input';
 import { HistoryList } from './history-list';
@@ -53,8 +55,9 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
 /**
  * One quotation or invoice: the customer, the items (each priced at the showroom price to start, with a warning
  * below the minimum price and the stock on hand), discount, other charges and GST, worked out as the server does.
- * A quotation is sent as a PDF and made into an invoice; an invoice is issued (numbered, stock out), paid and, if
- * needed, cancelled. Issued invoices and closed quotations are shown read-only.
+ * A quotation is sent as a PDF and made into a sales order or an invoice; a sales order (the customer's confirmed
+ * order, items removed or changed) is confirmed, which sets its project to Confirmed, then made into the invoice; an
+ * invoice is issued (numbered, stock out), paid and, if needed, cancelled. Issued and closed bills are read-only.
  */
 @Component({
   selector: 'app-sales-editor',
@@ -65,11 +68,11 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
   template: `
     <div class="p-head">
       <div>
-        <a class="back" [routerLink]="listLink()">← {{ invoice() ? 'Invoices' : 'Quotations' }}</a>
+        <a class="back" [routerLink]="listLink()">← {{ names().many }}</a>
         <h1>{{ title() }}
           @if (doc(); as d) {
             <span class="tags">
-              <span class="tag-wrap"><p-tag [value]="statusLabel(d.status).label" [severity]="statusLabel(d.status).severity" /></span>
+              <span class="tag-wrap"><p-tag [value]="statusLabel(d).label" [severity]="statusLabel(d).severity" /></span>
               @if (pay(); as p) { <span class="tag-wrap"><p-tag [value]="p.label" [severity]="p.severity" /></span> }
             </span>
           }
@@ -77,15 +80,16 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
         @if (doc(); as d) {
           <p>{{ d.company.name }} · prepared by <b>{{ d.createdByName ?? '—' }}</b>{{ d.createdByDesignation ? ', ' + d.createdByDesignation : '' }}
             on {{ d.createdAt | date: 'd MMM y' }}
-            @if (d.issuedAt) { · issued {{ d.issuedAt | date: 'd MMM y, h:mm a' }} by <b>{{ d.issuedByName }}</b> }
+            @if (d.issuedAt) { · {{ d.kind === 'SALES_ORDER' ? 'confirmed' : 'issued' }} {{ d.issuedAt | date: 'd MMM y, h:mm a' }} by <b>{{ d.issuedByName }}</b> }
             @if (d.updatedByName && d.updatedAt) { · last changed by {{ d.updatedByName }}, {{ d.updatedAt | date: 'd MMM y, h:mm a' }} }
             @if (d.projectId) { · project <a [routerLink]="'/portal/products/projects/' + d.projectId">{{ d.projectCode }} {{ d.projectName }}</a> }
-            @if (d.quotationId) { · from quotation <a [routerLink]="'/portal/products/quotations/' + d.quotationId">{{ d.quotationNumber }}</a> }
-            @if (d.invoiceId) { · invoice <a [routerLink]="'/portal/products/invoices/' + d.invoiceId">{{ d.invoiceNumber }}</a> }
+            @if (d.quotationId) { · from {{ kindName(d.sourceKind).toLowerCase() }} <a [routerLink]="link(d.sourceKind, d.quotationId)">{{ d.quotationNumber }}</a> }
+            @if (d.invoiceId) { · {{ kindName(d.madeKind).toLowerCase() }} <a [routerLink]="link(d.madeKind, d.invoiceId)">{{ d.invoiceNumber }}</a> }
           </p>
         } @else {
           <p>Prepared by <b>{{ me()?.name }}</b>{{ me()?.designationName ? ', ' + me()?.designationName : '' }}{{ brandName() ? ' · ' + brandName() : '' }}.
             {{ invoice() ? 'A draft invoice can be changed and take advance payments; issuing it numbers it and takes the items out of stock.'
+            : order() ? 'The customer’s confirmed order. Confirming it fixes it and sets the project to Confirmed; then make the invoice.'
             : 'Prices offered to a customer. Download the PDF to send it.' }}</p>
         }
       </div>
@@ -102,8 +106,17 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
               <p-button label="Rejected" icon="pi pi-times" [outlined]="true" severity="secondary" size="small" (onClick)="setStatus('REJECTED')" />
             }
             @if (d.status === 'REJECTED') { <p-button label="Open again" icon="pi pi-undo" [outlined]="true" size="small" (onClick)="setStatus('DRAFT')" /> }
+            @if (!d.invoiceId && d.status !== 'REJECTED' && canOrder()) {
+              <p-button label="Make sales order" icon="pi pi-check-square" [outlined]="true" size="small" (onClick)="makeOrder()" />
+            }
             @if (!d.invoiceId && d.status !== 'REJECTED' && canInvoice()) {
               <p-button label="Make invoice" icon="pi pi-receipt" size="small" (onClick)="makeInvoice()" />
+            }
+          } @else if (d.kind === 'SALES_ORDER') {
+            @if (d.status === 'DRAFT') { <p-button label="Confirm order" icon="pi pi-check-circle" severity="success" size="small" (onClick)="issue()" /> }
+            @if (d.status === 'ISSUED' && !d.invoiceId) {
+              <p-button label="Cancel order" icon="pi pi-ban" [outlined]="true" severity="danger" size="small" (onClick)="cancelOpen.set(true)" />
+              @if (canInvoice()) { <p-button label="Make invoice" icon="pi pi-receipt" size="small" (onClick)="makeInvoice()" /> }
             }
           } @else {
             @if (d.status === 'DRAFT') { <p-button label="Issue invoice" icon="pi pi-check-circle" severity="success" size="small" (onClick)="issue()" /> }
@@ -146,10 +159,10 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
                 }
               </div>
               <div class="pf">
-                <label for="se-date">{{ invoice() ? 'Invoice date' : 'Date' }} *</label>
+                <label for="se-date">{{ invoice() ? 'Invoice date' : order() ? 'Order date' : 'Date' }} *</label>
                 <p-datepicker inputId="se-date" dateFormat="dd/mm/yy" [showIcon]="true" [disabled]="!editable()" [ngModel]="docDate()" (ngModelChange)="docDate.set($event); dirty.set(true)" />
               </div>
-              @if (!invoice()) {
+              @if (quote()) {
                 <div class="pf">
                   <label for="se-valid">Valid until</label>
                   <p-datepicker inputId="se-valid" dateFormat="dd/mm/yy" [showIcon]="true" [disabled]="!editable()" [minDate]="docDate() ?? undefined"
@@ -180,6 +193,21 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
                 </div>
               }
             </div>
+            @if (editable()) {
+              <!-- copy the items of another bill into this one (not saved until Save) -->
+              <div class="copy-from">
+                <span class="copy-from__lbl"><i class="pi pi-copy" aria-hidden="true"></i> Copy items from</span>
+                <p-select [options]="copyKinds" optionLabel="label" optionValue="value" placeholder="Quotation, sales order or invoice" size="small"
+                          ariaLabel="Copy from: kind of bill" appendTo="body" [disabled]="!brandId()" [ngModel]="copyKind()" (ngModelChange)="pickCopyKind($event)"
+                          styleClass="copy-from__kind" />
+                <p-select [options]="copyOptions()" optionLabel="label" optionValue="value" [filter]="true" filterBy="label" size="small"
+                          [placeholder]="copyKind() ? (copyLoading() ? 'Loading…' : 'Choose the bill number') : 'Choose the kind first'"
+                          ariaLabel="Copy from: bill" appendTo="body" [disabled]="!copyKind() || copyLoading()" [ngModel]="null"
+                          (ngModelChange)="copyFrom($event)" styleClass="copy-from__bill" emptyMessage="No bills of this kind"
+                          emptyFilterMessage="No bill matches" />
+                <small class="muted">Its items are added below, not saved yet: change quantities, add or remove lines, then save.</small>
+              </div>
+            }
             <div class="lines">
               @for (l of lines(); track l.key; let i = $index) {
                 <div class="line" [class.free]="!l.itemId && freeKeys().has(l.key)">
@@ -214,12 +242,12 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
                     <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small" [ariaLabel]="'Remove line ' + (i + 1)" (onClick)="removeLine(l.key)" />
                   }
                 </div>
-              } @empty { <p class="p-empty">Add the items being {{ invoice() ? 'sold' : 'quoted' }}.</p> }
+              } @empty { <p class="p-empty">Add the items being {{ invoice() ? 'sold' : order() ? 'ordered' : 'quoted' }}.</p> }
             </div>
           </section>
 
           <section class="p-card">
-            <h2>Notes on the {{ invoice() ? 'invoice' : 'quotation' }}</h2>
+            <h2>Notes on the {{ names().one.toLowerCase() }}</h2>
             <div class="notes">
               <div class="pf"><label for="se-rem">Remarks</label>
                 <textarea pTextarea id="se-rem" rows="2" maxlength="1000" [autoResize]="true" [disabled]="!editable()" placeholder="Shown on the PDF"
@@ -275,7 +303,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
               }
               @if (sums().roundOff) { <dt>Round off</dt><dd>{{ sums().roundOff > 0 ? '+' : '−' }} {{ money(abs(sums().roundOff)) }}</dd> }
             </dl>
-            <div class="total"><span>{{ invoice() ? 'Total' : 'Quoted total' }}</span><b>{{ money(sums().total) }}</b></div>
+            <div class="total"><span>{{ invoice() ? 'Total' : order() ? 'Order total' : 'Quoted total' }}</span><b>{{ money(sums().total) }}</b></div>
             <div class="margin">
               <span>Supplier cost {{ money(cost()) }}</span>
               <span [class.neg]="marginValue() < 0">Margin {{ money(marginValue()) }}{{ cost() ? ' (' + marginPct() + '%)' : '' }}</span>
@@ -283,7 +311,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
             @if (formError()) { <p-message severity="error" styleClass="mt">{{ formError() }}</p-message> }
             @if (editable()) {
               <div class="p-actions">
-                <p-button [label]="isNew() ? 'Save ' + (invoice() ? 'draft invoice' : 'quotation') : 'Save changes'" icon="pi pi-check"
+                <p-button [label]="isNew() ? 'Save ' + (invoice() ? 'draft invoice' : names().one.toLowerCase()) : 'Save changes'" icon="pi pi-check"
                           [loading]="busy()" [disabled]="!isNew() && !dirty()" (onClick)="save()" />
                 @if (doc()?.canDelete) {
                   <p-button label="Delete" icon="pi pi-trash" [text]="true" severity="danger" (onClick)="remove()" />
@@ -299,14 +327,15 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
 
     <app-customer-form [(visible)]="customerOpen" [fixedBrand]="brandId()" [preset]="lastSearch()" (saved)="customerAdded($event)" />
 
-    <p-dialog header="Cancel this invoice" [modal]="true" [visible]="cancelOpen()" (visibleChange)="cancelOpen.set($event)"
+    <p-dialog [header]="order() ? 'Cancel this sales order' : 'Cancel this invoice'" [modal]="true" [visible]="cancelOpen()" (visibleChange)="cancelOpen.set($event)"
               [style]="{ width: '460px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }" [draggable]="false">
-      <p class="muted">Its items go back to stock and it stays in the list as cancelled. Refund any payments first.</p>
+      <p class="muted">{{ order() ? 'The customer called the order off. It stays in the list as cancelled; the quotation can be ordered again.'
+        : 'Its items go back to stock and it stays in the list as cancelled. Refund any payments first.' }}</p>
       <div class="pf"><label for="se-why">Reason *</label>
         <input pInputText id="se-why" maxlength="300" placeholder="e.g. Order changed; billed again as …" [ngModel]="cancelReason()" (ngModelChange)="cancelReason.set($event)" /></div>
       <ng-template #footer>
         <p-button label="Keep it" [text]="true" (onClick)="cancelOpen.set(false)" />
-        <p-button label="Cancel invoice" icon="pi pi-ban" severity="danger" [loading]="busy()" (onClick)="cancel()" />
+        <p-button [label]="order() ? 'Cancel order' : 'Cancel invoice'" icon="pi pi-ban" severity="danger" [loading]="busy()" (onClick)="cancel()" />
       </ng-template>
     </p-dialog>
   
@@ -322,6 +351,12 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
     </p-dialog>
   `,
   styles: `
+    .copy-from { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin: 0 0 12px; padding: 10px 12px;
+      background: #f6f9fd; border: 1px dashed #c9d8ea; border-radius: 10px; }
+    .copy-from__lbl { font-weight: 600; font-size: .88rem; display: inline-flex; gap: 6px; align-items: center; }
+    :host ::ng-deep .copy-from__kind { min-width: 200px; }
+    :host ::ng-deep .copy-from__bill { flex: 1 1 320px; min-width: 0; }
+    .copy-from small { flex-basis: 100%; font-size: .78rem; }
     .scan-log { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; max-height: 180px; overflow: auto; }
     .scan-log li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 10px; border-radius: 6px; background: var(--soft); font-size: .9rem; }
     :host ::ng-deep .paper { min-width: 128px; }
@@ -392,12 +427,84 @@ export class SalesEditor implements OnInit {
   protected readonly curLocale = computed(() => currencyLocale(this.cur()));
   protected readonly curSymbol = computed(() => CURRENCIES.find((c) => c.code === this.cur())?.symbol ?? '₹');
   protected readonly money = (v: number | null | undefined) => formatMoney(v, this.cur());
+
+  // ---- copy the items of another bill ----
+
+  protected readonly copyKinds = (Object.keys(DOC_KINDS) as DocKind[]).map((k) => ({ value: k, label: DOC_KINDS[k].one }));
+  protected readonly copyKind = signal<DocKind | null>(null);
+  protected readonly copyRows = signal<SalesRow[]>([]);
+  protected readonly copyLoading = signal(false);
+  /** The bills of the kind chosen (not cancelled, not this one): this customer's first, newest first. */
+  protected readonly copyOptions = computed(() => {
+    const me = this.doc()?.id;
+    const customer = this.customerId();
+    return this.copyRows()
+      .filter((r) => r.status !== 'CANCELLED' && r.id !== me)
+      .sort((a, b) => Number(b.customerId === customer) - Number(a.customerId === customer) || b.docDate.localeCompare(a.docDate) || b.id - a.id)
+      .map((r) => ({ value: r.id, label: `${r.number ?? 'Draft #' + r.id} · ${r.customerName} · ${r.docDate.split('-').reverse().join('/')} · ${this.money(r.total)}` }));
+  });
+
+  /** The kind of bill to copy from: its bills of this brand are listed (all of them, any date). */
+  protected pickCopyKind(kind: DocKind | null): void {
+    this.copyKind.set(kind);
+    this.copyRows.set([]);
+    if (!kind || !this.brandId()) return;
+    this.copyLoading.set(true);
+    const to = new Date();
+    to.setFullYear(to.getFullYear() + 1);
+    this.trade.salesList(kind, this.brandId(), new Date(2000, 0, 1), to).subscribe({
+      next: (rows) => {
+        this.copyRows.set(rows);
+        this.copyLoading.set(false);
+      },
+      error: (e) => {
+        this.copyLoading.set(false);
+        this.toast.add({ severity: 'error', summary: 'The bills could not be listed', detail: apiProblem(e).message });
+      },
+    });
+  }
+
+  /**
+   * The bill's items go into this one's lines (empty lines are dropped first), at the bill's quantities and rates;
+   * nothing is saved until Save. An item no longer sold by this brand comes in as an other line. With no customer
+   * chosen yet, the bill's customer is taken too.
+   */
+  protected copyFrom(id: number | null): void {
+    if (!id) return;
+    this.trade.salesDoc(id).subscribe({
+      next: (src) => {
+        const free = new Set(this.freeKeys());
+        const lines = src.lines.map((l) => {
+          const key = this.nextKey++;
+          const item = l.itemId ? this.itemById().get(l.itemId) : undefined;
+          const itemId = item && item.brand.id === this.brandId() ? item.id : null;
+          if (!itemId) free.add(key);
+          return { key, itemId, name: l.name, size: l.size ?? '', description: l.description ?? '', unit: l.unit ?? '',
+            hsnCode: l.hsnCode ?? '', quantity: l.quantity, rate: l.rate, unitCost: null };
+        });
+        this.lines.update((ls) => [...ls.filter((l) => l.itemId || l.name.trim()), ...lines]);
+        this.freeKeys.set(free);
+        if (!this.customerId() && src.customer) this.customerId.set(src.customer.id);
+        this.dirty.set(true);
+        const label = `${DOC_KINDS[src.kind].one} ${src.number ?? '(draft)'}`;
+        this.toast.add({ severity: 'success', summary: `${lines.length} ${lines.length === 1 ? 'item' : 'items'} copied from ${label}`,
+          detail: 'Not saved yet: change what you need, then save.' });
+      },
+      error: (e) => this.toast.add({ severity: 'error', summary: 'Not copied', detail: apiProblem(e).message }),
+    });
+  }
   protected readonly abs = Math.abs;
   protected readonly gstRates = GST_RATES;
-  protected readonly statusLabel = (s: DocStatus) => DOC_STATUS[s];
+  protected readonly statusLabel = (d: SalesDoc) => docStatus(d.kind, d.status);
+  protected readonly link = (kind: DocKind | null, id: number) => docLink(kind, id);
+  protected readonly kindName = (kind: DocKind | null) => DOC_KINDS[kind ?? 'QUOTATION'].one;
 
   protected readonly kind = signal<DocKind>(this.route.snapshot.data['kind']);
   protected readonly invoice = computed(() => this.kind() === 'INVOICE');
+  protected readonly order = computed(() => this.kind() === 'SALES_ORDER');
+  protected readonly quote = computed(() => this.kind() === 'QUOTATION');
+  protected readonly names = computed(() => DOC_KINDS[this.kind()]);
+  protected readonly canOrder = computed(() => this.auth.can('PROD_ORDERS'));
   protected readonly doc = signal<SalesDoc | null>(null);
   protected readonly isNew = computed(() => !this.doc());
   protected readonly ready = signal(false);
@@ -448,10 +555,10 @@ export class SalesEditor implements OnInit {
   protected readonly canInvoice = computed(() => this.auth.can('PROD_INVOICES'));
   protected readonly title = computed(() => {
     const d = this.doc();
-    if (!d) return this.invoice() ? 'New invoice' : 'New quotation';
-    return (d.kind === 'INVOICE' ? 'Invoice ' : 'Quotation ') + (d.number ?? '(draft)');
+    if (!d) return 'New ' + this.names().one.toLowerCase();
+    return DOC_KINDS[d.kind].one + ' ' + (d.number ?? '(draft)');
   });
-  protected readonly listLink = computed(() => (this.invoice() ? '/portal/products/invoices' : '/portal/products/quotations'));
+  protected readonly listLink = computed(() => this.names().route);
   protected readonly pay = computed(() => (this.doc() ? payLabel(this.doc()!.payStatus) : null));
   protected readonly customer = computed(() => this.customers().find((c) => c.id === this.customerId()) ?? null);
   protected readonly customerOptions = computed(() =>
@@ -491,7 +598,7 @@ export class SalesEditor implements OnInit {
           this.brandId.set(this.auth.user()?.brandId ?? this.brand.brandId());
           this.customerId.set(preset);
           this.projectId.set(Number(this.route.snapshot.queryParamMap.get('project')) || null);
-          if (!this.invoice()) this.validUntil.set(new Date(Date.now() + 15 * 86400000));
+          if (this.quote()) this.validUntil.set(new Date(Date.now() + 15 * 86400000));
           this.addLine(false);
           this.dirty.set(false);
         }
@@ -679,7 +786,7 @@ export class SalesEditor implements OnInit {
     if (this.discount() > this.sums().subtotal) return this.problem('The discount is more than the lines add up to.');
     return {
       kind: this.kind(), brandId: this.brandId(), customerId: this.customerId()!, projectId: this.projectId(), docDate: toIsoDate(this.docDate())!,
-      validUntil: this.invoice() ? null : toIsoDate(this.validUntil()),
+      validUntil: this.quote() ? toIsoDate(this.validUntil()) : null,
       lines: lines.map((l) => ({
         itemId: l.itemId, name: l.name.trim(), size: l.size.trim() || null, description: l.description.trim() || null,
         unit: l.unit.trim() || null, hsnCode: l.hsnCode.trim() || null, quantity: money(l.quantity!), rate: money(l.rate!),
@@ -728,6 +835,21 @@ export class SalesEditor implements OnInit {
     });
   }
 
+  /** The quotation into a draft sales order (items can then be removed or changed). */
+  protected makeOrder(): void {
+    const d = this.doc();
+    if (!d) return;
+    const go = () => this.trade.makeOrder(d.id).subscribe({
+      next: (o) => {
+        this.toast.add({ severity: 'success', summary: `Sales order ${o.number} made`, detail: 'Remove or change items as the customer asked, then confirm it.' });
+        this.router.navigate([DOC_KINDS.SALES_ORDER.route, o.id]);
+      },
+      error: (e) => this.toast.add({ severity: 'error', summary: 'Not made', detail: apiProblem(e).message }),
+    });
+    if (this.dirty() && this.editable()) this.save(() => go());
+    else go();
+  }
+
   protected makeInvoice(): void {
     const d = this.doc();
     if (!d) return;
@@ -745,6 +867,7 @@ export class SalesEditor implements OnInit {
   protected issue(): void {
     const d = this.doc();
     if (!d) return;
+    if (d.kind === 'SALES_ORDER') return this.confirmOrder(d);
     const stockLines = this.lines().filter((l) => l.itemId).length;
     this.confirm.confirm({
       header: 'Issue this invoice',
@@ -769,6 +892,26 @@ export class SalesEditor implements OnInit {
     });
   }
 
+  /** The customer confirmed: the order is fixed and its project moves to Confirmed. */
+  private confirmOrder(d: SalesDoc): void {
+    this.confirm.confirm({
+      header: 'Confirm this sales order',
+      message: 'It cannot be changed after this' + (d.projectId ? `, and project ${d.projectCode} moves to Confirmed` : '') + '. No stock moves until the invoice.',
+      icon: 'pi pi-check-circle', acceptLabel: 'Confirm order', rejectLabel: 'Not yet', rejectButtonProps: { outlined: true },
+      accept: () => {
+        const run = () => this.trade.issue(d.id).subscribe({
+          next: (x) => {
+            this.fill(x);
+            this.toast.add({ severity: 'success', summary: 'Sales order confirmed', detail: (x.number ?? '') + (x.projectCode ? ` · project ${x.projectCode} is Confirmed` : '') });
+          },
+          error: (e) => this.toast.add({ severity: 'error', summary: 'Not confirmed', detail: apiProblem(e).message, life: 8000 }),
+        });
+        if (this.dirty()) this.save(() => run());
+        else run();
+      },
+    });
+  }
+
   protected cancel(): void {
     const d = this.doc();
     if (!d) return;
@@ -779,7 +922,8 @@ export class SalesEditor implements OnInit {
         this.busy.set(false);
         this.cancelOpen.set(false);
         this.fill(x);
-        this.toast.add({ severity: 'success', summary: 'Invoice cancelled', detail: 'Its items went back to stock.' });
+        this.toast.add(x.kind === 'SALES_ORDER' ? { severity: 'success', summary: 'Sales order cancelled' }
+          : { severity: 'success', summary: 'Invoice cancelled', detail: 'Its items went back to stock.' });
       },
       error: (e) => {
         this.busy.set(false);
@@ -793,7 +937,7 @@ export class SalesEditor implements OnInit {
     if (!d) return;
     this.confirm.confirm({
       header: 'Delete',
-      message: `Delete this ${d.kind === 'INVOICE' ? 'draft invoice' : 'quotation'}?`,
+      message: `Delete this ${d.kind === 'INVOICE' ? 'draft invoice' : DOC_KINDS[d.kind].one.toLowerCase()}?`,
       icon: 'pi pi-trash',
       acceptLabel: 'Delete',
       rejectLabel: 'Keep',
@@ -826,7 +970,7 @@ export class SalesEditor implements OnInit {
         next: (blob) => {
           busy.set(false);
           if (print) printPdf(blob);
-          else saveFile(blob, `${x.kind === 'INVOICE' ? 'Invoice' : 'Quotation'}-${x.number ?? 'draft-' + x.id}${size === 'A4' ? '' : '-' + size.toLowerCase()}.pdf`);
+          else saveFile(blob, `${DOC_KINDS[x.kind].one.replace(' ', '-')}-${x.number ?? 'draft-' + x.id}${size === 'A4' ? '' : '-' + size.toLowerCase()}.pdf`);
         },
         error: () => {
           busy.set(false);

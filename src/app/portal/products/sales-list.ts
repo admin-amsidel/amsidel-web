@@ -18,14 +18,16 @@ import { TagModule } from 'primeng/tag';
 import { rupees, rupeesRound } from '../payroll/payroll.models';
 import { apiProblem } from '../portal.models';
 import { BrandPick, TradeBrand } from './trade-brand';
-import { DOC_STATUS, DocKind, fyRange, monthRange, payLabel, SalesRow } from './trade.models';
+import {
+  DOC_STATUS, DocKind, fyRange, monthRange, payLabel, SalesRow, DOC_KINDS, docStatus,
+} from './trade.models';
 import { TradeService } from './trade.service';
 import { phoneMatches } from '../phone-input';
 
 type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
 
 /**
- * Sales > Quotations, and Sales > Invoices: the bills of a period, by date, with their customer, status and money;
+ * Sales > Quotations, Sales orders and Invoices: the bills of a period, by date, with their customer, status and money;
  * invoices also with what is paid and due. Opening a row opens the bill.
  */
 @Component({
@@ -37,22 +39,25 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
   template: `
     <div class="p-head">
       <div>
-        <h1>{{ invoices() ? 'Invoices' : 'Quotations' }}</h1>
+        <h1>{{ names().many }}</h1>
         <p>{{ invoices()
           ? 'Final bills: issuing one numbers it and takes its items out of stock. Record the payments on each.'
-          : 'Prices offered to customers. Send the PDF, then make an accepted one into an invoice.' }}</p>
+          : orders() ? 'The customer’s confirmed order, made from a quotation (items removed or changed). Confirming it sets the project to Confirmed; then make the invoice.'
+          : 'Prices offered to customers. Send the PDF, then make an accepted one into a sales order or an invoice.' }}</p>
       </div>
       <div class="head-actions">
         <app-brand-pick (changed)="load()" />
-        <p-button [label]="invoices() ? 'New invoice' : 'New quotation'" icon="pi pi-plus" (onClick)="create()" />
+        <p-button [label]="'New ' + names().one.toLowerCase()" icon="pi pi-plus" (onClick)="create()" />
       </div>
     </div>
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
 
     <section class="tiles">
-      <article class="tile"><span class="lbl">{{ invoices() ? 'Invoices' : 'Quotations' }}</span><b class="big">{{ sums().count }}</b>
-        <span class="meta">{{ invoices() ? sums().issued + ' issued · ' + sums().drafts + ' draft' : sums().open + ' open · ' + sums().accepted + ' accepted' }}</span></article>
-      <article class="tile"><span class="lbl">{{ invoices() ? 'Billed' : 'Quoted' }}</span><b class="big">{{ round(sums().total) }}</b><span class="meta">{{ invoices() ? 'issued invoices' : 'all quotations' }}</span></article>
+      <article class="tile"><span class="lbl">{{ names().many }}</span><b class="big">{{ sums().count }}</b>
+        <span class="meta">{{ invoices() ? sums().issued + ' issued · ' + sums().drafts + ' draft' : orders() ? sums().issued + ' confirmed · ' + sums().drafts + ' draft'
+          : sums().open + ' open · ' + sums().accepted + ' accepted' }}</span></article>
+      <article class="tile"><span class="lbl">{{ invoices() ? 'Billed' : orders() ? 'Ordered' : 'Quoted' }}</span><b class="big">{{ round(sums().total) }}</b>
+        <span class="meta">{{ invoices() ? 'issued invoices' : orders() ? 'confirmed orders' : 'all quotations' }}</span></article>
       @if (invoices()) {
         <article class="tile"><span class="lbl">Received</span><b class="big">{{ round(sums().paid) }}</b><span class="meta">on these invoices</span></article>
         <article class="tile tile--warn"><span class="lbl">Still due</span><b class="big">{{ round(sums().due) }}</b><span class="meta">{{ sums().unpaid }} not fully paid</span></article>
@@ -77,7 +82,7 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
           <tr>
             <th>Number</th><th>Date</th><th>Customer</th><th>Status</th>
             <th class="num">Total</th>
-            @if (invoices()) { <th class="num">Paid</th><th class="num">Due</th> } @else { <th>Valid until</th> }
+            @if (invoices()) { <th class="num">Paid</th><th class="num">Due</th> } @else if (!orders()) { <th>Valid until</th> }
           </tr>
         </ng-template>
         <ng-template #body let-d>
@@ -93,7 +98,7 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
             @if (invoices()) {
               <td data-label="Paid" class="num">{{ money(d.paid) }}</td>
               <td data-label="Due" class="num" [class.due]="d.due > 0">{{ d.due > 0 ? money(d.due) : '—' }}</td>
-            } @else {
+            } @else if (!orders()) {
               <td data-label="Valid until" class="nowrap" [class.due]="expired(d)">{{ d.validUntil ? (d.validUntil | date: 'd MMM y') : '—' }}</td>
             }
           </tr>
@@ -127,11 +132,13 @@ export class SalesList implements OnInit {
   protected readonly brand = inject(TradeBrand);
   protected readonly money = rupees;
   protected readonly round = rupeesRound;
-  protected readonly status = (d: SalesRow) => DOC_STATUS[d.status];
+  protected readonly status = (d: SalesRow) => docStatus(d.kind, d.status);
   protected readonly pay = (d: SalesRow) => payLabel(d.payStatus);
 
   protected readonly kind = signal<DocKind>(this.route.snapshot.data['kind']);
   protected readonly invoices = computed(() => this.kind() === 'INVOICE');
+  protected readonly orders = computed(() => this.kind() === 'SALES_ORDER');
+  protected readonly names = computed(() => DOC_KINDS[this.kind()]);
   protected readonly rows = signal<SalesRow[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal('');
@@ -197,10 +204,10 @@ export class SalesList implements OnInit {
   }
 
   protected create(): void {
-    this.router.navigate([this.invoices() ? '/portal/products/invoices' : '/portal/products/quotations', 'new']);
+    this.router.navigate([this.names().route, 'new']);
   }
 
   protected open(d: SalesRow): void {
-    this.router.navigate([this.invoices() ? '/portal/products/invoices' : '/portal/products/quotations', d.id]);
+    this.router.navigate([this.names().route, d.id]);
   }
 }

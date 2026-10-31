@@ -18,7 +18,9 @@ import { rupees, rupeesRound } from '../payroll/payroll.models';
 import { apiProblem } from '../portal.models';
 import { CustomerForm } from './customer-form';
 import { BrandPick, TradeBrand } from './trade-brand';
-import { Customer, DOC_STATUS, HistoryEntry, payLabel, SalesRow } from './trade.models';
+import {
+  Customer, DOC_STATUS, HistoryEntry, payLabel, SalesRow, docLink,
+} from './trade.models';
 import { TradeService } from './trade.service';
 import { phoneMatches } from '../phone-input';
 import { HistoryList } from './history-list';
@@ -104,7 +106,7 @@ import { HistoryList } from './history-list';
         <ul class="docs">
           @for (d of docs(); track d.id) {
             <li>
-              <a [routerLink]="(d.kind === 'INVOICE' ? '/portal/products/invoices/' : '/portal/products/quotations/') + d.id">
+              <a [routerLink]="docLink(d.kind, d.id)">
                 <b>{{ d.kind === 'INVOICE' ? 'Invoice' : 'Quotation' }} {{ d.number ?? '(draft)' }}</b></a>
               <p-tag [value]="status(d).label" [severity]="status(d).severity" styleClass="tiny" />
               @if (pay(d); as p) { <p-tag [value]="p.label" [severity]="p.severity" styleClass="tiny" /> }
@@ -139,6 +141,7 @@ import { HistoryList } from './history-list';
   `,
 })
 export class Customers implements OnInit {
+  protected readonly docLink = docLink;
   private readonly trade = inject(TradeService);
   protected readonly brand = inject(TradeBrand);
   protected readonly money = rupees;

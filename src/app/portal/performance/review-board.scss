@@ -144,3 +144,80 @@ textarea[rows="4"] { min-height: 6.7rem; }
   .entries li .e-main { grid-column: 1 / -1; grid-row: 2; }
 }
 @media (max-width: 760px) { .trow.trow--sales { grid-template-columns: 1fr 140px; } }
+
+/* sales-order goals: target and achieved, the month-wise report and the orders */
+.goal--orders { border-left: 4px solid #1f7a45; }
+.hl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 6px 0 14px; }
+.hl__box { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: #f3f6fa; border: 1px solid var(--line); }
+.hl__box span { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.hl__box b { font-size: 1.25rem; }
+.hl__box small { color: var(--muted); font-size: .78rem; }
+.hl__box--ok { background: #e8f6ee; border-color: #b7e2c6; }
+.hl__box--ok b { color: #1f7a45; }
+.mr { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+.mr__head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+:host ::ng-deep .mr__pick { min-width: 210px; }
+.mr__table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.mr__table th { text-align: left; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.mr__table td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
+.mr__table tbody tr { cursor: default; }
+.mr__table tbody tr.click { cursor: pointer; }
+.mr__table tbody tr:hover { background: var(--soft); }
+.mr__table tbody tr.on { background: #e8f1fb; font-weight: 600; }
+.mr__table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.orders-note { margin: 16px 0 0; display: flex; gap: 6px; align-items: center; }
+@media (max-width: 760px) {
+  .hl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+/* month-wise report: + / - opens a month's orders and their invoices */
+.mr__month { white-space: nowrap; }
+.mr__fold { width: 22px; height: 22px; margin-right: 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff;
+  color: var(--ink); cursor: pointer; display: inline-grid; place-items: center; vertical-align: middle; padding: 0; }
+.mr__fold i { font-size: .7rem; }
+.mr__fold:hover:not(:disabled) { background: var(--soft); }
+.mr__fold:disabled { opacity: .35; cursor: default; }
+.mr__table tbody tr.mr__sub { cursor: default; background: #fafcff; }
+.mr__table tbody tr.mr__sub:hover { background: #fafcff; }
+.mr__sub > td { padding: 6px 6px 10px 36px; }
+.mr__inner { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.mr__inner th { font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+.mr__inner td { padding: 5px 6px; border-bottom: 1px dashed var(--line); vertical-align: top; }
+.mr__inner tr:last-child td { border-bottom: 0; }
+.mr__inner .num { text-align: right; }
+.mr__inner a { color: var(--brass-dark, #1d5fa3); text-decoration: none; }
+.mr__inner .block { display: block; font-size: .74rem; }
+
+.no-orders { margin: 4px 0 0; }
+.th-note { display: block; font-size: .6rem; letter-spacing: .06em; text-transform: none; font-weight: 500; }
+.mr__table td.muted, .mr__inner td.muted { color: var(--muted); }
+
+/* ---- phones ---- */
+@media (max-width: 760px) {
+  /* a goal's heading: the title across the full width, its type, weight and buttons on the line under it */
+  .goal { padding: 14px 12px; }
+  .goal__head { flex-wrap: wrap; align-items: flex-start; gap: 4px 8px; }
+  .goal__titles { flex: 1 1 calc(100% - 40px); }
+  .goal__right { flex: 1 1 100%; flex-wrap: wrap; gap: 4px; padding-left: 38px; }
+  /* the month-wise report as stacked cards: each month, then (opened) each order, label above value */
+  .mr { padding: 10px; }
+  .mr__head { flex-wrap: wrap; }
+  :host ::ng-deep .mr__pick { min-width: 0; width: 100%; }
+  .mr__table, .mr__table > tbody, .mr__inner, .mr__inner > tbody { display: block; width: 100%; }
+  .mr__table > thead, .mr__inner > thead { display: none; }
+  .mr__table > tbody > tr:not(.mr__sub) { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px 4px;
+    border-bottom: 1px solid var(--line); }
+  .mr__table > tbody > tr > td { border: 0; padding: 0; text-align: left; }
+  .mr__table td.mr__month { grid-column: 1 / -1; font-weight: 600; font-size: .95rem; }
+  .mr__table td[data-label]::before, .mr__inner td[data-label]::before { content: attr(data-label); display: block; font-size: .64rem;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 1px; }
+  .mr__table > tbody > tr.mr__sub { display: block; padding: 0 0 10px; border-bottom: 1px solid var(--line); }
+  .mr__sub > td { display: block; padding: 0; }
+  .mr__inner > tbody { display: grid; gap: 8px; }
+  .mr__inner tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 10px; background: #fff;
+    border: 1px solid var(--line); border-radius: 10px; }
+  .mr__inner td { border: 0; padding: 0; text-align: left; }
+  .mr__inner td.wide { grid-column: 1 / -1; }
+  .mr__inner .num { text-align: left; }
+  .hl__box b { font-size: 1.05rem; }
+}

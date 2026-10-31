@@ -81,6 +81,20 @@ export const PRODUCT_ROUTES: Routes = [
     loadComponent: () => import('./sales-editor').then((m) => m.SalesEditor),
   },
   {
+    path: 'sales-orders',
+    title: 'Sales orders' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_ORDERS', kind: 'SALES_ORDER' },
+    loadComponent: () => import('./sales-list').then((m) => m.SalesList),
+  },
+  {
+    path: 'sales-orders/:id',
+    title: 'Sales order' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_ORDERS', kind: 'SALES_ORDER' },
+    loadComponent: () => import('./sales-editor').then((m) => m.SalesEditor),
+  },
+  {
     path: 'invoices',
     title: 'Invoices' + T,
     canActivate: [menuGuard],

@@ -29,6 +29,8 @@ import {
   SkillCategory,
 } from './perf.models';
 import { PerfService } from './perf.service';
+import { AuthService } from '../auth.service';
+import { RouterLink } from '@angular/router';
 import { StarInput } from './star-input';
 import { Stars } from './stars';
 
@@ -55,7 +57,7 @@ interface TaskDraft {
 @Component({
   selector: 'app-review-board',
   imports: [
-    FormsModule, NgTemplateOutlet, Avatar, Stars, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputNumberModule, InputTextModule, MessageModule,
+    FormsModule, NgTemplateOutlet, RouterLink, Avatar, Stars, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputNumberModule, InputTextModule, MessageModule,
     ProgressBarModule, ProgressTone, SelectModule, SelectButtonModule, StarInput, SliderModule, TabsModule, TagModule, TextareaModule,
   ],
   templateUrl: './review-board.html',
@@ -65,6 +67,7 @@ export class ReviewBoard {
   private readonly perf = inject(PerfService);
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
+  private readonly auth = inject(AuthService);
 
   readonly review = input.required<ReviewView>();
   readonly changed = output<void>();
@@ -83,6 +86,94 @@ export class ReviewBoard {
   protected money(v: number | null | undefined): string {
     const n = v ?? 0;
     return this.review().currencySymbol + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  }
+
+  // ---- sales-order goals: the month-wise report ----
+
+  /** The month chosen per goal (null = all). */
+  protected readonly months = signal<Record<number, string | null>>({});
+  protected readonly abs = Math.abs;
+
+  protected canSee(menu: string): boolean {
+    return this.auth.can(menu);
+  }
+
+  protected monthOf(g: Goal): string | null {
+    return this.months()[g.id] ?? null;
+  }
+
+  /** A month picked: the report shows only it, opened; "All months": every month again. */
+  protected pickMonth(g: Goal, month: string | null): void {
+    this.months.update((m) => ({ ...m, [g.id]: month }));
+    if (month && !this.monthOpen(g, month)) this.toggleMonth(g, month);
+  }
+
+  /** The report's months: all of them, or the one picked. */
+  protected shownMonths(g: Goal) {
+    const m = this.monthOf(g);
+    const rows = this.monthRows(g);
+    return m ? rows.filter((r) => r.month === m) : rows;
+  }
+
+  /** "Oct 2026" for "2026-10". */
+  protected monthLabel(month: string): string {
+    const [y, m] = month.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  }
+
+  /** Every month of the goal (to today), with its orders, amount and the running total. */
+  protected monthRows(g: Goal): { month: string; label: string; count: number; amount: number; withGst: number; running: number; pct: number }[] {
+    const rows = [];
+    const [sy, sm] = g.startDate.split('-').map(Number);
+    // to today, or to the latest month with an order (orders may be dated ahead), never past the goal's end
+    const end = g.endDate.slice(0, 7);
+    const latest = [this.review().today.slice(0, 7), ...g.orders.map((o) => o.month)].reduce((a, b) => (b > a ? b : a));
+    const last = latest < end ? latest : end;
+    let running = 0;
+    for (let d = new Date(sy, sm - 1, 1); ; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (month > last && rows.length) break;
+      const list = g.orders.filter((o) => o.month === month);
+      const amount = this.sumOf(list);
+      running += amount;
+      const target = g.targetAmount ?? 0;
+      // amount and the running total are before GST (what counts towards the target); withGst is shown beside it
+      const withGst = list.reduce((t, o) => t + o.total, 0);
+      rows.push({ month, label: this.monthLabel(month), count: list.length, amount, withGst, running, pct: target ? Math.round((running / target) * 1000) / 10 : 0 });
+      if (month >= last) break;
+    }
+    return rows;
+  }
+
+  protected monthOptions(g: Goal): { value: string | null; label: string }[] {
+    return [{ value: null, label: 'All months' },
+      ...this.monthRows(g).map((m) => ({ value: m.month, label: `${m.label} · ${m.count} ${m.count === 1 ? 'order' : 'orders'}` }))];
+  }
+
+  /** Months opened (+) in the month-wise report, per goal: all closed at first. */
+  protected readonly openMonths = signal<ReadonlySet<string>>(new Set());
+
+  protected monthOpen(g: Goal, month: string): boolean {
+    return this.openMonths().has(`${g.id}:${month}`);
+  }
+
+  protected toggleMonth(g: Goal, month: string): void {
+    const key = `${g.id}:${month}`;
+    this.openMonths.update((s) => {
+      const next = new Set(s);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  protected ordersIn(g: Goal, month: string) {
+    return g.orders.filter((o) => o.month === month);
+  }
+
+
+  protected sumOf(list: { amount: number }[]): number {
+    return list.reduce((t, o) => t + o.amount, 0);
   }
 
   // ---- goals and sub-tasks: minimised or expanded ----
@@ -367,12 +458,14 @@ export class ReviewBoard {
 
   protected saveGoal(): void {
     this.gError.set('');
-    const tasks = this.gTasks();
     const sales = this.gType() === 'SALES';
+    const orders = this.gType() === 'SALES_ORDER';
+    // a sales-order goal has no sub-tasks: its lines are the confirmed orders
+    const tasks = orders ? [] : this.gTasks();
     if (!this.gTitle().trim() || !this.gWeight() || !this.gStart() || !this.gEnd()) {
       return this.gError.set('Give the goal a title, a weightage and its dates.');
     }
-    if (sales && !(this.gTarget()! > 0)) {
+    if ((sales || orders) && !(this.gTarget()! > 0)) {
       return this.gError.set("Give the goal's target amount.");
     }
     if (tasks.some((t) => !t.title.trim() || !t.start || !t.end || (sales ? !(t.target! > 0) : !t.weightage))) {
@@ -387,12 +480,12 @@ export class ReviewBoard {
     const body: GoalBody = {
       title: this.gTitle().trim(),
       type: this.gType(),
-      targetAmount: sales ? this.gTarget() : null,
+      targetAmount: sales || orders ? this.gTarget() : null,
       description: this.gDescription().trim() || null,
       weightage: this.gWeight()!,
       startDate: toIsoDate(this.gStart())!,
       endDate: toIsoDate(this.gEnd())!,
-      tasks: tasks.map((t) => ({ id: t.id, title: t.title.trim(), weightage: sales ? null : t.weightage!, targetAmount: sales ? t.target : null,
+      tasks: orders ? [] : tasks.map((t) => ({ id: t.id, title: t.title.trim(), weightage: sales ? null : t.weightage!, targetAmount: sales ? t.target : null,
         startDate: toIsoDate(t.start)!, endDate: toIsoDate(t.end)! })),
     };
     const r = this.review();

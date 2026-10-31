@@ -62,7 +62,8 @@
       @for (g of r.goals; track g.id) {
         @let open = isGoalOpen(g);
         @let sales = g.type === 'SALES';
-        <article class="goal" [class.goal--sales]="sales" [class.goal--min]="!open">
+        @let orders = g.type === 'SALES_ORDER';
+        <article class="goal" [class.goal--sales]="sales" [class.goal--orders]="orders" [class.goal--min]="!open">
           <header class="goal__head">
             <button type="button" class="fold" [attr.aria-expanded]="open" [attr.aria-label]="(open ? 'Minimise ' : 'Expand ') + g.title" (click)="toggleGoal(g)">
               <i [class]="open ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" aria-hidden="true"></i>
@@ -70,11 +71,12 @@
             <div class="goal__titles" (click)="toggleGoal(g)">
               <h3>{{ g.title }}</h3>
               <span class="muted">{{ date(g.startDate) }} – {{ date(g.endDate) }}
-                @if (sales) { · target {{ money(g.targetAmount) }} }
-                @if (!open) { · {{ sales ? money(g.achievedAmount) + ' achieved, ' + g.achievedPercent + '%' : g.progress + '% done' }} }</span>
+                @if (sales || orders) { · target {{ money(g.targetAmount) }} }
+                @if (!open) { · {{ sales || orders ? money(g.achievedAmount) + ' achieved, ' + g.achievedPercent + '%' : g.progress + '% done' }} }</span>
             </div>
             <div class="goal__right">
               @if (sales) { <p-tag value="Sales & marketing" icon="pi pi-chart-line" severity="info" /> }
+              @if (orders) { <p-tag value="Sales orders" icon="pi pi-check-square" severity="success" /> }
               <p-tag [value]="g.weightage + '%'" severity="secondary" />
               @if (g.canEdit) {
                 <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Edit goal" (onClick)="editGoal(g)" />
@@ -94,6 +96,75 @@
               <p-progressbar [value]="g.progress" [showValue]="false" styleClass="bar" />
               <b>{{ g.progress }}%</b>
             </div>
+            @if (orders) {
+              <!-- target and achieved, then the month-wise report and the orders behind it -->
+              <div class="hl">
+                <div class="hl__box"><span>Target</span><b>{{ money(g.targetAmount) }}</b></div>
+                <div class="hl__box hl__box--ok"><span>Achieved · without GST</span><b>{{ money(g.achievedAmount) }}</b><small>{{ g.orders.length }} confirmed {{ g.orders.length === 1 ? 'order' : 'orders' }}</small></div>
+                <div class="hl__box"><span>{{ (g.achievedAmount ?? 0) >= (g.targetAmount ?? 0) ? 'Passed by' : 'Still to go' }}</span><b>{{ money(abs((g.targetAmount ?? 0) - (g.achievedAmount ?? 0))) }}</b></div>
+                <div class="hl__box" [class.hl__box--ok]="(g.achievedPercent ?? 0) >= 100"><span>Of target</span><b>{{ g.achievedPercent }}%</b><small>by {{ date(g.endDate) }}</small></div>
+              </div>
+              <div class="mr">
+                <div class="mr__head">
+                  <b>Month-wise report</b>
+                  <p-select [options]="monthOptions(g)" optionLabel="label" optionValue="value" [ngModel]="monthOf(g)" (ngModelChange)="pickMonth(g, $event)"
+                            ariaLabel="Month" size="small" styleClass="mr__pick" appendTo="body" />
+                </div>
+                <table class="mr__table">
+                  <thead><tr><th>Month</th><th class="num">Orders</th><th class="num">Without GST</th><th class="num">With GST</th>
+                    <th class="num" title="The months added up from the goal's start, without GST: what counts towards the target">Running total<small class="th-note">without GST</small></th>
+                    <th class="num">Of target</th></tr></thead>
+                  <tbody>
+                    @for (m of shownMonths(g); track m.month) {
+                      @let shut = !monthOpen(g, m.month);
+                      <tr [class.on]="!shut" [class.click]="m.count > 0" (click)="m.count && toggleMonth(g, m.month)" tabindex="0"
+                          (keydown.enter)="m.count && toggleMonth(g, m.month)">
+                        <td class="mr__month">
+                          <button type="button" class="mr__fold" [disabled]="!m.count" [attr.aria-expanded]="!shut"
+                                  [attr.aria-label]="(shut ? 'Show the orders and invoices of ' : 'Hide the orders and invoices of ') + m.label"
+                                  (click)="toggleMonth(g, m.month); $event.stopPropagation()">
+                            <i [class]="shut ? 'pi pi-plus' : 'pi pi-minus'" aria-hidden="true"></i>
+                          </button>{{ m.label }}</td>
+                        <td class="num" data-label="Orders">{{ m.count }}</td><td class="num" data-label="Without GST"><b>{{ money(m.amount) }}</b></td>
+                        <td class="num muted" data-label="With GST">{{ money(m.withGst) }}</td>
+                        <td class="num" data-label="Running total (without GST)">{{ money(m.running) }}</td><td class="num" data-label="Of target">{{ m.pct }}%</td>
+                      </tr>
+                      @if (!shut) {
+                        <!-- the month's orders with the invoices made from them -->
+                        <tr class="mr__sub">
+                          <td colspan="6">
+                            <table class="mr__inner">
+                              <thead><tr><th>Order date</th><th>Sales order</th><th>Customer · project</th><th>Invoice</th><th class="num">Without GST</th><th class="num">With GST</th></tr></thead>
+                              <tbody>
+                                @for (o of ordersIn(g, m.month); track o.id) {
+                                  @let invText = o.invoiceStatus === 'DRAFT' ? 'Draft invoice' : o.invoiceNumber;
+                                  <tr>
+                                    <td data-label="Order date">{{ date(o.confirmedOn) }}</td>
+                                    <td data-label="Sales order">@if (canSee('PROD_ORDERS')) { <a [routerLink]="'/portal/products/sales-orders/' + o.id">{{ o.number }}</a> } @else { {{ o.number }} }</td>
+                                    <td data-label="Customer · project" class="wide">{{ o.customerName }}{{ o.projectCode ? ' · ' + o.projectCode : '' }}</td>
+                                    <td data-label="Invoice" class="wide">
+                                      @if (o.invoiceId) {
+                                        @if (canSee('PROD_INVOICES')) { <a [routerLink]="'/portal/products/invoices/' + o.invoiceId"><i class="pi pi-receipt" aria-hidden="true"></i> {{ invText }}</a> }
+                                        @else { <i class="pi pi-receipt" aria-hidden="true"></i> {{ invText }} }
+                                        <small class="muted"> · {{ o.invoiceStatus === 'ISSUED' ? 'issued' : o.invoiceStatus === 'DRAFT' ? 'not issued yet' : o.invoiceStatus?.toLowerCase() }}</small>
+                                      } @else { <span class="muted">No invoice yet</span> }
+                                    </td>
+                                    <td class="num" data-label="Without GST"><b>{{ money(o.amount) }}</b></td><td class="num muted" data-label="With GST">{{ money(o.total) }}</td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+              @if (!g.orders.length) {
+                <p class="muted small no-orders">No confirmed orders yet: each confirmed order dated in the goal's dates, on a project {{ r.employee.name }} is allocated to, is added here.</p>
+              }
+            }
             @if (sales) {
               <p class="sales-sum">
                 <b>{{ money(g.achievedAmount) }}</b> achieved of <b>{{ money(g.targetAmount) }}</b> target
@@ -143,7 +214,7 @@
                   }
                 </ul>
               }
-            } @else if (!sales && canMove(g)) {
+            } @else if (!sales && !orders && canMove(g)) {
               <div class="tasks one">
                 <span class="muted">No sub-tasks: move the goal's own progress.</span>
                 <p-slider [ngModel]="g.progress" [step]="5" [min]="0" [max]="100" styleClass="slider"
@@ -154,12 +225,12 @@
             <div class="ratings">
               <div class="rating">
                 <span class="lbl">Self rating</span>
-                @if (sales) {
+                @if (sales || orders) {
                   @if (g.selfRating) {
                     <span class="given"><app-stars [value]="g.selfRating" [decimals]="1" /></span>
-                    <small class="muted">From the amounts: {{ g.achievedPercent }}% of the target (5 stars = target met).</small>
+                    <small class="muted">From the {{ orders ? 'confirmed orders' : 'amounts' }}: {{ g.achievedPercent }}% of the target (5 stars = target met).</small>
                   } @else {
-                    <span class="muted">Shows once achievements are recorded.</span>
+                    <span class="muted">{{ orders ? 'Shows once an order is confirmed.' : 'Shows once achievements are recorded.' }}</span>
                   }
                 } @else if (editingRating(g, 'self')) {
                   @let d = draft(g, 'self');
@@ -193,7 +264,7 @@
                   @if (g.managerComment) { <p class="cmt">“{{ g.managerComment }}”</p> }
                   <small class="muted">by {{ g.managerRatedBy }}</small>
                 } @else {
-                  <span class="muted">{{ sales ? 'Once achievements are recorded, or from ' + date(g.endDate) : 'After the self-rating' }}</span>
+                  <span class="muted">{{ (sales || orders) && g.selfRating ? 'Not rated yet' : sales ? 'Once achievements are recorded, or from ' + date(g.endDate) : orders ? 'Once an order is confirmed, or from ' + date(g.endDate) : 'After the self-rating' }}</span>
                 }
               </div>
             </div>
@@ -324,6 +395,7 @@
       </p-selectbutton>
       <small class="hint">
         @if (gType() === 'SALES') { A target amount; {{ r.employee.name }} records what they achieved (amount, dates, invoice numbers) and the progress and self rating follow on their own. }
+        @else if (gType() === 'SALES_ORDER') { A target amount (e.g. for the year). Every confirmed sales order whose order date is between the dates, on a project {{ r.employee.name }} is an allocated employee of, is added on its own by month, whoever made it; progress and stars follow the total (before GST). }
         @else { Progress moved by hand; {{ r.employee.name }} rates it in stars after the end date. }
         @if (gLocked()) { Achievements are recorded, so it stays a sales goal. }
       </small>
@@ -337,7 +409,7 @@
       <label for="g-desc">Description</label>
       <textarea pTextarea id="g-desc" rows="2" [autoResize]="true" maxlength="2000" [ngModel]="gDescription()" (ngModelChange)="gDescription.set($event)"></textarea>
     </div>
-    @if (gType() === 'SALES') {
+    @if (gType() !== 'GENERAL') {
       <div class="pf span">
         <label for="g-target">Target amount *</label>
         <p-inputnumber inputId="g-target" [min]="0" [maxFractionDigits]="2" [prefix]="r.currencySymbol + ' '" locale="en-IN"
@@ -361,6 +433,9 @@
     </div>
   </div>
 
+  @if (gType() === 'SALES_ORDER') {
+    <p class="muted small orders-note"><i class="pi pi-info-circle" aria-hidden="true"></i> No sub-tasks: each confirmed sales order is a line of this goal.</p>
+  } @else {
   <div class="bar sub">
     <h4>Sub-tasks
       @if (gType() === 'SALES') { <small class="muted" [class.warn]="gTasks().length && taskTargetTotal() !== (gTarget() ?? 0)">({{ money(taskTargetTotal()) }} of {{ money(gTarget()) }})</small> }
@@ -383,6 +458,7 @@
   } @empty {
     <p class="muted small">{{ gType() === 'SALES' ? 'No sub-tasks: achievements are recorded against the goal itself. With sub-tasks, their targets must add up to the goal\'s target.'
       : 'No sub-tasks: the goal\'s own progress is used. With sub-tasks, their weights must add up to 100%.' }}</p>
+  }
   }
   @if (gRated()) { <p-message severity="info" styleClass="dlg-msg">This goal is already rated. The ratings, comments and progress stay as they are.</p-message> }
   @if (gError()) { <p-message severity="error" styleClass="dlg-msg">{{ gError() }}</p-message> }

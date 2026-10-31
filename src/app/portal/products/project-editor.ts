@@ -29,8 +29,7 @@ import { ProjectStages } from './project-stages';
 import { ProjectStatusService, ProjectStatusView } from './project-status.service';
 import { TradeBrand } from './trade-brand';
 import {
-  Customer, DOC_STATUS, PAY_MODES, payLabel, PersonRef, Project, ProjectBody, ProjectStatus, TASK_STATUS, TASK_STATUS_OPTIONS, TaskStatus,
-  ProjectTask, SalesRow, TaskBody,
+  Customer, DOC_STATUS, PAY_MODES, payLabel, PersonRef, Project, ProjectBody, ProjectStatus, TASK_STATUS, TASK_STATUS_OPTIONS, TaskStatus, ProjectTask, SalesRow, TaskBody, docLink,
 } from './trade.models';
 import { TradeService } from './trade.service';
 
@@ -159,7 +158,7 @@ import { TradeService } from './trade.service';
                         <small class="muted block">Registered {{ t.regDate | date: 'd MMM y' }} · {{ t.startDate ? (t.startDate | date: 'd MMM') : '—' }} to
                           {{ t.endDate ? (t.endDate | date: 'd MMM y') : '—' }}{{ t.assignee ? ' · ' + t.assignee.name : '' }}</small>
                         @if (t.billNumber) {
-                          <a class="bill" [routerLink]="(t.billKind === 'INVOICE' ? '/portal/products/invoices/' : '/portal/products/quotations/') + t.billId">
+                          <a class="bill" [routerLink]="docLink(t.billKind, t.billId!)">
                             <i class="pi pi-receipt" aria-hidden="true"></i> {{ t.billNumber }}</a>
                         }
                       </div>
@@ -200,7 +199,7 @@ import { TradeService } from './trade.service';
               <ul class="docs">
                 @for (d of x.bills; track d.id) {
                   <li>
-                    <a [routerLink]="(d.kind === 'INVOICE' ? '/portal/products/invoices/' : '/portal/products/quotations/') + d.id">
+                    <a [routerLink]="docLink(d.kind, d.id)">
                       <b>{{ d.kind === 'INVOICE' ? 'Invoice' : 'Quotation' }} {{ d.number ?? '(draft)' }}</b></a>
                     <p-tag [value]="docStatus(d).label" [severity]="docStatus(d).severity" styleClass="tiny" />
                     @if (pay(d); as pl) { <p-tag [value]="pl.label" [severity]="pl.severity" styleClass="tiny" /> }
@@ -399,6 +398,7 @@ import { TradeService } from './trade.service';
   `,
 })
 export class ProjectEditor implements OnInit {
+  protected readonly docLink = docLink;
   private readonly trade = inject(TradeService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

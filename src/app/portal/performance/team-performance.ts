@@ -70,19 +70,21 @@ import { Stars } from './stars';
                   <span><b>{{ t.employee.name }}</b><small class="muted">{{ t.employee.empNumber }}{{ t.employee.designationName ? ' · ' + t.employee.designationName : '' }}</small></span>
                 </span>
               </td>
-              <td data-label="Goals">
+              <td data-label="Goals" class="nowrap">
                 {{ t.totals.goals }} · <span [class.warn]="t.totals.weightTotal !== 100">{{ t.totals.weightTotal }}%</span>
               </td>
-              <td data-label="Progress" class="prog">
-                <p-progressbar [value]="t.totals.progress" [showValue]="false" styleClass="bar" /><b>{{ t.totals.progress }}%</b>
+              <td data-label="Progress">
+                <div class="prog"><p-progressbar [value]="t.totals.progress" [showValue]="false" styleClass="bar" /><b>{{ t.totals.progress }}%</b></div>
               </td>
               <td data-label="Self rating"><app-stars [value]="t.totals.selfRating" /></td>
               <td data-label="Your rating"><app-stars [value]="t.totals.managerRating" /></td>
-              <td data-label="To do" class="todo">
-                @if (t.totals.weightTotal < 100) { <p-tag severity="warn" [value]="(100 - t.totals.weightTotal) + '% goals to set'" /> }
-                @if (t.toRate) { <p-tag severity="info" [value]="t.toRate + ' to rate'" /> }
-                @if (t.skillsToValidate) { <p-tag severity="secondary" [value]="t.skillsToValidate + ' skills to validate'" /> }
-                @if (t.totals.weightTotal === 100 && !t.toRate && !t.skillsToValidate) { <span class="muted">—</span> }
+              <td data-label="To do">
+                <div class="todo">
+                  @if (t.totals.weightTotal < 100) { <p-tag severity="warn" [value]="(100 - t.totals.weightTotal) + '% goals to set'" /> }
+                  @if (t.toRate) { <p-tag severity="info" [value]="t.toRate + ' to rate'" /> }
+                  @if (t.skillsToValidate) { <p-tag severity="secondary" [value]="t.skillsToValidate + ' skills to validate'" /> }
+                  @if (t.totals.weightTotal === 100 && !t.toRate && !t.skillsToValidate) { <span class="muted">—</span> }
+                </div>
               </td>
             </tr>
           </ng-template>
@@ -99,9 +101,14 @@ import { Stars } from './stars';
     .person small { font-size: .76rem; }
     .muted { color: var(--muted); }
     .warn { color: #b45309; font-weight: 600; }
+    /* the flex layouts live inside the cells, so every cell stays a table cell and the rows line up */
+    :host ::ng-deep .p-datatable-tbody > tr > td { vertical-align: middle; }
+    .nowrap { white-space: nowrap; }
     .prog { display: flex; align-items: center; gap: 10px; min-width: 160px; }
     :host ::ng-deep .prog .bar { flex: 1; height: 8px; }
-    .todo { display: flex; flex-wrap: wrap; gap: 4px; }
+    .prog b { min-width: 44px; text-align: right; }
+    .todo { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    @media (max-width: 760px) { .prog { min-width: 0; } .prog b { min-width: 0; } }
   `,
 })
 export class TeamPerformance implements OnInit {

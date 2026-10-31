@@ -43,6 +43,9 @@ import { TradeService } from './trade.service';
       <section class="tiles">
         <article class="tile tile--blue"><span class="lbl">Sales this month</span><b class="big">{{ round(d.salesThisMonth) }}</b>
           <span class="meta">{{ d.invoicesThisMonth }} invoice{{ d.invoicesThisMonth === 1 ? '' : 's' }} · received {{ round(d.receivedThisMonth) }}</span></article>
+        <article class="tile tile--green"><span class="lbl">Sales orders this month</span><b class="big">{{ round(d.ordersThisMonth) }}</b>
+          <span class="meta">{{ d.ordersConfirmedThisMonth }} confirmed · {{ d.openOrders }} to confirm
+            @if (auth.can('PROD_ORDERS')) { · <a routerLink="/portal/products/sales-orders">see them</a> }</span></article>
         <article class="tile"><span class="lbl">Bought this month</span><b class="big">{{ round(d.purchasesThisMonth) }}</b>
           <span class="meta">paid to suppliers {{ round(d.paidOutThisMonth) }}</span></article>
         <article class="tile tile--warn"><span class="lbl">Customers owe</span><b class="big">{{ round(d.receivable) }}</b>
@@ -119,7 +122,8 @@ import { TradeService } from './trade.service';
     }
   `,
   styles: `
-    .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .tile--green .big { color: #1f7a45; }
+    .tiles { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
     .tile { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; align-content: start; }
     .tile .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
     .tile .big { font-size: 1.35rem; font-weight: 600; }
@@ -148,6 +152,13 @@ import { TradeService } from './trade.service';
     .list a { text-decoration: none; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .list a:hover { color: var(--brass-dark); }
     .right { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    /* phones: a card never grows past the screen; a bill's line wraps (number and customer, then amount and status) */
+    .p-card { min-width: 0; }
+    @media (max-width: 600px) {
+      .list li { flex-wrap: wrap; gap: 4px 10px; }
+      .list a { white-space: normal; flex: 1 1 100%; }
+      .right { flex: 1 1 100%; text-align: left; white-space: normal; }
+    }
     .block { display: block; }
     :host ::ng-deep .tiny { font-size: .66rem; padding: 1px 6px; margin-left: 6px; }
     @media (max-width: 1280px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

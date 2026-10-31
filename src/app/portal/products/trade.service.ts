@@ -135,6 +135,11 @@ export class TradeService {
     return this.http.post<SalesDoc>(`${T}/sales/${id}/status`, { status });
   }
 
+  /** A draft sales order from this quotation. */
+  makeOrder(quotationId: number): Observable<SalesDoc> {
+    return this.http.post<SalesDoc>(`${T}/sales/${quotationId}/order`, {});
+  }
+
   makeInvoice(quotationId: number): Observable<SalesDoc> {
     return this.http.post<SalesDoc>(`${T}/sales/${quotationId}/invoice`, {});
   }

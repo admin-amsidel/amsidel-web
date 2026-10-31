@@ -46,12 +46,29 @@ export interface Skill {
 }
 
 /** GENERAL: progress moved by hand and rated in stars; SALES: a target amount, progress and stars follow what is achieved. */
-export type GoalType = 'GENERAL' | 'SALES';
+export type GoalType = 'GENERAL' | 'SALES' | 'SALES_ORDER';
 
 export const GOAL_TYPES: { value: GoalType; label: string; icon: string }[] = [
   { value: 'GENERAL', label: 'General', icon: 'pi pi-flag' },
   { value: 'SALES', label: 'Sales & marketing', icon: 'pi pi-chart-line' },
+  { value: 'SALES_ORDER', label: 'Sales orders', icon: 'pi pi-check-square' },
 ];
+
+/** A confirmed sales order counted in a sales-order goal (amount: before GST; total: with GST). */
+export interface OrderLine {
+  id: number;
+  number: string;
+  confirmedOn: string;
+  /** "2026-10". */
+  month: string;
+  amount: number;
+  total: number;
+  customerName: string;
+  projectCode: string | null;
+  invoiceId: number | null;
+  invoiceNumber: string | null;
+  invoiceStatus: string | null;
+}
 
 export interface GoalTask {
   id: number;
@@ -116,6 +133,8 @@ export interface Goal {
   salesEntries: SalesEntry[];
   /** The person may record what they achieved (sales goals, until the manager rates). */
   canRecord: boolean;
+  /** Sales-order goals: the person's confirmed orders in the goal's dates. */
+  orders: OrderLine[];
 }
 
 export interface Achievement {
