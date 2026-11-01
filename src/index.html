@@ -76,6 +76,12 @@
       .ldr__aura { animation-duration: 4s; }
       .ldr::before { animation: none; opacity: .6; }
     }
+    /* Company Portal and its sign-in (class is-portal): the same ring in the portal's blues (portal.scss) */
+    #app-loader.is-portal .ldr::before { background: radial-gradient(closest-side, rgba(90, 160, 232, .4), rgba(90, 160, 232, 0)); }
+    #app-loader.is-portal .ldr__disc { box-shadow: 0 10px 30px rgba(23, 59, 99, .14), inset 0 0 0 1px #dce7f2; }
+    #app-loader.is-portal .ldr__aura { background: conic-gradient(from 0deg, rgba(47, 128, 214, 0) 0 50%, rgba(47, 128, 214, .35) 70%, #5aa0e8 90%, #2166b5 100%); }
+    #app-loader.is-portal .ldr__aura--back { background: conic-gradient(from 180deg, rgba(23, 59, 99, 0) 0 60%, rgba(23, 59, 99, .25) 80%, #173b63 100%); }
+    #app-loader.is-portal .ldr__name { color: #2166b5; }
 
     /* Doors & Windows pages (class is-dw): a casement window whose two glass sashes swing open around the ASD mark.
        The ring loader above stays for the Amsidel Group page. */
@@ -144,8 +150,12 @@
     <p class="win-name">AMSIDEL<small>DOORS &amp; WINDOWS</small></p>
     <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Loading…</span>
   </div>
-  <!-- pick the loader style before the first paint: casement window on Doors & Windows pages, ring elsewhere -->
-  <script>if (/^\/doors-windows(\/|$)/.test(location.pathname)) document.getElementById('app-loader').classList.add('is-dw');</script>
+  <!-- pick the loader style before the first paint: casement window on Doors & Windows pages, blue ring in the
+       Company Portal, gold ring elsewhere -->
+  <script>
+    if (/^\/doors-windows(\/|$)/.test(location.pathname)) document.getElementById('app-loader').classList.add('is-dw');
+    if (/^\/(portal|login)(\/|$)/.test(location.pathname)) document.getElementById('app-loader').classList.add('is-portal');
+  </script>
   <app-root></app-root>
   <!-- safety net: never leave the loader up if the app fails to start -->
   <script>setTimeout(function () { var l = document.getElementById('app-loader'); if (l) l.classList.add('is-hidden'); }, 15000);</script>
