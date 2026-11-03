@@ -74,6 +74,8 @@ export interface AttendanceToday {
   zone: string;
   /** Null before the first check-in. */
   day: AttendanceDaySummary | null;
+  /** False = I check in without a photo (Check in without photo): only the time and GPS location. */
+  photoCapture: boolean;
 }
 
 export interface AttendanceDayRow {

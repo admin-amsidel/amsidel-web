@@ -20,7 +20,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ExportExcel } from '../export-excel';
 import { AuthService } from '../auth.service';
 import { TeamMember } from '../leave/leave.models';
-import { apiProblem, ROLE_LABELS } from '../portal.models';
+import { apiProblem } from '../portal.models';
 import { buildMonth, DayCell, hrs, MyTask, WorkLogEntry, WorkLogMonth } from './worklog.models';
 import { TaskService } from './task.service';
 import { WorkLogService } from './worklog.service';
@@ -62,7 +62,7 @@ export class WorkLog implements OnInit {
   protected readonly viewing = signal<number | null>(null);
   protected readonly personOptions = computed(() => [
     { value: null, label: 'Me' },
-    ...this.team().map((m) => ({ value: m.id, label: `${m.name} · ${m.empNumber} · ${ROLE_LABELS[m.role]}` })),
+    ...this.team().map((m) => ({ value: m.id, label: `${m.name} · ${m.empNumber}` })),
   ]);
 
   protected readonly data = signal<WorkLogMonth | null>(null);

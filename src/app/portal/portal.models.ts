@@ -147,6 +147,17 @@ export interface Brand {
   razorpayReady: boolean;
 }
 
+/** The personal details everyone may change on My profile (the rest of the record stays with the admins). */
+export interface MyDetails {
+  phone: string;
+  personalEmail: string | null;
+  emergencyContact: string | null;
+  address: string | null;
+  /** yyyy-mm-dd */
+  dob: string | null;
+  bloodGroup: string | null;
+}
+
 /** An employee's PAN and salary account (payroll details, not in the employee record). */
 export interface BankDetails {
   pan: string | null;
@@ -192,6 +203,20 @@ export interface Designation {
   levelNumber: number;
   levelCode: string;
   active: boolean;
+  /** The brand whose ladder it is on; null = group-wide (every brand). */
+  brandId: number | null;
+  brandCode: string | null;
+  brandName: string | null;
+}
+
+/** "L3.7 · Sales Executive · DW" (the brand code only for a brand's own designation). */
+export function designationOption(d: Designation): string {
+  return designationLabel(d) + (d.brandCode ? ' · ' + d.brandCode : '');
+}
+
+/** The designations a person of this brand may have: the group-wide ones and their brand's own. */
+export function designationsFor<T extends { brandId: number | null }>(list: T[], brandId: number | null | undefined): T[] {
+  return list.filter((d) => d.brandId == null || d.brandId === brandId);
 }
 
 /** "L4 · Team Lead" */

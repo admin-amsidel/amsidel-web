@@ -23,7 +23,7 @@ import { AuthService } from '../auth.service';
 import { rupees } from '../payroll/payroll.models';
 import { phoneSearchText } from '../phone-input';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
-import { CustomerForm } from './customer-form';
+import { CustomerForm } from '../customers/customer-form';
 import { HistoryList } from './history-list';
 import { ProjectStages } from './project-stages';
 import { ProjectStatusService, ProjectStatusView } from './project-status.service';
@@ -271,7 +271,7 @@ import { TradeService } from './trade.service';
             <section class="p-card people">
               <h2>People</h2>
               <dl>
-                <dt>Customer</dt><dd><a [routerLink]="'/portal/products/customers'">{{ x.customer.name }}</a><small class="muted block">{{ x.customer.phone }}</small></dd>
+                <dt>Customer</dt><dd><a routerLink="/portal/customers">{{ x.customer.name }}</a><small class="muted block">{{ x.customer.phone }}</small></dd>
                 <dt>Owner</dt><dd>{{ x.owner?.name ?? '—' }}<small class="muted block">{{ x.owner?.designation ?? '' }}</small></dd>
                 <dt>Team</dt><dd>@for (m of x.members; track m.id) { <span class="chip">{{ m.name }}</span> } @empty { — }</dd>
                 <dt>Created</dt><dd>{{ x.createdByName }}<small class="muted block">{{ x.createdAt | date: 'd MMM y, h:mm a' }}</small></dd>
@@ -463,7 +463,7 @@ export class ProjectEditor implements OnInit {
       .map((c) => ({ value: c.id, label: `${c.name} · ${c.phone}`, phone: phoneSearchText(c.phone, c.phone2) })),
   );
   protected readonly peopleOptions = computed(() =>
-    this.people().map((x) => ({ value: x.id, label: x.name + (x.designation ? ' · ' + x.designation : '') })));
+    this.people().map((x) => ({ value: x.id, label: `${x.name} · ${x.empNumber}` })));
   protected readonly billOptions = computed(() =>
     (this.p()?.bills ?? []).map((d) => ({ value: d.id, label: `${d.kind === 'INVOICE' ? 'Invoice' : 'Quotation'} ${d.number ?? '(draft)'} · ${rupees(d.total)}` })));
   protected readonly doneTasks = computed(() => (this.p()?.tasks ?? []).filter((x) => x.status === 'COMPLETED').length);

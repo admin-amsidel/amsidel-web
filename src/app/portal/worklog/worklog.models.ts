@@ -199,6 +199,10 @@ export interface WorkTask {
   status: TaskStatus;
   brandId: number | null;
   brandName: string | null;
+  /** The customer the work is for, if any. */
+  customerId: number | null;
+  customerCode: string | null;
+  customerName: string | null;
   assignees: { id: number; name: string; empNumber: string; photoPath: string | null; photoUpdatedAt: string | null }[];
   loggedHours: number;
   createdByName: string;
@@ -211,5 +215,38 @@ export interface TaskBody {
   description: string;
   status: TaskStatus;
   brandId: number | null;
+  customerId: number | null;
   assigneeIds: number[];
+}
+
+/** One work log entry against a task (the task's page). */
+export interface TaskLogEntry {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  empNumber: string;
+  photoPath: string | null;
+  photoUpdatedAt: string | null;
+  /** yyyy-mm-dd */
+  workDate: string;
+  hours: number;
+  description: string;
+  createdAt: string | null;
+}
+
+/** A task and every work log entry against it, newest day first. */
+export interface TaskLogs {
+  task: WorkTask;
+  entries: TaskLogEntry[];
+}
+
+/** A customer a task can be for (the Customer ID picker). */
+export interface TaskCustomer {
+  id: number;
+  code: string;
+  name: string;
+  phone: string;
+  brandId: number;
+  brandCode: string;
+  active: boolean;
 }

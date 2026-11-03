@@ -68,8 +68,10 @@ export class MyAttendance implements OnInit {
   protected readonly cameraError = signal('');
   protected readonly facing = signal<'user' | 'environment'>('user');
   protected readonly photo = signal<Blob | null>(null);
-  /** Only a field visit needs the live photo. */
-  protected readonly photoNeeded = computed(() => this.mode() === 'FIELD');
+  /** False for people given Check in without photo: no camera, only the time and GPS location. */
+  protected readonly photoCapture = computed(() => this.today()?.photoCapture ?? true);
+  /** Only a field visit needs the live photo (and nobody who checks in without one). */
+  protected readonly photoNeeded = computed(() => this.photoCapture() && this.mode() === 'FIELD');
   protected readonly photoUrl = signal<string | null>(null);
   protected readonly location = signal<PermissionState | null>(null);
   protected readonly busy = signal(false);
@@ -165,11 +167,11 @@ export class MyAttendance implements OnInit {
   protected async checkIn(): Promise<void> {
     this.formError.set('');
     const mode = this.mode();
-    const photo = this.photo();
+    const photo = this.photoCapture() ? this.photo() : null;
     const place = this.place().trim();
     if (!mode) return this.formError.set('Choose where you are working today.');
     if (mode === 'FIELD' && !place) return this.formError.set('Enter the place or client you are visiting.');
-    if (!photo && mode === 'FIELD') return this.formError.set('Take your photo first: a field visit needs one.');
+    if (!photo && this.photoNeeded()) return this.formError.set('Take your photo first: a field visit needs one.');
     this.busy.set(true);
     this.step.set('Getting your location…');
     const fix = await currentFix();

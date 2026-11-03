@@ -90,7 +90,7 @@ const ALL = '*';
         </div>
         <h2 class="mt">Specific users</h2>
         <p class="note">Their own menus replace their user type's and designation's.</p>
-        <p-select [options]="addOptions()" optionLabel="label" optionValue="value" [filter]="true" filterBy="label"
+        <p-select [options]="addOptions()" optionLabel="label" optionValue="value" [filter]="true" filterBy="search"
                   placeholder="Add a person…" filterPlaceholder="Name, user ID or number" styleClass="add" appendTo="body"
                   [ngModel]="null" (ngModelChange)="addUser($event)" [disabled]="!canSave()" ariaLabel="Add a person" />
         <div class="list">
@@ -227,7 +227,8 @@ export class MenuAccessPage implements OnInit {
     const listed = new Set(this.userSubjects().map((s) => s.key));
     return this.people()
       .filter((e) => e.active && e.role !== 'OWNER' && !listed.has(String(e.id)))
-      .map((e) => ({ value: e.id, label: `${e.name} · ${e.userId} · ${e.empNumber}` }));
+      // shown as name and employee ID; the user ID still finds them
+      .map((e) => ({ value: e.id, label: `${e.name} · ${e.empNumber}`, search: `${e.name} ${e.empNumber} ${e.userId}` }));
   });
   protected readonly roleSubjects = signal<Subject[]>(BUILT_IN_SUBJECTS);
   protected readonly typesDialog = viewChild.required(UserTypesDialog);
@@ -264,7 +265,7 @@ export class MenuAccessPage implements OnInit {
           entries.filter((e) => e.subjectType === 'EMPLOYEE').map((e) => personSubject(e.subjectKey, e.label ?? e.subjectKey)),
         );
         this.designationSubjects.set(
-          designations.map((d) => ({ type: 'DESIGNATION' as const, key: String(d.id), label: d.name, hint: d.levelCode ? `Level ${d.levelCode}` : 'Designation' })),
+          designations.map((d) => ({ type: 'DESIGNATION' as const, key: String(d.id), label: d.name, hint: (d.levelCode ? `Level ${d.levelCode}` : 'Designation') + (d.brandCode ? ` · ${d.brandCode}` : ' · all brands') })),
         );
         this.select(this.roleSubjects()[1]);
       },

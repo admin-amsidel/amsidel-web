@@ -105,7 +105,8 @@ export class StaffService {
     return this.http.delete<void>(`${API_BASE}/api/user-types/${id}`);
   }
 
-  saveDesignation(body: Omit<Designation, 'id'>, id?: number): Observable<Designation> {
+  /** brandId null = group-wide; the brand code and name come back from the server. */
+  saveDesignation(body: Omit<Designation, 'id' | 'brandCode' | 'brandName'>, id?: number): Observable<Designation> {
     return id
       ? this.http.put<Designation>(`${API_BASE}/api/designations/${id}`, body)
       : this.http.post<Designation>(`${API_BASE}/api/designations`, body);

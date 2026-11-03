@@ -41,6 +41,13 @@ th.exp, td.exp { width: 44px; }
 .start__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 24px; align-items: start; }
 .start__form { display: grid; gap: 18px; align-content: start; }
 :host ::ng-deep .modes { display: flex; flex-wrap: wrap; }
+/* phones: the three work modes side by side, each its icon over its name, so none is cut off
+   (the portal-wide rule would keep them in one sideways-scrolling line) */
+@media (max-width: 760px) {
+  :host ::ng-deep .p-selectbutton.modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; width: 100%; }
+  :host ::ng-deep .modes .p-togglebutton { white-space: normal; min-width: 0; padding: 8px 4px; }
+  :host ::ng-deep .modes .p-togglebutton-content { flex-direction: column; gap: 4px; text-align: center; font-size: .8rem; line-height: 1.2; }
+}
 .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .88rem; color: var(--muted); }
 .checks i { margin-right: 6px; }
 .checks li.ok { color: #1f6b3e; }
@@ -62,6 +69,16 @@ th.exp, td.exp { width: 44px; }
 .cam__off > i { font-size: 2.2rem; color: var(--gold-hi); }
 .cam__off p { margin: 0; font-size: .88rem; max-width: 300px; }
 .cam__err { color: #fca5a5 !important; }
+
+/* Check in without photo: in place of the camera */
+.gps-only {
+  aspect-ratio: 4 / 3; border-radius: 12px; border: 1px dashed #b9d3ef; background: var(--accent-softer);
+  display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center;
+}
+.gps-only > i { font-size: 2.2rem; color: var(--brass-dark); }
+.gps-only b { font-size: 1.02rem; color: var(--pine); }
+.gps-only p { margin: 0; font-size: .88rem; max-width: 320px; color: var(--muted); }
+@media (max-width: 760px) { .gps-only { aspect-ratio: auto; } }
 
 /* team */
 .bar { display: flex; align-items: flex-end; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 14px; }

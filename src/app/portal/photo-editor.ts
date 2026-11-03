@@ -2,10 +2,11 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
-import { Component, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { Avatar } from './avatar';
+import { completionTone } from './documents.service';
 import { PhotoService, prepareProfilePhoto } from './photo.service';
 import { apiProblem, Employee } from './portal.models';
 
@@ -14,8 +15,18 @@ import { apiProblem, Employee } from './portal.models';
   selector: 'app-photo-editor',
   imports: [Avatar, ButtonModule],
   template: `
-    <app-avatar [name]="employee().name" [employeeId]="employee().id" [photoVersion]="employee().photoUpdatedAt"
-                [photoPath]="employee().photoPath" [size]="size()" />
+    @if (progress() != null) {
+      <!-- profile completion around the photo: green when complete, yellow from 50%, orange below -->
+      <span [class]="'ring tone-' + tone()" [style.--p]="progress()" role="img"
+            [attr.aria-label]="'Profile ' + progress() + '% complete'">
+        <app-avatar [name]="employee().name" [employeeId]="employee().id" [photoVersion]="employee().photoUpdatedAt"
+                    [photoPath]="employee().photoPath" [size]="size()" />
+        <span class="ring__pct" aria-hidden="true">{{ progress() }}%</span>
+      </span>
+    } @else {
+      <app-avatar [name]="employee().name" [employeeId]="employee().id" [photoVersion]="employee().photoUpdatedAt"
+                  [photoPath]="employee().photoPath" [size]="size()" />
+    }
     <div class="side">
       <input #file type="file" accept="image/*" class="visually-hidden" tabindex="-1" aria-hidden="true" (change)="pick($event)" />
       <div class="actions">
@@ -41,6 +52,20 @@ import { apiProblem, Employee } from './portal.models';
     .actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .msg { font-size: .78rem; color: var(--muted); max-width: 32ch; }
     .msg--err { color: #b3261e; }
+    .ring {
+      --tone: #e8890c; position: relative; display: inline-flex; padding: 6px; border-radius: 50%;
+      background: conic-gradient(var(--tone) calc(var(--p) * 1%), #e3ebf4 0);
+      transition: background .4s ease;
+    }
+    .ring::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fff; }
+    .ring app-avatar { position: relative; }
+    .ring.tone-mid { --tone: #e0b100; }
+    .ring.tone-done { --tone: #1f9d55; }
+    .ring__pct {
+      position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); padding: 2px 8px; border-radius: 999px;
+      background: var(--tone); color: #fff; font: 700 .72rem/1.3 var(--body); box-shadow: 0 1px 4px rgba(23,59,99,.2);
+    }
+    .ring.tone-mid .ring__pct { color: #3d3000; }
   `,
 })
 export class PhotoEditor {
@@ -50,6 +75,9 @@ export class PhotoEditor {
 
   readonly employee = input.required<Employee>();
   readonly size = input(104);
+  /** Profile completion (0-100) shown as a ring around the photo; null = no ring. */
+  readonly progress = input<number | null>(null);
+  protected readonly tone = computed(() => completionTone(this.progress() ?? 0));
   /** The employee as saved, with the new photoUpdatedAt. */
   readonly changed = output<Employee>();
 

@@ -2,7 +2,7 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
-import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, OnInit, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -22,9 +22,11 @@ import { Avatar } from '../avatar';
 import { ReportingLine } from '../org-chart/reporting-line';
 import { PhotoEditor } from '../photo-editor';
 import { BankDetailsCard } from './bank-details-card';
+import { DocumentsService, ProfileStatus } from '../documents.service';
+import { EmployeeDocuments } from './employee-documents';
 import { pinChecks, pinValidator } from '../pin-policy';
 import {
-  accountStatus, apiProblem, BLOOD_GROUPS, Brand, Designation, designationLabel, Employee, EmployeeRequest, fromIsoDate, Role, ROLE_LABELS, toIsoDate, UserType,
+  accountStatus, apiProblem, BLOOD_GROUPS, Brand, Designation, designationLabel, designationOption, designationsFor, Employee, EmployeeRequest, fromIsoDate, Role, ROLE_LABELS, toIsoDate, UserType,
 } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { PhoneInput, phoneValidator } from '../phone-input';
@@ -50,7 +52,7 @@ function staffNeedsBrand(g: AbstractControl): ValidationErrors | null {
   selector: 'app-employee-form',
   imports: [
     PhoneInput, ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker,
-    InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, BankDetailsCard,
+    InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, BankDetailsCard, EmployeeDocuments,
   ],
   templateUrl: './employee-form.html',
   styles: `
@@ -134,6 +136,29 @@ export class EmployeeForm implements OnInit {
     return this.auth.isAdmin() && (!target || this.me()?.role === 'OWNER' || target.role === 'MANAGER' || target.role === 'EMPLOYEE');
   });
 
+  private readonly documents = inject(DocumentsService);
+  /** How complete the person's profile is (the ring around their photo); for those who manage them. */
+  protected readonly status = signal<ProfileStatus | null>(null);
+
+  constructor() {
+    // again whenever the record changes (saved, new photo), since the details count towards it
+    effect(() => {
+      const e = this.employee();
+      const allowed = this.canEdit();
+      untracked(() => (e && allowed ? this.loadStatus(e.id) : this.status.set(null)));
+    });
+    // another brand's designation does not stay when the brand changes
+    effect(() => {
+      const brand = this.brandValue();
+      const chosen = untracked(() => this.designations().find((d) => d.id === this.form.controls.designationId.value));
+      if (chosen?.brandId != null && chosen.brandId !== brand) this.form.controls.designationId.setValue(null);
+    });
+  }
+
+  protected loadStatus(id: number): void {
+    this.documents.status(id).subscribe({ next: (s) => this.status.set(s), error: () => this.status.set(null) });
+  }
+
   /** The user types I may give: owners all, admins those on the manager and employee levels; active ones, plus the person's own. */
   protected readonly userTypes = signal<UserType[]>([]);
   protected readonly roleOptions = computed(() => {
@@ -154,13 +179,19 @@ export class EmployeeForm implements OnInit {
     if (t) this.form.controls.role.setValue(t.baseRole);
   }
 
-  /** Designations in use, plus the one this person already has. */
+  /**
+   * Designations in use for the chosen brand (the group-wide ladder and the brand's own), plus the one this person
+   * already has; the brand's own come first, as their order may differ from the group's.
+   */
   protected readonly designationOptions = computed(() => {
     const current = this.employee()?.designationId;
-    return this.designations()
+    const brand = this.brandValue();
+    return designationsFor(this.designations(), brand)
       .filter((d) => d.active || d.id === current)
-      .map((d) => ({ value: d.id, label: designationLabel(d) + (d.active ? '' : ' (no longer used)') }));
+      .sort((a, b) => (a.brandId == null ? 1 : 0) - (b.brandId == null ? 1 : 0))
+      .map((d) => ({ value: d.id, label: designationOption(d) + (d.active ? '' : ' (no longer used)') }));
   });
+  private readonly brandValue = toSignal(this.form.controls.brandId.valueChanges, { initialValue: this.form.controls.brandId.value });
 
   /** Possible superiors: everyone visible except this person, most senior first. */
   protected readonly reportsToOptions = computed(() => {
@@ -168,7 +199,7 @@ export class EmployeeForm implements OnInit {
     return this.people()
       .filter((p) => p.id !== self?.id && (p.active || p.id === self?.reportsToId))
       .sort((a, b) => (b.levelNumber ?? 0) - (a.levelNumber ?? 0) || a.name.localeCompare(b.name))
-      .map((p) => ({ value: p.id, label: p.name + (p.designationName ? ' · ' + designationLabel(p) : '') }));
+      .map((p) => ({ value: p.id, label: `${p.name} · ${p.empNumber}` }));
   });
 
   /** Brand admins only see their brand; inactive brands only when the person is already in one. */

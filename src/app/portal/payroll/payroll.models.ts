@@ -145,6 +145,8 @@ export interface TaxView {
   oldRegime: TaxCalc;
   /** I may choose Manual and type the tax. */
   canManual: boolean;
+  /** Tax regime selection: I may change the regime (else the salary keeps its own; a new one is Manual). */
+  canChooseRegime: boolean;
   /** The pay component the tax goes in (Income Tax). */
   taxComponentName: string | null;
 }

@@ -2,11 +2,13 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
+import { DOCUMENT } from '@angular/common';
 import { EnvironmentProviders, inject, makeEnvironmentProviders, provideEnvironmentInitializer } from '@angular/core';
 import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PrimeNG } from 'primeng/config';
+import { connectComboboxLabels } from './combobox-labels';
 
 /**
  * PrimeNG in the staff portal's colours: blue shades on white (primary #2F80D6), cool blue-greys for surfaces and
@@ -79,7 +81,13 @@ export function providePortalUi(): EnvironmentProviders {
       inject(PrimeNG).setConfig({
         ripple: true,
         theme: { preset: AmsidelPreset, options: { darkModeSelector: false, cssLayer: false } },
+        // <p-button> leaves its icon span readable, so the icon font's character (drawn by ::before) became part of
+        // the button's name, e.g. "\ue9xx APPLY". The icon is decoration: the label, or ariaLabel on an icon-only
+        // button, names it. (The pButton directive already hides its icon.)
+        pt: { button: { icon: { 'aria-hidden': 'true' } } },
       });
+      // the labels of dropdowns name them and focus them (PrimeNG's Select is a span, which <label for> cannot label)
+      connectComboboxLabels(inject(DOCUMENT));
     }),
   ]);
 }

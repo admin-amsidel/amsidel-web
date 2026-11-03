@@ -118,7 +118,8 @@ import { PayrollService } from './payroll.service';
               <span class="pf-label" id="s-regime">Tax regime</span>
               <p-selectbutton [options]="regimeOptions()" optionLabel="label" optionValue="value" optionDisabled="disabled" [allowEmpty]="false"
                               ariaLabelledBy="s-regime" [disabled]="!s.editable" [ngModel]="regime()" (ngModelChange)="regime.set($event)" />
-              <small class="hint">{{ regimeHint() }}@if (!s.tax.canManual) { · Manual entry needs the Manual income tax access. }</small>
+              <small class="hint">{{ regimeHint() }}@if (!s.tax.canChooseRegime) { · Changing the regime needs the Tax regime selection access. }
+                @else if (!s.tax.canManual) { · Manual entry needs the Manual income tax access. }</small>
             </div>
             @if (regime() === 'OLD') {
               <div class="pf">
@@ -343,8 +344,12 @@ export class SalaryEditor {
   protected readonly declared = signal<number | null>(null);
   protected readonly preview = signal<{ NEW: TaxCalc; OLD: TaxCalc } | null>(null);
   private previewTimer: ReturnType<typeof setTimeout> | null = null;
-  protected readonly regimeOptions = computed(() => TAX_REGIMES.map((r) => ({ ...r,
-    disabled: r.value === 'MANUAL' && !this.salary()?.tax.canManual && this.salary()?.tax.regime !== 'MANUAL' })));
+  protected readonly regimeOptions = computed(() => {
+    const tax = this.salary()?.tax;
+    // without Tax regime selection only the salary's own regime; Manual also needs the Manual income tax access
+    return TAX_REGIMES.map((r) => ({ ...r,
+      disabled: r.value !== tax?.regime && (!tax?.canChooseRegime || (r.value === 'MANUAL' && !tax?.canManual)) }));
+  });
   protected readonly regimeLabel = computed(() => TAX_REGIMES.find((r) => r.value === this.regime())!.label.toLowerCase());
   protected readonly regimeHint = computed(() => TAX_REGIMES.find((r) => r.value === this.regime())!.hint);
   protected readonly chosenCalc = computed(() => this.regime() === 'MANUAL' ? null : this.preview()?.[this.regime() as 'NEW' | 'OLD'] ?? null);

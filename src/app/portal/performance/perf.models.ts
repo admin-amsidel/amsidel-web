@@ -45,14 +45,48 @@ export interface Skill {
   validatedAt: string | null;
 }
 
-/** GENERAL: progress moved by hand and rated in stars; SALES: a target amount, progress and stars follow what is achieved. */
-export type GoalType = 'GENERAL' | 'SALES' | 'SALES_ORDER';
+/**
+ * GENERAL: progress moved by hand and rated in stars; SALES: a target amount, progress and stars follow what is achieved;
+ * SALES_ORDER: a target reached by confirmed orders; TASK_WORKLOG: the person's work log tasks as sub-tasks.
+ */
+export type GoalType = 'GENERAL' | 'SALES' | 'SALES_ORDER' | 'TASK_WORKLOG';
 
-export const GOAL_TYPES: { value: GoalType; label: string; icon: string }[] = [
-  { value: 'GENERAL', label: 'General', icon: 'pi pi-flag' },
-  { value: 'SALES', label: 'Sales & marketing', icon: 'pi pi-chart-line' },
-  { value: 'SALES_ORDER', label: 'Sales orders', icon: 'pi pi-check-square' },
+/** menu: the Goal type tick under Performance that lets a manager choose it. */
+export const GOAL_TYPES: { value: GoalType; label: string; icon: string; menu: string }[] = [
+  { value: 'GENERAL', label: 'General', icon: 'pi pi-flag', menu: 'PERF_TYPE_GENERAL' },
+  { value: 'SALES', label: 'Sales & marketing', icon: 'pi pi-chart-line', menu: 'PERF_TYPE_SALES' },
+  { value: 'SALES_ORDER', label: 'Sales orders', icon: 'pi pi-check-square', menu: 'PERF_TYPE_ORDERS' },
+  { value: 'TASK_WORKLOG', label: 'Task worklog', icon: 'pi pi-clock', menu: 'PERF_TYPE_WORKLOG' },
 ];
+
+/** One day the person logged against a work log task. */
+export interface WorklogEntry {
+  date: string;
+  hours: number;
+  description: string;
+}
+
+/** A task worklog sub-task: the work log task, the person's logs and hours, completion and ratings. */
+export interface WorklogTask {
+  workTaskId: number;
+  code: string;
+  taskTitle: string;
+  /** OPEN or CLOSED (the work log task itself). */
+  taskStatus: string;
+  logs: WorklogEntry[];
+  totalHours: number;
+  completedAt: string | null;
+  selfRating: number | null;
+  selfComment: string | null;
+  managerRating: number | null;
+  managerComment: string | null;
+  managerRatedBy: string | null;
+  managerRatedAt: string | null;
+  /** The person may mark it complete or open it again (until it is reviewed). */
+  canComplete: boolean;
+  /** The manager may review it (once completed). */
+  canReview: boolean;
+}
 
 /** A confirmed sales order counted in a sales-order goal (amount: before GST; total: with GST). */
 export interface OrderLine {
@@ -80,6 +114,8 @@ export interface GoalTask {
   /** Sales goals: the sub-task's target and what was achieved towards it. */
   targetAmount: number | null;
   achievedAmount: number | null;
+  /** Task worklog goals only. */
+  worklog: WorklogTask | null;
 }
 
 /** What the person achieved towards a sales goal. */

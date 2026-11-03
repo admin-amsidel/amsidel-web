@@ -13,9 +13,9 @@ import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { apiProblem } from '../portal.models';
-import { TradeBrand } from './trade-brand';
-import { Customer } from './trade.models';
-import { TradeService } from './trade.service';
+import { TradeBrand } from '../products/trade-brand';
+import { Customer } from '../products/trade.models';
+import { TradeService } from '../products/trade.service';
 import { PhoneInput, phoneProblem } from '../phone-input';
 
 /** Adding or changing a customer; used on the customers page and from a quotation or invoice ("new customer"). */
@@ -43,6 +43,12 @@ import { PhoneInput, phoneProblem } from '../phone-input';
           <textarea pTextarea id="cu-addr" rows="2" maxlength="500" [autoResize]="true" [(ngModel)]="f.address"></textarea></div>
         <div class="pf"><label for="cu-pan">PAN</label><input pInputText id="cu-pan" maxlength="10" [ngModel]="f.panNumber" (ngModelChange)="f.panNumber = $event.toUpperCase()" /></div>
         <div class="pf"><label for="cu-notes">Notes</label><input pInputText id="cu-notes" maxlength="500" [(ngModel)]="f.notes" /></div>
+        <fieldset class="span bank">
+          <legend>Bank &amp; UPI <span class="opt">(optional, for refunds)</span></legend>
+          <div class="pf"><label for="cu-acc">Bank account no</label><input pInputText id="cu-acc" maxlength="20" inputmode="numeric" [(ngModel)]="f.bankAccount" /></div>
+          <div class="pf"><label for="cu-ifsc">IFSC</label><input pInputText id="cu-ifsc" maxlength="11" placeholder="HDFC0001234" [ngModel]="f.ifsc" (ngModelChange)="f.ifsc = $event.toUpperCase()" /></div>
+          <div class="pf"><label for="cu-upi">UPI ID</label><input pInputText id="cu-upi" maxlength="80" placeholder="name@bank" [(ngModel)]="f.upi" /></div>
+        </fieldset>
         @if (customer()) { <label class="check span"><p-toggleswitch [(ngModel)]="f.active" /> Active</label> }
         @if (error()) { <p-message severity="error" styleClass="span">{{ error() }}</p-message> }
       </div>
@@ -55,7 +61,9 @@ import { PhoneInput, phoneProblem } from '../phone-input';
   styles: `
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
     .span { grid-column: 1 / -1; }
-    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    .bank { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 0; }
+    .bank legend { font-size: .82rem; font-weight: 600; color: var(--pine); padding: 0 6px; }
+    @media (max-width: 760px) { .grid, .bank { grid-template-columns: 1fr; } }
   `,
 })
 export class CustomerForm {
@@ -85,7 +93,8 @@ export class CustomerForm {
         this.error.set('');
         this.f = c
           ? { brandId: c.brand.id, name: c.name, phone: c.phone, phone2: c.phone2 ?? '', email: c.email ?? '', location: c.location ?? '',
-              address: c.address ?? '', gstNumber: c.gstNumber ?? '', panNumber: c.panNumber ?? '', notes: c.notes ?? '', active: c.active }
+              address: c.address ?? '', gstNumber: c.gstNumber ?? '', panNumber: c.panNumber ?? '',
+              bankAccount: c.bankAccount ?? '', ifsc: c.ifsc ?? '', upi: c.upi ?? '', notes: c.notes ?? '', active: c.active }
           : { ...blank(this.fixedBrand() ?? this.brand.brandId()), ...(/^[+0-9 ()-]{5,}$/.test(preset) ? { phone: preset } : { name: preset }) };
       });
     });
@@ -117,5 +126,8 @@ export class CustomerForm {
 }
 
 function blank(brandId: number | null) {
-  return { brandId, name: '', phone: '', phone2: '', email: '', location: '', address: '', gstNumber: '', panNumber: '', notes: '', active: true };
+  return {
+    brandId, name: '', phone: '', phone2: '', email: '', location: '', address: '', gstNumber: '', panNumber: '',
+    bankAccount: '', ifsc: '', upi: '', notes: '', active: true,
+  };
 }

@@ -74,6 +74,7 @@ export const TASK_STATUS_OPTIONS = (Object.keys(TASK_STATUS) as TaskStatus[]).ma
 export interface PersonRef {
   id: number;
   name: string;
+  empNumber: string;
   designation: string | null;
 }
 
@@ -242,6 +243,9 @@ export interface Customer {
   address: string | null;
   gstNumber: string | null;
   panNumber: string | null;
+  bankAccount: string | null;
+  ifsc: string | null;
+  upi: string | null;
   notes: string | null;
   active: boolean;
   balance: Balance;

@@ -91,8 +91,10 @@
             @if (mode() === 'FIELD') {
               <li [class.ok]="!!place().trim()"><i [class]="place().trim() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i> Place / client</li>
             }
-            <li [class.ok]="!!photo()"><i [class]="photo() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
-              Live photo{{ photoNeeded() ? ' (needed for a field visit)' : ' (optional)' }}</li>
+            @if (photoCapture()) {
+              <li [class.ok]="!!photo()"><i [class]="photo() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
+                Live photo{{ photoNeeded() ? ' (needed for a field visit)' : ' (optional)' }}</li>
+            }
             <li [class.ok]="location() === 'granted'" [class.warn]="location() === 'denied'">
               <i [class]="location() === 'granted' ? 'pi pi-check-circle' : location() === 'denied' ? 'pi pi-exclamation-triangle' : 'pi pi-map-marker'" aria-hidden="true"></i>
               @switch (location()) {
@@ -111,6 +113,15 @@
           </div>
         </div>
 
+        @if (!photoCapture()) {
+          <!-- Check in without photo: no camera, only the time and the GPS location -->
+          <div class="gps-only">
+            <i class="pi pi-map-marker" aria-hidden="true"></i>
+            <b>Time &amp; GPS check-in</b>
+            <p>No photo is needed. When you check in{{ mode() === 'FIELD' ? ' to a visit' : '' }}, the time and your current GPS location are recorded.
+              Allow location when your browser asks.</p>
+          </div>
+        } @else {
         <div class="cam" [class.live]="cameraOn()">
           <video #video [class.mirror]="facing() === 'user'" [hidden]="!cameraOn()" aria-label="Camera preview"></video>
           @if (photoUrl(); as url) {
@@ -133,6 +144,7 @@
             </div>
           }
         </div>
+        }
       </div>
     </section>
   }

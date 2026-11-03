@@ -92,6 +92,12 @@ export interface MailResult {
   at: string;
 }
 
+/** Staff mail: how many people Choose people may reach in one send, and whether I may change that. */
+export interface StaffMailRules {
+  pickLimit: number;
+  canChangeLimit: boolean;
+}
+
 /** Staff mail, and customer and supplier mail: the same calls under their own API. */
 @Injectable({ providedIn: 'root' })
 export class MailService {
@@ -111,6 +117,15 @@ export class MailService {
 
   send(body: MailBody, api = STAFF_MAIL_API): Observable<MailResult> {
     return this.http.post<MailResult>(`${API_BASE}${api}/send`, body);
+  }
+
+  rules(): Observable<StaffMailRules> {
+    return this.http.get<StaffMailRules>(`${API_BASE}${STAFF_MAIL_API}/rules`);
+  }
+
+  /** Owners and group admins. */
+  savePickLimit(pickLimit: number): Observable<StaffMailRules> {
+    return this.http.put<StaffMailRules>(`${API_BASE}${STAFF_MAIL_API}/rules/pick-limit`, { pickLimit });
   }
 
   /** The customers and suppliers who can be mailed (customer and supplier mail only). */

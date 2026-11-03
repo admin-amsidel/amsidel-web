@@ -38,6 +38,10 @@ export const PORTAL_ROUTES: Routes = [
         loadChildren: () => import('./products/products.routes').then((m) => m.PRODUCT_ROUTES),
       },
       {
+        path: 'customers',
+        loadChildren: () => import('./customers/customers.routes').then((m) => m.CUSTOMER_ROUTES),
+      },
+      {
         path: 'profile',
         title: 'My Profile · Amsidel Company Portal',
         loadComponent: () => import('./pages/profile').then((m) => m.Profile),
@@ -88,6 +92,13 @@ export const PORTAL_ROUTES: Routes = [
         data: { menu: 'TASKS' },
         title: 'Tasks · Amsidel Company Portal',
         loadComponent: () => import('./worklog/tasks').then((m) => m.Tasks),
+      },
+      {
+        path: 'worklog/tasks/:id',
+        canActivate: [menuGuard],
+        data: { menu: 'TASKS' },
+        title: 'Task · Amsidel Company Portal',
+        loadComponent: () => import('./worklog/task-detail').then((m) => m.TaskDetail),
       },
       {
         path: 'leave/approvals',

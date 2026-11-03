@@ -105,12 +105,21 @@ export class TradeService {
     return this.http.get<Customer[]>(`${T}/customers`, { params: params({ brandId }) });
   }
 
+  customer(id: number): Observable<Customer> {
+    return this.http.get<Customer>(`${T}/customers/${id}`);
+  }
+
   customerDocuments(id: number): Observable<SalesRow[]> {
     return this.http.get<SalesRow[]>(`${T}/customers/${id}/documents`);
   }
 
   saveCustomer(id: number | null, body: object): Observable<Customer> {
     return id ? this.http.put<Customer>(`${T}/customers/${id}`, body) : this.http.post<Customer>(`${T}/customers`, body);
+  }
+
+  /** Only a customer with no bills, projects or payments; otherwise 409 (mark them inactive instead). */
+  deleteCustomer(id: number): Observable<void> {
+    return this.http.delete<void>(`${T}/customers/${id}`);
   }
 
   // ---- quotations and invoices ----

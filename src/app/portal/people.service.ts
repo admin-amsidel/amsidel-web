@@ -41,7 +41,9 @@ export class PeopleService {
     return this.http.get<ReportingLine>(`${API_BASE}/api/people/${employeeId}/line`, { context: silent() });
   }
 
-  orgChart(): Observable<OrgNode[]> {
-    return this.http.get<OrgNode[]>(`${API_BASE}/api/people/org-chart`);
+  /** One brand's chart (brandId is only read for owners and group admins; null = the group-level people). */
+  orgChart(brandId: number | null): Observable<OrgNode[]> {
+    const params: Record<string, number> = brandId != null ? { brandId } : {};
+    return this.http.get<OrgNode[]>(`${API_BASE}/api/people/org-chart`, { params });
   }
 }

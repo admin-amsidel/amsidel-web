@@ -22,7 +22,7 @@ import { catchError, forkJoin, Observable, of, switchMap } from 'rxjs';
 import { CURRENCIES, currencyLocale, formatMoney } from '../payroll/payroll.models';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { AuthService } from '../auth.service';
-import { CustomerForm } from './customer-form';
+import { CustomerForm } from '../customers/customer-form';
 import { PaymentPanel } from './payment-panel';
 import { TradeBrand } from './trade-brand';
 import {

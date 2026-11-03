@@ -147,7 +147,7 @@
           <span class="pf-label">Photo</span>
           @if (employee(); as e) {
             @if (canEdit()) {
-              <app-photo-editor [employee]="e" [size]="72" (changed)="employee.set($event)" />
+              <app-photo-editor [employee]="e" [size]="72" [progress]="status()?.percent ?? null" (changed)="employee.set($event)" />
             } @else {
               <app-avatar [name]="e.name" [employeeId]="e.id" [photoVersion]="e.photoUpdatedAt" [photoPath]="e.photoPath" [size]="72" />
             }
@@ -180,6 +180,10 @@
     </section>
 
     <app-bank-details-card [employeeId]="e.id" />
+
+    @if (canEdit()) {
+      <app-employee-documents [employeeId]="e.id" (changed)="loadStatus(e.id)" />
+    }
   }
 
   @if (!isNew() && canEdit() && !isSelf()) {

@@ -19,7 +19,7 @@ import { BusyService } from '../busy';
 import { Avatar } from '../avatar';
 import { TeamChat } from '../chat/team-chat';
 import { PortalStyles } from '../portal-styles';
-import { ROLE_LABELS } from '../portal.models';
+import { MenuNode, ROLE_LABELS } from '../portal.models';
 import { CREDITS } from '../../shared/credits';
 
 interface NavLink {
@@ -42,10 +42,15 @@ interface NavGroup {
 type NavEntry = NavLink | NavGroup;
 
 const SIDEBAR_KEY = 'amsidel.portal.sidebar';
-const PRODUCTS = '/portal/products';
 
-function isProduct(path: string): boolean {
-  return path === PRODUCTS || path.startsWith(PRODUCTS + '/');
+/** The portal's parts: the product and customer portals by their address, everything else the employee portal. */
+type Section = 'EMPLOYEE' | 'PRODUCT' | 'CUSTOMER';
+const SECTION_ROOTS: [Section, string][] = [['PRODUCT', '/portal/products'], ['CUSTOMER', '/portal/customers']];
+const SECTION_LABELS: Record<Section, string> = { EMPLOYEE: 'Employee portal', PRODUCT: 'Product portal', CUSTOMER: 'Customer portal' };
+
+function sectionOf(path: string): Section {
+  const p = path.split(/[?#]/)[0];
+  return SECTION_ROOTS.find(([, root]) => p === root || p.startsWith(root + '/'))?.[0] ?? 'EMPLOYEE';
 }
 
 /**
@@ -77,12 +82,18 @@ function isProduct(path: string): boolean {
         <img src="brand/amsidel-mark.png" alt="" width="60" height="28" />
         <span>Company Portal</span>
       </a>
-      @if (productStart(); as start) {
+      @if (hasSections()) {
         <nav class="p-switch" aria-label="Portal section">
           <a routerLink="/portal/profile" [class.on]="section() === 'EMPLOYEE'" [attr.aria-current]="section() === 'EMPLOYEE' ? 'page' : null">
             <i class="pi pi-users" aria-hidden="true"></i><span>Employee portal</span></a>
-          <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" [attr.aria-current]="section() === 'PRODUCT' ? 'page' : null">
-            <i class="pi pi-box" aria-hidden="true"></i><span>Product portal</span></a>
+          @if (productStart(); as start) {
+            <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" [attr.aria-current]="section() === 'PRODUCT' ? 'page' : null">
+              <i class="pi pi-box" aria-hidden="true"></i><span>Product portal</span></a>
+          }
+          @if (customerStart(); as start) {
+            <a [routerLink]="start" [class.on]="section() === 'CUSTOMER'" [attr.aria-current]="section() === 'CUSTOMER' ? 'page' : null">
+              <i class="pi pi-address-book" aria-hidden="true"></i><span>Customer portal</span></a>
+          }
         </nav>
       }
       @if (auth.user(); as me) {
@@ -149,16 +160,22 @@ function isProduct(path: string): boolean {
 
     <!-- the menu: links, and groups with sub-menus; with icons only, a group opens its pages in a pop-up -->
     <ng-template #tree let-mini="mini" let-drawer="drawer">
-      @if (drawer && productStart(); as start) {
+      @if (drawer && hasSections()) {
         <div class="dr-switch" role="group" aria-label="Portal section">
           <a routerLink="/portal/profile" [class.on]="section() === 'EMPLOYEE'" (click)="drawerOpen.set(false)">
             <i class="pi pi-users" aria-hidden="true"></i> Employee</a>
-          <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" (click)="drawerOpen.set(false)">
-            <i class="pi pi-box" aria-hidden="true"></i> Products</a>
+          @if (productStart(); as start) {
+            <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" (click)="drawerOpen.set(false)">
+              <i class="pi pi-box" aria-hidden="true"></i> Products</a>
+          }
+          @if (customerStart(); as start) {
+            <a [routerLink]="start" [class.on]="section() === 'CUSTOMER'" (click)="drawerOpen.set(false)">
+              <i class="pi pi-address-book" aria-hidden="true"></i> Customers</a>
+          }
         </div>
       }
-      @if (!mini && productStart()) {
-        <p class="nav__section">{{ section() === 'PRODUCT' ? 'Product portal' : 'Employee portal' }}</p>
+      @if (!mini && hasSections()) {
+        <p class="nav__section">{{ sectionLabels[section()] }}</p>
       }
       <nav class="nav" [class.nav--mini]="mini">
         @for (entry of nav(); track entry.label) {
@@ -242,10 +259,13 @@ function isProduct(path: string): boolean {
     .p-switch a:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
     .p-switch i { font-size: .85rem; }
     .nav__section { margin: 0 0 8px; padding: 0 12px; font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-    .dr-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; margin-bottom: 14px; border-radius: 10px;
+    .dr-switch { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 3px; margin-bottom: 14px; border-radius: 10px;
       background: var(--accent-softer); border: 1px solid var(--line); }
-    .dr-switch a { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 6px; border-radius: 8px;
-      color: var(--muted); text-decoration: none; font-weight: 600; font-size: .86rem; }
+    /* the icon over its word, so three portals fit the drawer */
+    .dr-switch a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 7px 4px;
+      border-radius: 8px; min-width: 0; color: var(--muted); text-decoration: none; font-weight: 600; font-size: .76rem; line-height: 1.15;
+      text-align: center; overflow-wrap: anywhere; }
+    .dr-switch a i { font-size: .95rem; }
     .dr-switch a.on { background: #fff; color: var(--brass-dark); box-shadow: 0 1px 4px rgba(23,59,99,.12); }
     .p-mark img { height: 24px; width: auto; }
     .p-mark span { font-family: var(--body); font-weight: 600; font-size: .95rem; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
@@ -364,15 +384,18 @@ export class PortalShell {
     this.auth.reloadAccess().subscribe();
   }
 
-  /** The product portal is everything under /portal/products; the rest is the employee portal. */
-  protected readonly section = computed<'EMPLOYEE' | 'PRODUCT'>(() =>
-    this.url().startsWith(PRODUCTS + '/') || this.url().split(/[?#]/)[0] === PRODUCTS ? 'PRODUCT' : 'EMPLOYEE',
+  protected readonly sectionLabels = SECTION_LABELS;
+  /** The product portal is everything under /portal/products, the customer portal /portal/customers; the rest is the employee portal. */
+  protected readonly section = computed(() => sectionOf(this.url()));
+  private readonly menuPaths = computed(() =>
+    (this.auth.access()?.menus ?? []).flatMap((m) => [m.path, ...m.children.map((c) => c.path)]).filter((p): p is string => !!p),
   );
   /** Where the product portal opens (its first page I may see); null = none of its menus are mine. */
-  protected readonly productStart = computed(() => {
-    const paths = (this.auth.access()?.menus ?? []).flatMap((m) => [m.path, ...m.children.map((c) => c.path)]);
-    return paths.find((p): p is string => !!p && isProduct(p)) ?? null;
-  });
+  protected readonly productStart = computed(() => this.menuPaths().find((p) => sectionOf(p) === 'PRODUCT') ?? null);
+  /** Where the customer portal opens; null = it is not mine. */
+  protected readonly customerStart = computed(() => this.menuPaths().find((p) => sectionOf(p) === 'CUSTOMER') ?? null);
+  /** The switch shows when I have a portal besides the employee one. */
+  protected readonly hasSections = computed(() => !!this.productStart() || !!this.customerStart());
 
   /**
    * The menus this person may open in the current section, from menu access (the menus table, in its order); a
@@ -383,18 +406,21 @@ export class PortalShell {
     if (!me) return [];
     if (me.mustChangePassword) return [link('Change PIN', 'pi-key', '/portal/change-pin')];
     if (this.auth.accessDenied()) return [];
-    const products = this.section() === 'PRODUCT';
-    const menus = (this.auth.access()?.menus ?? []).filter(
-      (m) => [m.path, ...m.children.map((c) => c.path)].some((p) => !!p && isProduct(p)) === products,
-    );
+    const section = this.section();
+    // a menu belongs to the section of its pages (a group whose pages are all elsewhere is the employee portal's)
+    const sectionOfMenu = (m: MenuNode) =>
+      [m.path, ...m.children.map((c) => c.path)].map((p) => (p ? sectionOf(p) : 'EMPLOYEE')).find((s) => s !== 'EMPLOYEE') ?? 'EMPLOYEE';
+    const menus = (this.auth.access()?.menus ?? []).filter((m) => sectionOfMenu(m) === section);
     // a link is "exact" when another page lives below its address (My leave /portal/leave vs /portal/leave/approvals)
     const paths = menus.flatMap((m) => [m.path, ...m.children.map((c) => c.path)]).filter((x): x is string => !!x);
     const exact = (path: string) => paths.some((other) => other.startsWith(path + '/'));
-    const entries: NavEntry[] = products ? [] : [link('My profile', 'pi-user', '/portal/profile')];
+    const entries: NavEntry[] = section !== 'EMPLOYEE' ? [] : [link('My profile', 'pi-user', '/portal/profile')];
     for (const m of menus) {
-      if (m.children.length) {
-        const children = m.children.filter((c) => c.path).map((c) => link(c.name, c.icon ?? 'pi-circle', c.path!, exact(c.path!)));
-        if (children.length) entries.push(group(m.code, m.name, m.icon ?? 'pi-folder', children));
+      // sub-menus without a page (ticks such as Customers > New invoice button) leave the menu a plain link
+      const pages = m.children.filter((c) => c.path);
+      if (pages.length) {
+        const children = pages.map((c) => link(c.name, c.icon ?? 'pi-circle', c.path!, exact(c.path!)));
+        entries.push(group(m.code, m.name, m.icon ?? 'pi-folder', children));
       } else if (m.path) {
         entries.push(link(m.name, m.icon ?? 'pi-circle', m.path, exact(m.path)));
       }

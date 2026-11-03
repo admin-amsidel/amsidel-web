@@ -7,7 +7,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
 import { API_BASE } from './portal.config';
-import { Employee, LoginResponse, MyAccess } from './portal.models';
+import { Employee, LoginResponse, MyAccess, MyDetails } from './portal.models';
 
 interface Session {
   token: string;
@@ -103,6 +103,11 @@ export class AuthService {
         if (s) this.save({ ...s, user });
       }),
     );
+  }
+
+  /** Saves my own personal details (My profile) and keeps the stored profile in step. */
+  updateMyDetails(body: MyDetails): Observable<Employee> {
+    return this.http.put<Employee>(`${API_BASE}/api/auth/me/details`, body).pipe(tap((user) => this.setUser(user)));
   }
 
   /** Replaces the stored profile with a fresh copy from the backend (e.g. after a photo change). */

@@ -78,6 +78,16 @@ export class PerfService {
     return this.http.delete<Goal>(`${PERF}/sales-entries/${id}`);
   }
 
+  /** Task worklog: the person marks a task complete (stars, description) or opens it again. */
+  completeTask(goalId: number, taskId: number, completed: boolean, rating: number | null, comment: string): Observable<Goal> {
+    return this.http.put<Goal>(`${PERF}/goals/${goalId}/tasks/${taskId}/completion`, { completed, rating, comment });
+  }
+
+  /** Task worklog: the manager reviews a completed task. */
+  reviewTask(goalId: number, taskId: number, rating: number, comment: string): Observable<Goal> {
+    return this.http.put<Goal>(`${PERF}/goals/${goalId}/tasks/${taskId}/review`, { rating, comment });
+  }
+
   rate(goalId: number, who: 'self' | 'manager', rating: number, comment: string): Observable<Goal> {
     return this.http.put<Goal>(`${PERF}/goals/${goalId}/${who}-rating`, { rating, comment });
   }

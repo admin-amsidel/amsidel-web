@@ -59,13 +59,8 @@ export const PRODUCT_ROUTES: Routes = [
     data: { menu: 'PROD_PURCHASES' },
     loadComponent: () => import('./purchase-editor').then((m) => m.PurchaseEditor),
   },
-  {
-    path: 'customers',
-    title: 'Customers' + T,
-    canActivate: [menuGuard],
-    data: { menu: 'PROD_CUSTOMERS' },
-    loadComponent: () => import('./customers').then((m) => m.Customers),
-  },
+  // customers moved to their own portal; old links and bookmarks still arrive
+  { path: 'customers', redirectTo: '/portal/customers' },
   {
     path: 'quotations',
     title: 'Quotations' + T,

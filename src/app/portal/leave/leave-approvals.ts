@@ -18,7 +18,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
-import { apiProblem, ROLE_LABELS, toIsoDate } from '../portal.models';
+import { apiProblem, toIsoDate } from '../portal.models';
 import {
   dateRange,
   days,
@@ -73,7 +73,7 @@ export class LeaveApprovals implements OnInit {
   protected readonly team = signal<TeamMember[]>([]);
   private readonly types = signal<LeaveType[]>([]);
   protected readonly teamOptions = computed(() =>
-    this.team().map((m) => ({ value: m.id, label: `${m.name} · ${m.empNumber} · ${ROLE_LABELS[m.role]}` })),
+    this.team().map((m) => ({ value: m.id, label: `${m.name} · ${m.empNumber}` })),
   );
   protected readonly grantTypeOptions = computed(() =>
     this.types().filter((t) => t.active && t.allocation !== 'UNLIMITED').map((t) => ({ value: t.id, label: t.name })),
@@ -103,7 +103,8 @@ export class LeaveApprovals implements OnInit {
   }
 
   protected setStatus(value: LeaveStatus | 'ALL' | null): void {
-    if (!value) return; // the select button allows unselecting; keep the current filter
+    // the filter cannot be switched off ([allowEmpty]="false"); clicking the one already on changes nothing
+    if (!value || value === this.status()) return;
     this.status.set(value);
     this.loadRequests();
   }

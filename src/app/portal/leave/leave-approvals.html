@@ -8,8 +8,10 @@
 @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
 
 <section class="p-card">
-  <p-selectbutton [options]="filters" optionLabel="label" optionValue="value" [ngModel]="status()"
-                  (ngModelChange)="setStatus($event)" ariaLabelledBy="Show" styleClass="filter" />
+  <!-- one filter is always on: clicking the one already on does nothing, like tabs -->
+  <span id="la-show" class="visually-hidden">Show requests</span>
+  <p-selectbutton [options]="filters" optionLabel="label" optionValue="value" [allowEmpty]="false" [ngModel]="status()"
+                  (ngModelChange)="setStatus($event)" ariaLabelledBy="la-show" styleClass="filter" />
 
   <p-table [value]="requests()" [loading]="loading()" dataKey="id" [tableStyle]="{ 'min-width': '920px' }" styleClass="p-stack"
            [paginator]="requests().length > 20" [rows]="20">

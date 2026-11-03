@@ -80,7 +80,95 @@ export class ReviewBoard {
   protected readonly technical = computed(() => this.review().skills.filter((s) => s.category === 'TECHNICAL'));
   protected readonly nonTechnical = computed(() => this.review().skills.filter((s) => s.category === 'NON_TECHNICAL'));
   protected readonly weightLeft = computed(() => 100 - this.review().totals.weightTotal);
-  protected readonly goalTypes = GOAL_TYPES;
+  /** The types I may choose (my Goal type ticks), plus the goal's own when editing; Task worklog once per review. */
+  protected readonly goalTypes = computed(() => {
+    const editing = this.goalId() != null;
+    const own = editing ? this.gType() : null;
+    const hasWorklog = this.review().goals.some((g) => g.type === 'TASK_WORKLOG');
+    return GOAL_TYPES.filter((t) => t.value === own || (this.auth.can(t.menu) && !(editing && (t.value === 'TASK_WORKLOG' || own === 'TASK_WORKLOG'))
+      && !(t.value === 'TASK_WORKLOG' && hasWorklog)));
+  });
+
+  /** Task worklog goals: every sub-task's hours added up. */
+  protected worklogHours(g: Goal): number {
+    return g.tasks.reduce((s, t) => s + (t.worklog?.totalHours ?? 0), 0);
+  }
+
+  protected doneCount(g: Goal): number {
+    return g.tasks.filter((t) => t.worklog?.completedAt).length;
+  }
+
+  protected hours(h: number): string {
+    return `${Math.round(h * 100) / 100} h`;
+  }
+
+  // ---- task worklog: each task's logs, completion and review ----
+
+  /** Sub-tasks whose logs are shown (all closed at first). */
+  protected readonly openLogs = signal<ReadonlySet<number>>(new Set());
+  /** The sub-task whose completion or review form is open, and its values. */
+  protected readonly wForm = signal<{ taskId: number; who: 'self' | 'manager' } | null>(null);
+  protected readonly wRating = signal<number | null>(null);
+  protected readonly wComment = signal('');
+  protected readonly wBusy = signal(false);
+
+  protected logsOpen(t: GoalTask): boolean {
+    return this.openLogs().has(t.id);
+  }
+
+  protected toggleLogs(t: GoalTask): void {
+    this.openLogs.update((s) => toggled(s, t.id));
+  }
+
+  protected formFor(t: GoalTask, who: 'self' | 'manager'): boolean {
+    const f = this.wForm();
+    return !!f && f.taskId === t.id && f.who === who;
+  }
+
+  /** Opens the person's "Mark complete" form, or the manager's review, with what was saved before. */
+  protected openForm(t: GoalTask, who: 'self' | 'manager'): void {
+    const w = t.worklog!;
+    this.wForm.set({ taskId: t.id, who });
+    this.wRating.set(who === 'self' ? w.selfRating : w.managerRating);
+    this.wComment.set((who === 'self' ? w.selfComment : w.managerComment) ?? '');
+    if (!this.logsOpen(t)) this.toggleLogs(t);
+  }
+
+  protected saveForm(g: Goal, t: GoalTask): void {
+    const f = this.wForm();
+    if (!f) return;
+    if (!this.wRating()) return this.toast.add({ severity: 'warn', summary: 'Choose the stars first' });
+    if (f.who === 'manager' && !this.wComment().trim()) {
+      return this.toast.add({ severity: 'warn', summary: 'Write your feedback', detail: 'A review needs a few words.' });
+    }
+    this.wBusy.set(true);
+    const save$ = f.who === 'self'
+      ? this.perf.completeTask(g.id, t.id, true, this.wRating(), this.wComment().trim())
+      : this.perf.reviewTask(g.id, t.id, this.wRating()!, this.wComment().trim());
+    save$.subscribe({
+      next: () => {
+        this.wBusy.set(false);
+        this.wForm.set(null);
+        this.toast.add({ severity: 'success', summary: f.who === 'self' ? 'Task completed' : 'Review saved', detail: t.worklog!.code });
+        this.changed.emit();
+      },
+      error: (e) => {
+        this.wBusy.set(false);
+        this.fail(e);
+      },
+    });
+  }
+
+  /** The person takes a completion back (before the review). */
+  protected reopen(g: Goal, t: GoalTask): void {
+    this.perf.completeTask(g.id, t.id, false, null, '').subscribe({
+      next: () => {
+        this.toast.add({ severity: 'info', summary: 'Opened again', detail: t.worklog!.code });
+        this.changed.emit();
+      },
+      error: (e) => this.fail(e),
+    });
+  }
 
   /** "₹1,25,000" in the person's brand currency. */
   protected money(v: number | null | undefined): string {
@@ -196,6 +284,12 @@ export class ReviewBoard {
 
   protected toggleTasks(g: Goal): void {
     this.closedTasks.update((s) => toggled(s, g.id));
+  }
+
+  /** The type chosen for a new goal or an edited one. */
+  protected pickType(type: GoalType): void {
+    this.gType.set(type);
+    if (type === 'TASK_WORKLOG' && !this.gTitle().trim()) this.gTitle.set('Task worklog');
   }
 
   /** Every goal and its sub-tasks open, or every goal minimised. */
@@ -411,6 +505,7 @@ export class ReviewBoard {
 
   protected newGoal(): void {
     this.goalId.set(null);
+    const first = GOAL_TYPES.find((t) => this.auth.can(t.menu) && !(t.value === 'TASK_WORKLOG' && this.review().goals.some((g) => g.type === 'TASK_WORKLOG')));
     this.gTitle.set('');
     this.gDescription.set('');
     this.gWeight.set(Math.max(0, Math.min(100, this.weightLeft())) || null);
@@ -418,7 +513,7 @@ export class ReviewBoard {
     this.gStart.set(today);
     this.gEnd.set(this.cycleMax());
     this.gTasks.set([]);
-    this.gType.set('GENERAL');
+    this.gType.set(first?.value ?? 'GENERAL');
     this.gTarget.set(null);
     this.gLocked.set(false);
     this.gRated.set(false);
@@ -437,7 +532,7 @@ export class ReviewBoard {
     this.gTasks.set(g.tasks.map((t) => ({ id: t.id, title: t.title, weightage: t.weightage, target: t.targetAmount, start: fromIsoDate(t.startDate), end: fromIsoDate(t.endDate) })));
     this.gType.set(g.type ?? 'GENERAL');
     this.gTarget.set(g.targetAmount);
-    this.gLocked.set(g.salesEntries.length > 0);
+    this.gLocked.set(g.salesEntries.length > 0 || g.type === 'TASK_WORKLOG');
     this.gError.set('');
     this.goalOpen.set(true);
   }
@@ -460,8 +555,9 @@ export class ReviewBoard {
     this.gError.set('');
     const sales = this.gType() === 'SALES';
     const orders = this.gType() === 'SALES_ORDER';
-    // a sales-order goal has no sub-tasks: its lines are the confirmed orders
-    const tasks = orders ? [] : this.gTasks();
+    const worklog = this.gType() === 'TASK_WORKLOG';
+    // a sales-order goal has no sub-tasks: its lines are the confirmed orders; a task worklog goal's are the work log tasks
+    const tasks = orders || worklog ? [] : this.gTasks();
     if (!this.gTitle().trim() || !this.gWeight() || !this.gStart() || !this.gEnd()) {
       return this.gError.set('Give the goal a title, a weightage and its dates.');
     }
@@ -485,7 +581,7 @@ export class ReviewBoard {
       weightage: this.gWeight()!,
       startDate: toIsoDate(this.gStart())!,
       endDate: toIsoDate(this.gEnd())!,
-      tasks: orders ? [] : tasks.map((t) => ({ id: t.id, title: t.title.trim(), weightage: sales ? null : t.weightage!, targetAmount: sales ? t.target : null,
+      tasks: orders || worklog ? [] : tasks.map((t) => ({ id: t.id, title: t.title.trim(), weightage: sales ? null : t.weightage!, targetAmount: sales ? t.target : null,
         startDate: toIsoDate(t.start)!, endDate: toIsoDate(t.end)! })),
     };
     const r = this.review();

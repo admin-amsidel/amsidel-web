@@ -52,9 +52,11 @@ interface RuleRow {
         </ng-template>
         <ng-template #body let-r>
           <tr [class.default]="r.levelNumber === 0">
-            <td class="lvlcell stack-full">
-              @if (r.levelNumber) { <span class="lvl">L{{ r.levelNumber }}</span> }
-              <span>{{ r.label }}</span>
+            <td class="stack-full">
+              <span class="lvlcell">
+                @if (r.levelNumber) { <span class="lvl">L{{ r.levelNumber }}</span> }
+                <span>{{ r.label }}</span>
+              </span>
             </td>
             <td data-label="Hours a day"><p-inputnumber [(ngModel)]="r.dailyMinHours" [min]="0" [max]="24" [maxFractionDigits]="2" inputStyleClass="num"
                                [placeholder]="ph(r, 'dailyMinHours')" [ariaLabel]="'Hours a day, ' + r.label" /></td>
@@ -82,6 +84,8 @@ interface RuleRow {
   styles: `
     :host ::ng-deep .rules .num { width: 110px; }
     :host ::ng-deep .rules tr.default > td { background: var(--accent-softer); font-weight: 600; }
+    /* the flex box sits inside the cell: a flex <td> stops being a table cell and loses the row's height and lines */
+    :host ::ng-deep .rules td { vertical-align: middle; }
     .lvlcell { display: flex; align-items: center; gap: 8px; }
     .act { text-align: right; }
     .note { margin: 16px 0 0; font-size: .84rem; color: var(--muted); max-width: 75ch; }

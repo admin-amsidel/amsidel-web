@@ -4,6 +4,7 @@
  */
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -22,16 +23,20 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../auth.service';
 import { Avatar } from '../avatar';
 import { TapTooltip } from '../tap-tooltip';
-import { apiProblem, Brand, designationLabel, Employee } from '../portal.models';
+import { apiProblem, Brand, Employee } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { TaskService } from './task.service';
-import { hrs, TaskStatus, WorkTask } from './worklog.models';
+import { hrs, TaskCustomer, TaskStatus, WorkTask } from './worklog.models';
 
-/** Owners and admins: create tasks, assign them to employees, and see the hours logged against each. */
+/**
+ * Owners and admins: create tasks, assign them to employees, and see the hours logged against each. A task may be
+ * for a customer (Customer ID); the ID in the list opens the customer's page for people with the Customers menu.
+ * Clicking a task opens its page (its work log by employee and the total effort); the pencil changes it.
+ */
 @Component({
   selector: 'app-tasks',
   imports: [
-    FormsModule, Avatar, ButtonModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
+    FormsModule, RouterLink, Avatar, ButtonModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
     MultiSelectModule, SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule, TooltipModule, TapTooltip,
   ],
   template: `
@@ -58,12 +63,35 @@ import { hrs, TaskStatus, WorkTask } from './worklog.models';
         </p-iconfield>
       </div>
 
+      <!-- phones: one line per task (hours on the right); the table on wider screens -->
+      <ul class="mlist only-phone" aria-label="Tasks">
+        @for (t of shown(); track t.id) {
+          <li class="m-task">
+            <button type="button" class="mrow" (click)="openTask(t)">
+              <span>
+                <span class="mrow__title"><span class="tid">{{ t.code }}</span> {{ t.title }}</span>
+                <span class="mrow__sub">
+                  @if (t.customerCode) { <i class="pi pi-user" aria-hidden="true"></i> {{ t.customerCode }} · {{ t.customerName }} · }
+                  {{ t.brandName ?? 'Whole group' }}
+                </span>
+                <span class="mrow__sub">
+                  <p-tag [value]="t.status === 'OPEN' ? 'Open' : 'Closed'" [severity]="t.status === 'OPEN' ? 'success' : 'secondary'" styleClass="tiny" />
+                  · {{ t.assignees.length ? t.assignees.length + (t.assignees.length === 1 ? ' person' : ' people') : 'nobody yet' }}
+                </span>
+              </span>
+              <span class="mrow__end">{{ hrs(t.loggedHours) }}<small>logged</small></span>
+            </button>
+            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" [ariaLabel]="'Edit task ' + t.code" (onClick)="openEdit(t)" />
+          </li>
+        } @empty { <li class="p-empty">{{ loading() ? 'Loading…' : 'No tasks ' + (status() === 'OPEN' ? 'open ' : '') + 'yet. Create one with "New task".' }}</li> }
+      </ul>
       <p-table [value]="shown()" [loading]="loading()" dataKey="id" [paginator]="shown().length > 20" [rows]="20"
-               [tableStyle]="{ 'min-width': '820px' }" styleClass="p-stack" sortField="code" [sortOrder]="1">
+               [tableStyle]="{ 'min-width': '820px' }" styleClass="p-stack only-desk" sortField="code" [sortOrder]="1">
         <ng-template #header>
           <tr>
             <th pSortableColumn="code">Task ID <p-sortIcon field="code" /></th>
             <th pSortableColumn="title">Title <p-sortIcon field="title" /></th>
+            <th pSortableColumn="customerCode">Customer <p-sortIcon field="customerCode" /></th>
             <th>Assigned to</th>
             <th pSortableColumn="loggedHours">Hours logged <p-sortIcon field="loggedHours" /></th>
             <th>Status</th>
@@ -71,11 +99,23 @@ import { hrs, TaskStatus, WorkTask } from './worklog.models';
           </tr>
         </ng-template>
         <ng-template #body let-t>
-          <tr class="row-link" (click)="openEdit(t)">
-            <td data-label="Task ID" class="nowrap"><b>{{ t.code }}</b></td>
+          <tr class="row-link" tabindex="0" (click)="openTask(t)" (keydown.enter)="openTask(t)">
+            <td data-label="Task ID" class="nowrap"><a class="tid" [routerLink]="['/portal/worklog/tasks', t.id]" (click)="$event.stopPropagation()">{{ t.code }}</a></td>
             <td data-label="Title" class="stack-full">
               {{ t.title }}
               @if (t.brandName) { <small class="block muted">{{ t.brandName }}</small> }
+            </td>
+            <td data-label="Customer">
+              @if (t.customerId) {
+                @if (canOpenCustomers()) {
+                  <!-- opens the customer's details page (not the task) -->
+                  <a class="cust" [routerLink]="['/portal/customers', t.customerId]" (click)="$event.stopPropagation()"
+                     [attr.aria-label]="'Open customer ' + t.customerCode + ', ' + t.customerName">{{ t.customerCode }}</a>
+                } @else {
+                  <b class="nowrap">{{ t.customerCode }}</b>
+                }
+                <small class="block muted">{{ t.customerName }}</small>
+              } @else { <span class="muted">—</span> }
             </td>
             <td data-label="Assigned to" class="stack-full">
               @if (t.assignees.length) {
@@ -99,12 +139,12 @@ import { hrs, TaskStatus, WorkTask } from './worklog.models';
             <td data-label="Hours logged">{{ hrs(t.loggedHours) }}</td>
             <td data-label="Status"><p-tag [value]="t.status === 'OPEN' ? 'Open' : 'Closed'" [severity]="t.status === 'OPEN' ? 'success' : 'secondary'" /></td>
             <td class="act stack-end">
-              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Edit task" (onClick)="openEdit(t)" />
+              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Edit task" pTooltip="Edit task" tooltipPosition="left" (onClick)="openEdit(t); $event.stopPropagation()" />
             </td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td colspan="6" class="p-empty">No tasks {{ status() === 'OPEN' ? 'open' : '' }} yet. Create one with "New task".</td></tr>
+          <tr><td colspan="7" class="p-empty">No tasks {{ status() === 'OPEN' ? 'open' : '' }} yet. Create one with "New task".</td></tr>
         </ng-template>
       </p-table>
     </section>
@@ -139,9 +179,17 @@ import { hrs, TaskStatus, WorkTask } from './worklog.models';
             <label for="t-brand">Brand</label>
             <p-select inputId="t-brand" name="brand" [options]="brandOptions()" optionLabel="label" optionValue="value"
                       [showClear]="canPickGroup()" [placeholder]="canPickGroup() ? 'Whole group' : 'Choose a brand'" appendTo="body"
-                      [ngModel]="brandId()" (ngModelChange)="brandId.set($event)" />
+                      [ngModel]="brandId()" (ngModelChange)="setBrand($event)" />
           </div>
           <div class="pf">
+            <label for="t-cust">Customer ID <span class="opt">(optional)</span></label>
+            <p-select inputId="t-cust" name="cust" [options]="customerOptions()" optionLabel="label" optionValue="value"
+                      [filter]="true" filterBy="label" filterPlaceholder="Customer ID, name or phone" [showClear]="true"
+                      placeholder="No customer" appendTo="body" [emptyMessage]="brandId() ? 'No customers for this brand' : 'No customers'"
+                      [ngModel]="customerId()" (ngModelChange)="customerId.set($event ?? null)" />
+            <small class="hint">The customer the work is for{{ brandId() ? ', of this brand' : '' }}.</small>
+          </div>
+          <div class="pf span">
             <label for="t-who">Assign to</label>
             <p-multiselect inputId="t-who" name="who" [options]="peopleOptions()" optionLabel="label" optionValue="value"
                            [filter]="true" filterPlaceholder="Search people" placeholder="Choose people" display="chip"
@@ -175,11 +223,22 @@ import { hrs, TaskStatus, WorkTask } from './worklog.models';
       color: var(--brass-dark); font-size: .72rem; font-weight: 700;
     }
     .block { display: block; }
+    .nowrap { white-space: nowrap; }
+    .tid { font-weight: 700; color: var(--ink); text-decoration: none; }
+    .tid:hover { color: var(--brass-dark); text-decoration: underline; }
+    .cust { font-weight: 600; white-space: nowrap; color: var(--brass-dark); text-decoration: none; border-bottom: 1px dashed currentColor; }
+    .cust:hover { color: var(--ink); }
+    .cust:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; border-radius: 2px; }
     .act { text-align: right; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .grid .span { grid-column: 1 / -1; }
     :host ::ng-deep .dlg-msg { margin-top: 12px; }
     :host ::ng-deep .p-multiselect, :host ::ng-deep .p-select { width: 100%; }
+    .m-task { display: flex; align-items: center; gap: 4px; }
+    .m-task .mrow { flex: 1 1 auto; min-width: 0; }
+    .m-task .tid { color: var(--brass-dark); margin-right: 2px; }
+    .m-task .mrow__sub .pi { font-size: .7rem; }
+    :host ::ng-deep .m-task .tiny { font-size: .62rem; padding: 0 6px; }
     @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .filters { flex-direction: column; align-items: stretch; } }
   `,
 })
@@ -188,6 +247,7 @@ export class Tasks implements OnInit {
   private readonly staff = inject(StaffService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(MessageService);
+  private readonly router = inject(Router);
 
   protected readonly hrs = hrs;
   protected readonly statusOptions: { label: string; value: TaskStatus | 'ALL' }[] = [
@@ -211,14 +271,31 @@ export class Tasks implements OnInit {
   protected readonly shown = computed(() => {
     const q = this.query().trim().toLowerCase();
     return this.list().filter(
-      (t) => !q || [t.code, t.title, ...t.assignees.map((a) => a.name)].some((v) => v.toLowerCase().includes(q)),
+      (t) => !q || [t.code, t.title, t.customerCode ?? '', t.customerName ?? '', ...t.assignees.map((a) => a.name)]
+        .some((v) => v.toLowerCase().includes(q)),
     );
   });
+
+  /** The customer ID links to the customer's page for people with the Customers menu. */
+  protected readonly canOpenCustomers = computed(() => !!this.auth.access() && this.auth.can('CUSTOMERS'));
+  private readonly customers = signal<TaskCustomer[]>([]);
+  /** Customers of the task's brand (all of mine for a group-wide task); inactive ones only when already chosen. */
+  protected readonly customerOptions = computed(() => {
+    const brand = this.brandId();
+    const chosen = this.customerId();
+    return this.customers()
+      .filter((c) => (brand == null || c.brandId === brand) && (c.active || c.id === chosen))
+      .map((c) => ({
+        value: c.id,
+        label: `${c.code} · ${c.name} · ${c.phone}${brand == null && this.manyBrands() ? ' · ' + c.brandCode : ''}${c.active ? '' : ' (inactive)'}`,
+      }));
+  });
+  private readonly manyBrands = computed(() => new Set(this.customers().map((c) => c.brandId)).size > 1);
 
   protected readonly peopleOptions = computed(() =>
     this.people()
       .filter((p) => p.active)
-      .map((p) => ({ value: p.id, label: `${p.name} · ${p.empNumber}${p.designationName ? ' · ' + designationLabel(p) : ''}` })),
+      .map((p) => ({ value: p.id, label: `${p.name} · ${p.empNumber}` })),
   );
   protected readonly canPickGroup = computed(() => this.auth.user()?.role === 'OWNER' || this.auth.user()?.brandId == null);
   protected readonly brandOptions = computed(() => {
@@ -237,6 +314,7 @@ export class Tasks implements OnInit {
   protected readonly formStatus = signal<TaskStatus>('OPEN');
   protected readonly brandId = signal<number | null>(null);
   protected readonly assigneeIds = signal<number[]>([]);
+  protected readonly customerId = signal<number | null>(null);
   protected readonly saving = signal(false);
   protected readonly formError = signal('');
 
@@ -248,7 +326,16 @@ export class Tasks implements OnInit {
       },
       error: (err) => this.error.set(apiProblem(err).message),
     });
+    // the Customer ID picker; without it a task is simply made without a customer
+    this.tasks.customers().subscribe({ next: (c) => this.customers.set(c), error: () => undefined });
     this.load();
+  }
+
+  /** A customer of another brand does not stay on the task when the brand changes. */
+  protected setBrand(id: number | null): void {
+    this.brandId.set(id);
+    const c = this.customers().find((x) => x.id === this.customerId());
+    if (c && id != null && c.brandId !== id) this.customerId.set(null);
   }
 
   protected setStatus(value: TaskStatus | 'ALL'): void {
@@ -267,6 +354,11 @@ export class Tasks implements OnInit {
     return t.assignees.slice(this.SHOWN).map((a) => a.name).join(', ');
   }
 
+  /** The task's page: its work log by employee and the total effort. */
+  protected openTask(t: WorkTask): void {
+    this.router.navigate(['/portal/worklog/tasks', t.id]);
+  }
+
   protected openNew(): void {
     this.editingId.set(null);
     this.code.set('');
@@ -275,6 +367,7 @@ export class Tasks implements OnInit {
     this.formStatus.set('OPEN');
     this.brandId.set(this.canPickGroup() ? null : (this.auth.user()?.brandId ?? null));
     this.assigneeIds.set([]);
+    this.customerId.set(null);
     this.formError.set('');
     this.dialogOpen.set(true);
   }
@@ -287,6 +380,7 @@ export class Tasks implements OnInit {
     this.formStatus.set(t.status);
     this.brandId.set(t.brandId);
     this.assigneeIds.set(t.assignees.map((a) => a.id));
+    this.customerId.set(t.customerId);
     this.formError.set('');
     this.dialogOpen.set(true);
   }
@@ -304,6 +398,7 @@ export class Tasks implements OnInit {
           description: this.description().trim(),
           status: this.formStatus(),
           brandId: this.brandId(),
+          customerId: this.customerId(),
           assigneeIds: this.assigneeIds(),
         },
         id ?? undefined,
