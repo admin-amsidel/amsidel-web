@@ -6,6 +6,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
+import { silent } from './busy';
 import { API_BASE } from './portal.config';
 import { Employee, LoginResponse, MyAccess, MyDetails } from './portal.models';
 
@@ -16,6 +17,8 @@ interface Session {
 }
 
 const STORAGE_KEY = 'amsidel.portal.session';
+/** My menus as last loaded, for the next page load (with whose they are). */
+const ACCESS_KEY = 'amsidel.portal.access';
 
 /** The signed-in staff member and their access token (kept in localStorage until it expires or they sign out). */
 @Injectable({ providedIn: 'root' })
@@ -32,8 +35,12 @@ export class AuthService {
   /** Decides leave for others: owners, admins and managers. */
   readonly isApprover = computed(() => this.isAdmin() || this.user()?.role === 'MANAGER');
 
-  /** My menus (menu access), loaded after sign-in; null until then. */
-  readonly access = signal<MyAccess | null>(null);
+  /**
+   * My menus (menu access), loaded after sign-in; null until then. After a page reload the ones loaded last time
+   * are used at once (so the page opens without waiting for the server) and refreshed in the background; the
+   * backend checks every call anyway, so a stale copy for a moment only shows a menu, never its data.
+   */
+  readonly access = signal<MyAccess | null>(restoreAccess(this.session()?.user.id));
   /** Set when the backend says no menus were given to me at all ("No permission granted..."). */
   readonly accessDenied = signal<string | null>(null);
   private access$: Observable<MyAccess | null> | null = null;
@@ -44,31 +51,43 @@ export class AuthService {
     return !!a && (a.all || a.codes.includes(code));
   }
 
-  /** Loads my menus once per sign-in (again after reloadAccess). */
+  /** Loads my menus once per sign-in (again after reloadAccess); with last time's at hand, answers with them at once. */
   ensureAccess(): Observable<MyAccess | null> {
     if (!this.isLoggedIn()) return of(null);
     if (!this.access$) {
-      this.access$ = this.http.get<MyAccess>(`${API_BASE}/api/auth/access`).pipe(
+      const cached = this.access();
+      const load$ = this.http.get<MyAccess>(`${API_BASE}/api/auth/access`, cached ? { context: silent() } : {}).pipe(
         tap((a) => {
           this.access.set(a);
           this.accessDenied.set(null);
+          saveAccess(this.user()?.id, a);
         }),
         catchError((err: HttpErrorResponse) => {
           this.access$ = null;
           if (err.status === 403) {
             this.accessDenied.set((err.error as { error?: string } | null)?.error ?? 'No permission granted.');
+            this.access.set(null);
+            saveAccess(undefined, null);
           }
           return of(null);
         }),
         shareReplay(1),
       );
+      if (cached) {
+        // the page goes on with last time's menus; the fresh ones replace them when they come
+        load$.subscribe();
+        this.access$ = of(cached);
+      } else {
+        this.access$ = load$;
+      }
     }
     return this.access$;
   }
 
-  /** After menu access was changed. */
+  /** After menu access was changed: loaded afresh (not from last time's). */
   reloadAccess(): Observable<MyAccess | null> {
     this.access$ = null;
+    this.access.set(null);
     return this.ensureAccess();
   }
 
@@ -138,6 +157,7 @@ export class AuthService {
       this.access$ = null;
       this.access.set(null);
       this.accessDenied.set(null);
+      saveAccess(undefined, null);
     }
     this.session.set(s);
     try {
@@ -155,5 +175,25 @@ function restore(): Session | null {
     return s && Date.parse(s.expiresAt) > Date.now() ? s : null;
   } catch {
     return null;
+  }
+}
+
+/** Last time's menus, when they are this person's. */
+function restoreAccess(userId: number | undefined): MyAccess | null {
+  if (userId == null) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACCESS_KEY) ?? 'null') as { userId: number; access: MyAccess } | null;
+    return saved && saved.userId === userId ? saved.access : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveAccess(userId: number | undefined, access: MyAccess | null): void {
+  try {
+    if (userId != null && access) localStorage.setItem(ACCESS_KEY, JSON.stringify({ userId, access }));
+    else localStorage.removeItem(ACCESS_KEY);
+  } catch {
+    // blocked storage: the menus are loaded on each page load as before
   }
 }

@@ -429,9 +429,10 @@ export class PortalShell {
   });
 
   constructor() {
-    // my menus: loaded once per sign-in (and again after a new PIN, which signs in afresh)
+    // my menus: loaded once per sign-in (and again after a new PIN, which signs in afresh); with last time's in
+    // hand this refreshes them in the background (ensureAccess asks only once)
     effect(() => {
-      if (this.auth.user() && !this.auth.access() && !this.auth.accessDenied()) {
+      if (this.auth.user() && !this.auth.accessDenied()) {
         untracked(() => this.auth.ensureAccess().subscribe());
       }
     });
