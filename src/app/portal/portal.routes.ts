@@ -157,6 +157,14 @@ export const PORTAL_ROUTES: Routes = [
         loadComponent: () => import('./payroll/my-pay').then((m) => m.MyPayPage),
       },
       {
+        // before payroll/:employeeId
+        path: 'payroll/team-pay',
+        title: 'Team Pay · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'TEAM_PAY', team: true },
+        loadComponent: () => import('./payroll/my-pay').then((m) => m.MyPayPage),
+      },
+      {
         path: 'payroll/:employeeId',
         title: 'Salary · Amsidel Company Portal',
         canActivate: [menuGuard],

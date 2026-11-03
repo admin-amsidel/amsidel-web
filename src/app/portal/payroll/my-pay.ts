@@ -13,14 +13,19 @@ import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
-import { apiProblem } from '../portal.models';
-import { fyLabel, KINDS, MyPay, paymentLabel, PayKind, Payslip, rupees, rupeesRound, SalaryLine } from './payroll.models';
+import { apiProblem, Brand } from '../portal.models';
+import { ActivatedRoute, Router } from '@angular/router';
+import { fyLabel, KINDS, MyPay, paymentLabel, PayKind, Payslip, rupees, rupeesRound, SalaryLine, TeamPayPerson } from './payroll.models';
 import { PayrollService } from './payroll.service';
+import { AuthService } from '../auth.service';
+import { StaffService } from '../staff.service';
 import { PayslipSheet } from './payslip-sheet';
 
 /**
  * My pay: the year at a glance (expected salary, earned so far, taxes paid, balance), month by month, my published
  * payslips (view and PDF) and my salary structure, monthly and yearly. Read-only; drafts never show here.
+ * Team pay (route data team): the same for one of the people reporting to me (everyone in scope for owners and
+ * admins), chosen by person, with a brand filter when they are in more than one brand; ?employee= keeps the choice.
  */
 @Component({
   selector: 'app-my-pay',
@@ -28,20 +33,47 @@ import { PayslipSheet } from './payslip-sheet';
   template: `
     <div class="p-head">
       <div>
-        <h1>My pay</h1>
-        <p>Your salary for the financial year, your payslips and what has been paid so far.</p>
+        <h1>{{ team ? 'Team pay' : 'My pay' }}</h1>
+        <p>{{ team ? 'The pay of the people reporting to you, as they see it: salary, payslips and what has been paid so far. Read-only.'
+          : 'Your salary for the financial year, your payslips and what has been paid so far.' }}</p>
       </div>
       <div class="head-actions">
-        <p-select [options]="yearOptions()" optionLabel="label" optionValue="value" ariaLabel="Financial year"
-                  [ngModel]="data()?.fyStartYear" (ngModelChange)="load($event)" />
+        @if (!team || personId()) {
+          <p-select [options]="yearOptions()" optionLabel="label" optionValue="value" ariaLabel="Financial year"
+                    [ngModel]="data()?.fyStartYear" (ngModelChange)="load($event)" />
+        }
       </div>
     </div>
 
+    @if (team) {
+      <section class="p-card picker">
+        @if (allBrands() || brandOptions().length > 1) {
+          <div class="pf">
+            <label for="tp-brand">Brand</label>
+            <p-select inputId="tp-brand" [options]="brandOptions()" optionLabel="label" optionValue="value" [showClear]="true"
+                      placeholder="All brands" appendTo="body" [ngModel]="brandKey()" (ngModelChange)="pickBrand($event)" />
+          </div>
+        }
+        <div class="pf">
+          <label for="tp-person">Employee</label>
+          <p-select inputId="tp-person" [options]="personOptions()" optionLabel="label" optionValue="value" [filter]="true"
+                    filterBy="label" placeholder="Choose a person" appendTo="body" [loading]="peopleLoading()"
+                    [emptyMessage]="peopleLoading() ? 'Loading…' : 'Nobody reports to you'"
+                    [ngModel]="personId()" (ngModelChange)="pickPerson($event)" />
+        </div>
+        @if (person(); as p) {
+          <p class="who"><b>{{ p.name }}</b> · {{ p.empNumber }}{{ p.designationName ? ' · ' + p.designationName : '' }}{{ p.brandName ? ' · ' + p.brandName : '' }}</p>
+        }
+      </section>
+    }
+
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
 
-    @if (data(); as d) {
+    @if (team && !personId()) {
+      <p class="p-empty">{{ peopleLoading() ? 'Loading the people reporting to you…' : people().length ? 'Choose a person to see their pay.' : 'Nobody reports to you, so there is no pay to show.' }}</p>
+    } @else if (data(); as d) {
       @if (!d.salary.set) {
-        <p-message severity="info" styleClass="page-message">Your salary for {{ d.fyLabel }} is not set up yet. Payroll will add it.</p-message>
+        <p-message severity="info" styleClass="page-message">{{ team ? (person()?.name ?? 'Their') + "'s" : 'Your' }} salary for {{ d.fyLabel }} is not set up yet. Payroll will add it.</p-message>
       }
 
       <!-- the year at a glance -->
@@ -119,7 +151,7 @@ import { PayslipSheet } from './payslip-sheet';
                   </tr>
                 </ng-template>
                 <ng-template #emptymessage>
-                  <tr><td colspan="7" class="p-empty">No payslips for {{ d.fyLabel }} yet. Each month's payslip appears here once your salary is credited.</td></tr>
+                  <tr><td colspan="7" class="p-empty">No payslips for {{ d.fyLabel }} yet. Each month's payslip appears here once {{ team ? 'the' : 'your' }} salary is credited.</td></tr>
                 </ng-template>
               </p-table>
             </p-tabpanel>
@@ -148,14 +180,14 @@ import { PayslipSheet } from './payslip-sheet';
                   <span><b>{{ round(d.salary.totals.annualNet) }}</b> a year</span>
                 </div>
               } @else {
-                <p class="p-empty">Your salary for {{ d.fyLabel }} is not set up yet.</p>
+                <p class="p-empty">{{ team ? 'The' : 'Your' }} salary for {{ d.fyLabel }} is not set up yet.</p>
               }
             </p-tabpanel>
           </p-tabpanels>
         </p-tabs>
       </section>
     } @else if (!error()) {
-      <p class="p-loading">Loading your pay…</p>
+      <p class="p-loading">{{ team ? 'Loading their pay…' : 'Loading your pay…' }}</p>
     }
 
     <p-dialog [visible]="!!slip()" (visibleChange)="!$event && slip.set(null)" [modal]="true" [draggable]="false" [dismissableMask]="true"
@@ -170,6 +202,10 @@ import { PayslipSheet } from './payslip-sheet';
     </p-dialog>
   `,
   styles: `
+    .picker { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 18px; margin-bottom: 18px; }
+    .picker .pf { min-width: min(280px, 100%); }
+    .picker p-select { width: 100%; }
+    .picker .who { margin: 0 0 8px; color: var(--muted); font-size: .9rem; }
     .dash { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
     .metric { display: grid; gap: 8px; padding: 18px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line);
       box-shadow: var(--shadow); align-content: start; }
@@ -211,6 +247,8 @@ import { PayslipSheet } from './payslip-sheet';
     .net-row b { font-size: 1.1rem; color: #1d5fa3; }
     @media (max-width: 1100px) { .dash { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 760px) {
+      .picker { display: grid; gap: 10px; }
+      .picker .who { margin: 0; }
       .months ul { grid-template-columns: 1fr; }
       .months li { grid-template-columns: 64px minmax(0, 1fr) 96px; gap: 10px; }
       .num { text-align: left; }
@@ -221,6 +259,39 @@ import { PayslipSheet } from './payslip-sheet';
 })
 export class MyPayPage implements OnInit {
   private readonly payroll = inject(PayrollService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+  private readonly staff = inject(StaffService);
+
+  /** Team pay: someone else's pay, chosen on the page. */
+  protected readonly team = this.route.snapshot.data['team'] === true;
+  protected readonly people = signal<TeamPayPerson[]>([]);
+  protected readonly peopleLoading = signal(false);
+  protected readonly personId = signal<number | null>(null);
+  /** The brand filter: a brand id, or 'none' for people without a brand; null = every brand. */
+  protected readonly brandKey = signal<string | null>(null);
+  protected readonly person = computed(() => this.people().find((p) => p.id === this.personId()) ?? null);
+  /** Owners and group admins always get the brand filter, with every brand (also those nobody is listed in yet). */
+  protected readonly allBrands = computed(() => {
+    const me = this.auth.user();
+    return me?.role === 'OWNER' || (me?.role === 'ADMIN' && me.brandId == null);
+  });
+  private readonly brands = signal<Brand[]>([]);
+  protected readonly brandOptions = computed(() => {
+    const seen = new Map<string, string>();
+    for (const b of this.brands()) seen.set(String(b.id), b.name);
+    for (const p of this.people()) seen.set(p.brandId == null ? 'none' : String(p.brandId), p.brandName ?? 'Group (no brand)');
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([value, name]) => ({
+      value, label: `${name} · ${this.people().filter((p) => (p.brandId == null ? 'none' : String(p.brandId)) === value).length}`,
+    }));
+  });
+  protected readonly personOptions = computed(() => {
+    const b = this.brandKey();
+    return this.people()
+      .filter((p) => b === null || (p.brandId == null ? 'none' : String(p.brandId)) === b)
+      .map((p) => ({ value: p.id, label: `${p.name} · ${p.empNumber}` }));
+  });
 
   protected readonly kinds = KINDS;
   protected readonly money = rupees;
@@ -241,23 +312,59 @@ export class MyPayPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.load();
+    if (!this.team) {
+      this.load();
+      return;
+    }
+    if (this.allBrands()) this.staff.brands().subscribe({ next: (b) => this.brands.set(b), error: () => undefined });
+    const chosen = Number(this.route.snapshot.queryParamMap.get('employee')) || null;
+    this.peopleLoading.set(true);
+    this.payroll.teamPeople().subscribe({
+      next: (list) => {
+        this.people.set(list);
+        this.peopleLoading.set(false);
+        if (chosen && list.some((p) => p.id === chosen)) this.pickPerson(chosen);
+      },
+      error: (err) => {
+        this.peopleLoading.set(false);
+        this.error.set(apiProblem(err).message);
+      },
+    });
   }
 
   protected load(fy?: number): void {
     this.error.set('');
-    this.payroll.myPay(fy).subscribe({ next: (d) => this.data.set(d), error: (err) => this.error.set(apiProblem(err).message) });
+    const id = this.personId();
+    if (this.team && !id) return;
+    const pay$ = this.team ? this.payroll.teamPay(id!, fy ?? this.data()?.fyStartYear) : this.payroll.myPay(fy);
+    pay$.subscribe({ next: (d) => this.data.set(d), error: (err) => this.error.set(apiProblem(err).message) });
+  }
+
+  /** Team pay: a person chosen (kept in the address, so a reload shows them again). */
+  protected pickPerson(id: number | null): void {
+    this.personId.set(id);
+    this.data.set(null);
+    this.router.navigate([], { relativeTo: this.route, queryParams: { employee: id }, replaceUrl: true });
+    if (id) this.load();
+  }
+
+  /** Team pay: a brand chosen; the person goes when they are not in it. */
+  protected pickBrand(key: string | null): void {
+    this.brandKey.set(key);
+    const p = this.person();
+    if (p && key !== null && (p.brandId == null ? 'none' : String(p.brandId)) !== key) this.pickPerson(null);
   }
 
   protected open(id: number): void {
-    this.payroll.myPayslip(id).subscribe({ next: (p) => this.slip.set(p), error: (err) => this.error.set(apiProblem(err).message) });
+    const slip$ = this.team ? this.payroll.teamPayslip(this.personId()!, id) : this.payroll.myPayslip(id);
+    slip$.subscribe({ next: (p) => this.slip.set(p), error: (err) => this.error.set(apiProblem(err).message) });
   }
 
   /** The A4 payslip: downloaded, or printed. */
   protected pdf(p: Payslip, print = false): void {
     const busy = print ? this.printing : this.downloading;
     busy.set(true);
-    this.payroll.downloadPdf(p, true, print).subscribe({
+    this.payroll.downloadPdf(p, this.team ? { teamOf: this.personId()! } : true, print).subscribe({
       next: () => busy.set(false),
       error: (err) => {
         busy.set(false);

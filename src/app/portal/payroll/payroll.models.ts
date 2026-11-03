@@ -496,3 +496,14 @@ export function moneyInWords(v: number, code: string | null | undefined): string
   }
   return `${unit[0]} ${parts.join(' ') || 'Zero'}${sub ? ' and ' + wBelow100(sub) + ' ' + unit[1] : ''} Only`;
 }
+
+/** Someone whose pay Team pay can show (the people reporting to me; everyone in scope for owners and admins). */
+export interface TeamPayPerson {
+  id: number;
+  name: string;
+  empNumber: string;
+  designationName: string | null;
+  brandId: number | null;
+  brandCode: string | null;
+  brandName: string | null;
+}

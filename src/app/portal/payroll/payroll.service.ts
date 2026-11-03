@@ -7,7 +7,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
-import { MyPay, PaymentMode, PayComponent, PayKind, PayrollYear, Payslip, PayslipMonth, PayslipSave, PayslipTax, Salary, SalaryBody, TaxCalc } from './payroll.models';
+import { MyPay, PaymentMode, PayComponent, PayKind, PayrollYear, Payslip, PayslipMonth, PayslipSave, PayslipTax, Salary, SalaryBody, TaxCalc, TeamPayPerson } from './payroll.models';
 import { printPdf } from '../../shared/print-pdf';
 
 const PAY = `${API_BASE}/api/payroll`;
@@ -116,12 +116,27 @@ export class PayrollService {
     return this.http.get<Payslip>(`${API_BASE}/api/my-pay/payslips/${id}`);
   }
 
+  /** Team pay: the people whose pay I may watch. */
+  teamPeople(): Observable<TeamPayPerson[]> {
+    return this.http.get<TeamPayPerson[]>(`${API_BASE}/api/team-pay/people`);
+  }
+
+  /** Team pay: one person's pay for the year, as My pay shows it to them. */
+  teamPay(employeeId: number, fy?: number): Observable<MyPay> {
+    return this.http.get<MyPay>(`${API_BASE}/api/team-pay/${employeeId}`, { params: fy ? { fy } : {} });
+  }
+
+  teamPayslip(employeeId: number, id: number): Observable<Payslip> {
+    return this.http.get<Payslip>(`${API_BASE}/api/team-pay/${employeeId}/payslips/${id}`);
+  }
+
   /**
    * Downloads the payslip PDF, an A4 page (own: My pay; any in scope: payroll), or with print opens the print dialog
    * with it. The request needs the login token, so not a plain link.
    */
-  downloadPdf(p: Payslip, own: boolean, print = false): Observable<void> {
-    const url = own ? `${API_BASE}/api/my-pay/payslips/${p.id}/pdf` : `${PAY}/payslips/${p.id}/pdf`;
+  downloadPdf(p: Payslip, own: boolean | { teamOf: number }, print = false): Observable<void> {
+    const url = typeof own === 'object' ? `${API_BASE}/api/team-pay/${own.teamOf}/payslips/${p.id}/pdf`
+      : own ? `${API_BASE}/api/my-pay/payslips/${p.id}/pdf` : `${PAY}/payslips/${p.id}/pdf`;
     return new Observable<void>((sub) => {
       const req = this.http.get(url, { responseType: 'blob' }).subscribe({
         next: (blob) => {
