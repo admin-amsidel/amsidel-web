@@ -36,7 +36,8 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
         @if (store.unreadTotal()) { <span class="launch-badge">{{ store.unreadTotal() > 99 ? '99+' : store.unreadTotal() }}</span> }
       </button>
     } @else {
-      <section class="chat" [class.max]="mode() === 'max'" role="dialog" aria-label="Team chat">
+      <section class="chat" [class.max]="mode() === 'max'" role="dialog" aria-label="Team chat"
+               (pointerdown)="store.touch()" (keydown)="store.touch()">
         <header class="bar">
           <i class="pi pi-comments" aria-hidden="true"></i>
           <b>Team chat</b>
@@ -128,7 +129,9 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
           </span>
           <div class="who"><div class="title">{{ c.title }}</div><div class="sub" [class.typing-text]="store.activeTyping().length">{{ subtitle() }}</div></div>
           @if (c.type === 'GROUP') {
+            @if (canAddPeople()) {
             <button type="button" class="icon-btn" (click)="startNew('ADD')" aria-label="Add people" title="Add people"><i class="pi pi-user-plus" aria-hidden="true"></i></button>
+            }
             <button type="button" class="icon-btn" (click)="leave(c)" aria-label="Leave the group" title="Leave the group"><i class="pi pi-sign-out" aria-hidden="true"></i></button>
           }
         </div>
@@ -177,7 +180,7 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
         <div class="who"><div class="title">{{ pick() === 'ADD' ? 'Add people to ' + (store.active()?.title ?? 'the group') : 'New chat' }}</div>
           <div class="sub">{{ pick() === 'PERSON' ? 'Choose a colleague' : 'Choose the people' }}</div></div>
       </div>
-      @if (pick() !== 'ADD') {
+      @if (pick() !== 'ADD' && canStartGroup()) {
         <div class="seg" role="tablist" aria-label="Chat with">
           <button type="button" role="tab" [attr.aria-selected]="pick() === 'PERSON'" [class.on]="pick() === 'PERSON'" (click)="pick.set('PERSON')"><i class="pi pi-user" aria-hidden="true"></i> One person</button>
           <button type="button" role="tab" [attr.aria-selected]="pick() === 'GROUP'" [class.on]="pick() === 'GROUP'" (click)="pick.set('GROUP')"><i class="pi pi-users" aria-hidden="true"></i> Group</button>
@@ -354,6 +357,9 @@ export class TeamChat implements OnInit, OnDestroy, AfterViewChecked {
   private readonly wide = signal(typeof window !== 'undefined' && window.matchMedia('(min-width: 900px)').matches);
   protected readonly twoPane = computed(() => this.mode() === 'max' && this.wide());
   protected readonly meId = computed(() => this.auth.user()?.id ?? 0);
+  /** Group chat ticks under Team chat: starting groups, and adding people to one I am in. */
+  protected readonly canStartGroup = computed(() => !!this.auth.access() && this.auth.can('CHAT_GROUP_CREATE'));
+  protected readonly canAddPeople = computed(() => !!this.auth.access() && this.auth.can('CHAT_GROUP_ADD'));
 
   protected readonly shownChats = computed(() => {
     const q = this.query().trim().toLowerCase();
@@ -407,10 +413,12 @@ export class TeamChat implements OnInit, OnDestroy, AfterViewChecked {
   private stick = true;
   private lastCount = -1;
   private media?: MediaQueryList;
+  /** Checks each minute whether the open window has gone unused for SLEEP_AFTER_MS. */
+  private sleepTimer?: ReturnType<typeof setInterval>;
   private readonly onMedia = (e: MediaQueryListEvent) => this.wide.set(e.matches);
 
   constructor() {
-    // the window open = polls faster and reads what it shows
+    // the window open = polls fast (and asks at once) and reads what it shows; minimised = the slow cheap check
     effect(() => {
       const open = this.mode() !== 'closed';
       untracked(() => {
@@ -418,6 +426,8 @@ export class TeamChat implements OnInit, OnDestroy, AfterViewChecked {
         if (open) {
           this.store.pollSoon();
           this.store.markActiveRead();
+        } else {
+          this.store.paceChanged();
         }
       });
     });
@@ -431,6 +441,7 @@ export class TeamChat implements OnInit, OnDestroy, AfterViewChecked {
 
   ngOnInit(): void {
     this.store.start();
+    this.sleepTimer = setInterval(() => this.sleepIfUnused(), 60_000);
     if (typeof window !== 'undefined') {
       this.media = window.matchMedia('(min-width: 900px)');
       this.media.addEventListener('change', this.onMedia);
@@ -439,6 +450,7 @@ export class TeamChat implements OnInit, OnDestroy, AfterViewChecked {
 
   ngOnDestroy(): void {
     this.store.stop();
+    if (this.sleepTimer) clearInterval(this.sleepTimer);
     this.media?.removeEventListener('change', this.onMedia);
   }
 
@@ -447,6 +459,17 @@ export class TeamChat implements OnInit, OnDestroy, AfterViewChecked {
     const count = this.store.activeMessages().length + this.store.activeTyping().length;
     if (el && count !== this.lastCount && this.stick) el.scrollTop = el.scrollHeight;
     if (el) this.lastCount = count;
+  }
+
+  /**
+   * Sleep mode: open but unused for half an hour (no message sent or received, no typing, no click in it), the
+   * window minimises itself, so it drops to the 30-second check; opening it again checks at once.
+   */
+  private sleepIfUnused(): void {
+    if (this.mode() === 'closed' || Date.now() - this.store.lastActivityAt() < SLEEP_AFTER_MS) return;
+    this.setMode('closed');
+    this.toast.add({ severity: 'info', summary: 'Chat minimised', life: 6000,
+      detail: 'No chat activity for 30 minutes. New messages still show on the chat button.' });
   }
 
   protected setMode(m: Mode): void {
@@ -632,6 +655,9 @@ export class TeamChat implements OnInit, OnDestroy, AfterViewChecked {
     return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
   }
 }
+
+/** Open and unused this long: the window minimises itself (sleep mode). */
+const SLEEP_AFTER_MS = 5 * 60_000;
 
 function dayLabel(iso: string): string {
   const d = new Date(iso);

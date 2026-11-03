@@ -7,6 +7,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
+import { ChatPolling } from './chat-polling';
 
 const C = `${API_BASE}/api/chat`;
 
@@ -52,15 +53,19 @@ interface Sync {
   unreadTotal: number;
   retentionDays: number;
   serverTime: string;
+  /** My change version when this was read: the minimised window's /changes check compares it. */
+  version: string;
 }
 
 /**
- * Team chat: my chats and their messages, kept fresh by asking the server every few seconds (more often while the
- * chat window is open). Messages of a chat load when it is opened; older ones as you scroll up.
+ * Team chat: my chats and their messages, kept fresh by ChatPolling (fast only while someone is chatting, a cheap
+ * check while minimised, nothing in a hidden tab). Messages of a chat load when it is opened; older ones as you
+ * scroll up. A new message while minimised plays a short sound.
  */
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly http = inject(HttpClient);
+  private readonly polling = inject<ChatPolling<Sync>>(ChatPolling);
 
   readonly conversations = signal<Conversation[]>([]);
   readonly messages = signal<Record<number, ChatMessage[]>>({});
@@ -74,63 +79,79 @@ export class ChatStore {
   /** The window is open (polls faster, marks what is shown as read). */
   readonly visible = signal(false);
 
-  readonly unreadTotal = computed(() => this.conversations().reduce((s, c) => s + c.unread, 0));
+  /** From the minimised check (the chat list is not fetched then); stale = it is newer than the list. */
+  private readonly checkedUnread = signal(0);
+  private readonly listStale = signal(true);
+  readonly unreadTotal = computed(() => (this.listStale() ? this.checkedUnread() : this.conversations().reduce((s, c) => s + c.unread, 0)));
   readonly active = computed(() => this.conversations().find((c) => c.id === this.activeId()) ?? null);
   readonly activeMessages = computed(() => (this.activeId() ? this.messages()[this.activeId()!] ?? [] : []));
   readonly activeTyping = computed(() => (this.activeId() ? this.typing()[String(this.activeId())] ?? [] : []));
 
   private after = -1;
-  private timer: ReturnType<typeof setTimeout> | null = null;
-  private running = false;
   private lastTypingSent = 0;
   private tempId = -1;
+  /** Last time something happened in the chat (opened, sent, typed, a message came): fast polling for a minute. */
+  private lastActivity = Date.now();
+  private firstSync = true;
+  private firstCheck = true;
 
+  /** Starts polling (the window is only there for people with Team chat). */
   start(): void {
-    if (this.running) return;
-    this.running = true;
-    this.poll();
-  }
-
-  stop(): void {
-    this.running = false;
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = null;
-  }
-
-  /** Ask now (e.g. the window was just opened). */
-  pollSoon(): void {
-    if (!this.running) return;
-    if (this.timer) clearTimeout(this.timer);
-    this.poll();
-  }
-
-  private poll(): void {
-    const params = new HttpParams().set('after', String(this.after));
-    this.http.get<Sync>(`${C}/sync`, { params, context: silent() }).subscribe({
-      next: (s) => {
+    this.polling.start({
+      state: () => ({ open: this.visible(), otherTyping: this.visible() && this.activeTyping().length > 0, lastActivity: this.lastActivity }),
+      synced: (s) => {
         this.apply(s);
         this.error.set('');
         this.loading.set(false);
-        this.next();
       },
-      error: (e) => {
+      unread: (count) => {
+        const before = this.unreadTotal();
+        this.checkedUnread.set(count);
+        this.listStale.set(true);
+        // minimised and something new came in: a short sound (in the tab in view)
+        if (!this.firstCheck && count > before && document.visibilityState === 'visible') chime();
+        this.firstCheck = false;
+      },
+      denied: () => this.loading.set(false),
+      failed: () => {
         this.loading.set(false);
-        // no access any more (or signed out): stop asking
-        if (e?.status === 401 || e?.status === 403) return this.stop();
         this.error.set('Chat is offline; trying again…');
-        this.next(15000);
       },
     });
   }
 
-  private next(ms?: number): void {
-    if (!this.running) return;
-    const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
-    const wait = ms ?? (hidden ? 30000 : this.visible() ? 3500 : 15000);
-    this.timer = setTimeout(() => this.poll(), wait);
+  stop(): void {
+    this.polling.stop();
+    this.firstSync = true;
+    this.firstCheck = true;
+  }
+
+  /** Ask now (the window was just opened, or a message sent). */
+  pollSoon(): void {
+    this.lastActivity = Date.now();
+    this.polling.now();
+  }
+
+  /** When something last happened in the chat (opened, sent, typed, a message came, a click in the window). */
+  lastActivityAt(): number {
+    return this.lastActivity;
+  }
+
+  /** A click or key in the open window: it is in use (back to fast polling if it had gone idle). */
+  touch(): void {
+    const wasIdle = Date.now() - this.lastActivity > 60_000;
+    this.lastActivity = Date.now();
+    if (wasIdle) this.polling.changed();
+  }
+
+  /** The window was minimised: poll at the new pace. */
+  paceChanged(): void {
+    this.polling.changed();
   }
 
   private apply(s: Sync): void {
+    const unreadBefore = this.unreadTotal();
+    const typingBefore = this.activeTyping().length > 0;
     this.retentionDays.set(s.retentionDays);
     this.typing.set(s.typing ?? {});
     this.online.set(new Set(s.online));
@@ -154,9 +175,19 @@ export class ChatStore {
       if (this.activeId() && !ids.has(this.activeId()!)) this.activeId.set(null);
     }
     this.conversations.set(s.conversations);
+    this.listStale.set(false);
     const lastIds = [...s.conversations.map((c) => c.last?.id ?? 0), ...s.messages.map((m) => m.id), Math.max(this.after, 0)];
-    this.after = Math.max(...lastIds);
+    const newest = Math.max(...lastIds);
+    // a new message (or someone starting to type): back to fast polling
+    if (newest > this.after && !this.firstSync) this.lastActivity = Date.now();
+    if (!typingBefore && this.activeTyping().length) this.lastActivity = Date.now();
+    this.after = newest;
+    this.polling.seen(newest);
     this.markActiveRead();
+    // minimised and something new came in: a short sound (in the tab in view)
+    if (!this.firstSync && !this.visible() && this.unreadTotal() > unreadBefore && document.visibilityState === 'visible') chime();
+    this.firstSync = false;
+    if (typingBefore !== this.activeTyping().length > 0) this.polling.changed();
   }
 
   /** The open chat is shown: what came in is read. */
@@ -169,6 +200,7 @@ export class ChatStore {
   }
 
   open(id: number | null): void {
+    this.lastActivity = Date.now();
     this.activeId.set(id);
     if (id === null) return;
     if (!this.messages()[id]) this.loadPage(id, null);
@@ -215,6 +247,8 @@ export class ChatStore {
           .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt)));
         this.after = Math.max(this.after, m.id - 1);
         this.lastTypingSent = 0;
+        // check at once: the others' answers and read ticks
+        this.pollSoon();
       },
       error: () => {
         this.messages.update((all) => ({ ...all, [c.id]: (all[c.id] ?? []).filter((x) => x.id !== temp.id) }));
@@ -227,6 +261,9 @@ export class ChatStore {
   typed(): void {
     const c = this.active();
     const now = Date.now();
+    const wasIdle = now - this.lastActivity > 60_000;
+    this.lastActivity = now;
+    if (wasIdle) this.polling.changed();
     if (!c || now - this.lastTypingSent < 4000) return;
     this.lastTypingSent = now;
     this.http.post<void>(`${C}/conversations/${c.id}/typing`, {}, { context: silent() }).subscribe({ error: () => undefined });
@@ -262,5 +299,29 @@ export class ChatStore {
     this.conversations.update((list) => list.filter((x) => x.id !== id));
     this.messages.update((all) => Object.fromEntries(Object.entries(all).filter(([k]) => Number(k) !== id)));
     if (this.activeId() === id) this.activeId.set(null);
+  }
+}
+
+/** A soft two-note sound for a new chat message while the window is minimised (silent where audio is not allowed). */
+function chime(): void {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    [660, 880].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const at = ctx.currentTime + i * 0.12;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.08, at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.25);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(at);
+      osc.stop(at + 0.3);
+    });
+    setTimeout(() => ctx.close(), 800);
+  } catch {
+    /* no sound */
   }
 }
