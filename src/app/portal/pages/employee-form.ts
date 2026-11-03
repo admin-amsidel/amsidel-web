@@ -2,6 +2,7 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
+import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, OnInit, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -51,7 +52,7 @@ function staffNeedsBrand(g: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-employee-form',
   imports: [
-    PhoneInput, ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker,
+    DatePipe, PhoneInput, ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker,
     InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, BankDetailsCard, EmployeeDocuments,
   ],
   templateUrl: './employee-form.html',

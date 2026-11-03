@@ -189,6 +189,12 @@
   @if (!isNew() && canEdit() && !isSelf()) {
     <section class="p-card">
       <h2>Reset PIN</h2>
+      @if (employee()?.locked) {
+        <p-message severity="error" styleClass="page-message">
+          <span><b>Sign-in locked</b> after 5 wrong PINs in a row{{ employee()?.lockedAt ? ' on ' + (employee()!.lockedAt | date: 'd MMM y, h:mm a') : '' }}.
+            It stays locked until you set a temporary PIN below; they then choose their own PIN at the next sign-in.</span>
+        </p-message>
+      }
       <p class="p-intro">Use this when someone forgets their PIN or is locked out. It also signs them out everywhere.</p>
       @if (resetError()) { <p-message severity="error" styleClass="page-message">{{ resetError() }}</p-message> }
       <div class="reset">

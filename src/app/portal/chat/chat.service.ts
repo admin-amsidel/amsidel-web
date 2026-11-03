@@ -4,7 +4,7 @@
  */
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Observable } from 'rxjs';
+import { finalize, Observable } from 'rxjs';
 import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
 import { ChatPolling } from './chat-polling';
@@ -82,6 +82,13 @@ export class ChatStore {
   /** From the minimised check (the chat list is not fetched then); stale = it is newer than the list. */
   private readonly checkedUnread = signal(0);
   private readonly listStale = signal(true);
+  /**
+   * Chat calls the person waits for (opening a chat, loading people, starting or changing a chat): shown by the
+   * chat window's own loader bar, never the page's loader. Background checks (sync, changes) do not count.
+   */
+  private readonly pending = signal(0);
+  readonly working = computed(() => this.pending() > 0);
+
   readonly unreadTotal = computed(() => (this.listStale() ? this.checkedUnread() : this.conversations().reduce((s, c) => s + c.unread, 0)));
   readonly active = computed(() => this.conversations().find((c) => c.id === this.activeId()) ?? null);
   readonly activeMessages = computed(() => (this.activeId() ? this.messages()[this.activeId()!] ?? [] : []));
@@ -217,7 +224,7 @@ export class ChatStore {
   private loadPage(id: number, before: number | null): void {
     let params = new HttpParams().set('size', '40');
     if (before) params = params.set('before', String(before));
-    this.http.get<ChatMessage[]>(`${C}/conversations/${id}/messages`, { params, context: silent() }).subscribe({
+    this.track(this.http.get<ChatMessage[]>(`${C}/conversations/${id}/messages`, { params, context: silent() })).subscribe({
       next: (page) => {
         this.messages.update((all) => {
           const have = all[id] ?? [];
@@ -270,23 +277,31 @@ export class ChatStore {
   }
 
   people(): Observable<ChatPerson[]> {
-    return this.http.get<ChatPerson[]>(`${C}/people`);
+    return this.track(this.http.get<ChatPerson[]>(`${C}/people`, { context: silent() }));
   }
 
   direct(employeeId: number): Observable<Conversation> {
-    return this.http.post<Conversation>(`${C}/conversations/direct`, { employeeId });
+    return this.track(this.http.post<Conversation>(`${C}/conversations/direct`, { employeeId }, { context: silent() }));
   }
 
   group(name: string, memberIds: number[]): Observable<Conversation> {
-    return this.http.post<Conversation>(`${C}/conversations/group`, { name, memberIds });
+    return this.track(this.http.post<Conversation>(`${C}/conversations/group`, { name, memberIds }, { context: silent() }));
   }
 
   addMembers(id: number, memberIds: number[]): Observable<Conversation> {
-    return this.http.post<Conversation>(`${C}/conversations/${id}/members`, { memberIds });
+    return this.track(this.http.post<Conversation>(`${C}/conversations/${id}/members`, { memberIds }, { context: silent() }));
   }
 
   leave(id: number): Observable<void> {
-    return this.http.delete<void>(`${C}/conversations/${id}/members/me`);
+    return this.track(this.http.delete<void>(`${C}/conversations/${id}/members/me`, { context: silent() }));
+  }
+
+  /** Counts the call in the chat window's loader while it runs (the page's loader stays out of it). */
+  private track<T>(call: Observable<T>): Observable<T> {
+    return new Observable<T>((sub) => {
+      this.pending.update((n) => n + 1);
+      return call.pipe(finalize(() => this.pending.update((n) => Math.max(0, n - 1)))).subscribe(sub);
+    });
   }
 
   /** A chat just made or changed: in the list at once, then opened. */

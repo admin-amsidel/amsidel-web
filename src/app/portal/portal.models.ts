@@ -65,6 +65,8 @@ export interface Employee {
   active: boolean;
   mustChangePassword: boolean;
   locked: boolean;
+  /** When it locked after too many wrong PINs; it stays locked until an admin sets a temporary PIN. */
+  lockedAt?: string | null;
   lastLoginAt: string | null;
   /** The user type (portal access) given; null = the built-in one of role. */
   userTypeId: number | null;

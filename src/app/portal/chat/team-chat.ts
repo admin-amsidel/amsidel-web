@@ -39,6 +39,10 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
       <section class="chat" [class.max]="mode() === 'max'" role="dialog" aria-label="Team chat"
                (pointerdown)="store.touch()" (keydown)="store.touch()">
         <header class="bar">
+          <!-- the chat's own loader: chat calls never put the page's loader over the whole page -->
+          @if (store.working() || (store.loading() && !store.conversations().length)) {
+            <span class="chat-load" role="progressbar" aria-label="Loading the chat"></span>
+          }
           <i class="pi pi-comments" aria-hidden="true"></i>
           <b>Team chat</b>
           @if (store.unreadTotal()) { <span class="bar-badge">{{ store.unreadTotal() }}</span> }
@@ -227,6 +231,13 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
     .launch-badge { position: absolute; top: -3px; right: -3px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #dc2626;
       color: #fff; font-size: .72rem; font-weight: 700; display: grid; place-items: center; border: 2px solid #fff; }
 
+    .bar { position: relative; }
+    .chat-load { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; overflow: hidden; pointer-events: none;
+      background: color-mix(in srgb, var(--c-brand) 18%, transparent); }
+    .chat-load::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 40%; background: var(--c-brand);
+      border-radius: 3px; animation: chat-load 1.1s ease-in-out infinite; }
+    @keyframes chat-load { to { left: 100%; } }
+    @media (prefers-reduced-motion: reduce) { .chat-load::after { animation: none; left: 0; width: 100%; opacity: .6; } }
     .chat { position: fixed; right: 22px; bottom: 22px; z-index: 1000; width: 380px; height: min(600px, calc(100dvh - 44px)); display: flex; flex-direction: column;
       background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden;
       box-shadow: 0 24px 60px rgba(15, 27, 45, .22), 0 4px 16px rgba(15, 27, 45, .08); }
