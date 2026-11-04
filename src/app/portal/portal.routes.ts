@@ -228,6 +228,13 @@ export const PORTAL_ROUTES: Routes = [
         loadComponent: () => import('./pages/designations').then((m) => m.Designations),
       },
       {
+        path: 'offer-letters',
+        canActivate: [menuGuard],
+        data: { menu: 'OFFER_LETTERS', freshAccess: true },
+        title: 'Issue Offer Letter · Amsidel Company Portal',
+        loadComponent: () => import('./offer-letters/offer-letters').then((m) => m.OfferLetters),
+      },
+      {
         path: 'employees',
         canActivate: [menuGuard],
         data: { menu: 'EMP_LIST' },
