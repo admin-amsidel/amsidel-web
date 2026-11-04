@@ -1,12 +1,7 @@
 <div class="p-head">
   <div>
     <h1>My leave</h1>
-    <p>Your balance for each type of leave, and everything you have applied for.</p>
-  </div>
-  <div class="pf year">
-    <label for="ml-year">Year</label>
-    <p-select inputId="ml-year" [options]="years" optionLabel="label" optionValue="value"
-              [ngModel]="year()" (ngModelChange)="changeYear($event)" />
+    <p>Your balance for each type of leave in the current leave period, and everything you have applied for in it.</p>
   </div>
 </div>
 
@@ -14,7 +9,19 @@
 
 @if (loading()) {
   <p class="p-loading">Loading your leave…</p>
+} @else if (!current()?.validFrom) {
+  <section class="p-card">
+    <p class="p-empty">No leave plan is in force for your brand right now, so leave cannot be applied for. Please ask your admin.</p>
+  </section>
 } @else {
+  @if (current(); as c) {
+    <section class="period" aria-label="Leave period">
+      <span><small>Valid from</small><b>{{ shortDate(c.validFrom!, true) }}</b></span>
+      <span><small>Valid until</small><b>{{ shortDate(c.validUntil!, true) }}</b></span>
+      <span><small>Today</small><b>{{ shortDate(c.today, true) }}</b></span>
+      @if (c.brandCode) { <span><small>Brand</small><b>{{ c.brandCode }}</b></span> }
+    </section>
+  }
   <section class="balances" aria-label="Leave balances">
     @for (b of balances(); track b.leaveTypeId) {
       <article class="bal" [class.bal--empty]="isEmpty(b)">
@@ -29,9 +36,9 @@
           <p class="bal__none">None yet</p>
           <p class="bal__hint">Given by your manager or admin when due.</p>
         } @else {
-          <p class="bal__big">{{ days(b.available) }}<small> of {{ days(b.entitled) }} left</small></p>
+          <p class="bal__big">{{ days(b.available) }}<small> left of {{ days(b.entitled) }}</small></p>
           <p class="bal__meta">
-            Used {{ days(b.used) }}@if (b.pending) { · {{ days(b.pending) }} waiting }@if (b.granted) { · {{ days(b.granted) }} granted }
+            Maximum {{ days(b.entitled) }} · Used {{ days(b.used) }}@if (b.pending) { · {{ days(b.pending) }} waiting }@if (b.carried) { · {{ days(b.carried) }} carried forward }@if (b.granted) { · {{ days(b.granted) }} granted }
           </p>
         }
       </article>
@@ -103,7 +110,7 @@
   </section>
 
   <section class="p-card">
-    <h2>My requests in {{ year() }}</h2>
+    <h2>My requests in this period</h2>
     <p-table [value]="requests()" [tableStyle]="{ 'min-width': '640px' }" dataKey="id" styleClass="p-stack">
       <ng-template #header>
         <tr><th>Dates</th><th>Type</th><th>Days</th><th>Status</th><th>Note</th><th></th></tr>
@@ -129,16 +136,16 @@
         </tr>
       </ng-template>
       <ng-template #emptymessage>
-        <tr><td colspan="6" class="p-empty">No leave applied for in {{ year() }}.</td></tr>
+        <tr><td colspan="6" class="p-empty">No leave applied for in this period.</td></tr>
       </ng-template>
     </p-table>
   </section>
 
   <section class="p-card">
-    <h2>Office holidays {{ year() }}</h2>
+    <h2>Office holidays in this period</h2>
     <p class="p-intro">The office is closed on these days. No need to apply; leave across them does not count them.</p>
     @if (!officeHolidays().length) {
-      <p class="p-empty">No office holidays listed for {{ year() }} yet.</p>
+      <p class="p-empty">No office holidays listed for this period yet.</p>
     } @else {
       <ul class="holidays office">
         @for (h of officeHolidays(); track h.id) {
@@ -154,7 +161,7 @@
 
   @if (grants().length) {
     <section class="p-card">
-      <h2>Days granted to you in {{ year() }}</h2>
+      <h2>Days granted to you in this period</h2>
       <ul class="grants">
         @for (g of grants(); track g.id) {
           <li>

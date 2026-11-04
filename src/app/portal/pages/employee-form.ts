@@ -57,6 +57,7 @@ function staffNeedsBrand(g: AbstractControl): ValidationErrors | null {
   ],
   templateUrl: './employee-form.html',
   styles: `
+    .auto-approve { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; min-height: 40px; cursor: pointer; }
     form { display: grid; }
     form + .p-card { margin-top: 36px; }
     .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
@@ -90,6 +91,7 @@ export class EmployeeForm implements OnInit {
       brandId: this.fb.control<number | null>(null),
       designationId: this.fb.control<number | null>(null),
       reportsToId: this.fb.control<number | null>(null),
+      autoApproveReports: this.fb.control(false),
       name: ['', [Validators.required, Validators.maxLength(150)]],
       empNumber: ['', [Validators.maxLength(30), Validators.pattern(/^[A-Za-z0-9-]*$/)]],
       phone: ['', [Validators.required, phoneValidator(true)]],
@@ -302,6 +304,7 @@ export class EmployeeForm implements OnInit {
       brandId: v.brandId,
       designationId: v.designationId,
       reportsToId: v.reportsToId,
+      autoApproveReports: v.autoApproveReports,
       address: v.address,
       phone: v.phone,
       // photos are uploaded separately (PhotoEditor); keep any older public/users path as it is
@@ -384,6 +387,7 @@ export class EmployeeForm implements OnInit {
       brandId: e.brandId,
       designationId: e.designationId,
       reportsToId: e.reportsToId,
+      autoApproveReports: !!e.autoApproveReports,
       name: e.name,
       empNumber: e.empNumber,
       phone: e.phone ?? '',

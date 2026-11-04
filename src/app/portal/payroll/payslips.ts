@@ -17,6 +17,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -26,8 +27,8 @@ import { Avatar } from '../avatar';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { TouchDatePicker } from '../touch-datepicker';
 import {
-  DEFAULT_WORKING_DAYS, employedFor, forDays, PAYMENT_MODES, paymentLabel, PaymentMode, Payslip, PayslipMonth, PayslipRow, PayslipTax, rupees,
-  rupeesRound,
+  DEFAULT_WORKING_DAYS, employedFor, forDays, payBrandKey, payBrandOptions, payEmployeeOptions, PAYMENT_MODES, paymentLabel, PaymentMode, Payslip,
+  PayslipMonth, PayslipRow, PayslipTax, rupees, rupeesRound,
 } from './payroll.models';
 import { PayrollService } from './payroll.service';
 import { PayslipSheet } from './payslip-sheet';
@@ -43,7 +44,7 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
   selector: 'app-payslips',
   imports: [
     FormsModule, DatePipe, RouterLink, Avatar, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, IconFieldModule,
-    InputIconModule, InputNumberModule, InputTextModule, MessageModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
+    InputIconModule, InputNumberModule, InputTextModule, MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
     TooltipModule, PayslipSheet,
   ],
   template: `
@@ -66,28 +67,28 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
       <section class="tiles" aria-label="Month totals">
         <article class="tile">
           <span class="lbl">To make</span>
-          <b class="big">{{ todo().length }}<small> of {{ d.eligible }}</small></b>
+          <b class="big">{{ todo().length }}<small> of {{ summary().eligible }}</small></b>
           <span class="meta">with a salary in {{ d.label }}</span>
         </article>
         <article class="tile">
           <span class="lbl">Drafts</span>
-          <b class="big">{{ d.drafts }}</b>
+          <b class="big">{{ summary().drafts }}</b>
           <span class="meta">not visible to employees yet</span>
         </article>
         <article class="tile">
           <span class="lbl">Awaiting credit</span>
-          <b class="big">{{ d.published - d.credited }}</b>
+          <b class="big">{{ summary().published - summary().credited }}</b>
           <span class="meta">published, salary not credited yet</span>
         </article>
         <article class="tile tile--ok">
           <span class="lbl">Credited</span>
-          <b class="big">{{ d.credited }}<small> of {{ d.eligible }}</small></b>
+          <b class="big">{{ summary().credited }}<small> of {{ summary().eligible }}</small></b>
           <span class="meta">employees can see and download</span>
         </article>
         <article class="tile tile--accent">
           <span class="lbl">Net pay {{ d.label }}</span>
-          <b class="big">{{ round(d.total.net) }}</b>
-          <span class="meta">Gross {{ round(d.total.gross) }} · tax and other deductions {{ round(d.total.deductions) }}</span>
+          <b class="big">{{ round(summary().net) }}</b>
+          <span class="meta">Gross {{ round(summary().gross) }} · tax and other deductions {{ round(summary().deductions) }}</span>
         </article>
       </section>
 
@@ -110,11 +111,19 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
             }
           </div>
         </div>
-        <p-iconfield class="search">
-          <p-inputicon styleClass="pi pi-search" />
-          <input pInputText type="search" placeholder="Name or number" aria-label="Search people"
-                 [ngModel]="query()" (ngModelChange)="query.set($event)" />
-        </p-iconfield>
+        <div class="picks">
+          @if (brandOptions().length > 1) {
+            <p-select class="pick" [options]="brandOptions()" optionLabel="label" optionValue="value" [showClear]="true" placeholder="All brands"
+                      ariaLabel="Filter by brand" appendTo="body" [ngModel]="brand()" (ngModelChange)="setBrand($event)" />
+          }
+          <p-select class="pick" [options]="employeeOptions()" optionLabel="label" optionValue="value" [showClear]="true" [filter]="true" filterBy="label"
+                    placeholder="All employees" ariaLabel="Filter by employee" appendTo="body" [ngModel]="employeeId()" (ngModelChange)="setEmployee($event)" />
+          <p-iconfield class="search">
+            <p-inputicon styleClass="pi pi-search" />
+            <input pInputText type="search" placeholder="Name or number" aria-label="Search people"
+                   [ngModel]="query()" (ngModelChange)="query.set($event)" />
+          </p-iconfield>
+        </div>
 
         <p-table [value]="rows()" dataKey="employee.id" styleClass="p-stack" [tableStyle]="{ 'min-width': '860px' }"
                  [selection]="picked()" (selectionChange)="picked.set($event)" [paginator]="rows().length > 25" [rows]="25">
@@ -393,7 +402,9 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
     .meta { font-size: .8rem; color: var(--muted); }
     .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .search { display: block; max-width: 320px; margin-bottom: 12px; }
+    .picks { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .pick { flex: 0 1 240px; min-width: 0; }
+    .search { display: block; flex: 0 1 320px; }
     .search input { width: 100%; }
     .person { display: inline-flex; align-items: center; gap: 10px; }
     .person > span { display: grid; line-height: 1.25; }
@@ -414,7 +425,7 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
     @media (max-width: 1100px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     @media (max-width: 600px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 760px) {
-      .search { max-width: none; }
+      .pick, .search { flex: 1 1 100%; }
       .num { text-align: left; }
       .big { font-size: 1.2rem; }
       .dlg-foot .grow { display: none; }
@@ -434,6 +445,31 @@ export class Payslips implements OnInit {
   protected readonly show = signal<Show>('ALL');
   protected readonly picked = signal<PayslipRow[]>([]);
   protected readonly round = rupeesRound;
+  /** A brand's code (or NO_BRAND); null = every brand. */
+  protected readonly brand = signal<string | null>(null);
+  protected readonly employeeId = signal<number | null>(null);
+  protected readonly brandOptions = computed(() => payBrandOptions(this.data()?.rows ?? []));
+  protected readonly employeeOptions = computed(() => payEmployeeOptions(this.data()?.rows ?? [], this.brand()));
+  /** The people of the chosen brand and employee: the totals, counts, list and every bulk action are about them only. */
+  protected readonly scoped = computed(() => {
+    const brand = this.brand();
+    const id = this.employeeId();
+    return (this.data()?.rows ?? []).filter((r) => (brand === null || payBrandKey(r.employee) === brand) && (id === null || r.employee.id === id));
+  });
+  protected readonly summary = computed(() => {
+    const made = this.scoped().filter((r) => r.payslipId);
+    const sum = (pick: (r: PayslipRow) => number) => made.reduce((t, r) => t + Number(pick(r)), 0);
+    const published = made.filter((r) => r.status === 'PUBLISHED');
+    return {
+      eligible: this.scoped().filter((r) => r.salarySet || r.payslipId).length,
+      drafts: made.filter((r) => r.status === 'DRAFT').length,
+      published: published.length,
+      credited: published.filter((r) => r.paidOn).length,
+      gross: sum((r) => r.money.gross),
+      deductions: sum((r) => r.money.deductions),
+      net: sum((r) => r.money.net),
+    };
+  });
 
   // the open payslip
   protected readonly slip = signal<Payslip | null>(null);
@@ -510,28 +546,28 @@ export class Payslips implements OnInit {
   protected readonly bulkOpen = signal(false);
   protected readonly draft = computed(() => !!this.slip()?.editable && this.slip()?.status === 'DRAFT');
 
-  protected readonly todo = computed(() => (this.data()?.rows ?? []).filter((r) => r.salarySet && !r.payslipId && r.editable));
-  protected readonly drafts = computed(() => (this.data()?.rows ?? []).filter((r) => r.status === 'DRAFT' && r.editable));
+  protected readonly todo = computed(() => this.scoped().filter((r) => r.salarySet && !r.payslipId && r.editable));
+  protected readonly drafts = computed(() => this.scoped().filter((r) => r.status === 'DRAFT' && r.editable));
   protected readonly pickedDrafts = computed(() => this.picked().filter((r) => r.status === 'DRAFT'));
   protected readonly publishable = computed(() => (this.picked().length ? this.pickedDrafts() : this.drafts()));
   /** Published, salary not credited yet. */
-  protected readonly awaiting = computed(() => (this.data()?.rows ?? []).filter((r) => r.status === 'PUBLISHED' && !r.paidOn && r.editable));
+  protected readonly awaiting = computed(() => this.scoped().filter((r) => r.status === 'PUBLISHED' && !r.paidOn && r.editable));
   protected readonly pickedAwaiting = computed(() => this.picked().filter((r) => r.status === 'PUBLISHED' && !r.paidOn));
   protected readonly creditable = computed(() => (this.picked().length ? this.pickedAwaiting() : this.awaiting()));
   protected readonly showOptions = computed(() => {
-    const d = this.data();
+    const s = this.summary();
     return [
-      { label: `All ${d?.rows.length ?? 0}`, value: 'ALL' },
+      { label: `All ${this.scoped().length}`, value: 'ALL' },
       { label: `To make ${this.todo().length}`, value: 'TODO' },
-      { label: `Drafts ${d?.drafts ?? 0}`, value: 'DRAFT' },
-      { label: `Awaiting credit ${(d?.published ?? 0) - (d?.credited ?? 0)}`, value: 'AWAITING' },
-      { label: `Credited ${d?.credited ?? 0}`, value: 'CREDITED' },
+      { label: `Drafts ${s.drafts}`, value: 'DRAFT' },
+      { label: `Awaiting credit ${s.published - s.credited}`, value: 'AWAITING' },
+      { label: `Credited ${s.credited}`, value: 'CREDITED' },
     ];
   });
   protected readonly rows = computed(() => {
     const q = this.query().trim().toLowerCase();
     const show = this.show();
-    return (this.data()?.rows ?? []).filter(
+    return this.scoped().filter(
       (r) =>
         (show === 'ALL' ||
           (show === 'TODO' ? r.salarySet && !r.payslipId
@@ -553,8 +589,23 @@ export class Payslips implements OnInit {
     this.load();
   }
 
+  /** Someone of another brand does not stay chosen; a selection never reaches people the filter hides. */
+  protected setBrand(value: string | null): void {
+    this.brand.set(value ?? null);
+    this.picked.set([]);
+    const id = this.employeeId();
+    if (id !== null && !this.employeeOptions().some((o) => o.value === id)) this.employeeId.set(null);
+  }
+
+  protected setEmployee(value: number | null): void {
+    this.employeeId.set(value ?? null);
+    this.picked.set([]);
+  }
+
   protected openGenerate(employeeIds?: number[]): void {
-    this.genIds.set(employeeIds ?? null);
+    // with a filter on, only those people: without a list the server makes payslips for everyone
+    const filtered = this.brand() !== null || this.employeeId() !== null;
+    this.genIds.set(employeeIds ?? (filtered ? this.todo().map((r) => r.employee.id) : null));
     this.genDays.set(DEFAULT_WORKING_DAYS);
     this.genOpen.set(true);
   }
@@ -819,7 +870,11 @@ export class Payslips implements OnInit {
     const d = this.monthDate();
     this.error.set('');
     this.payroll.month(d.getFullYear(), d.getMonth() + 1).subscribe({
-      next: (m) => this.data.set(m),
+      next: (m) => {
+        this.data.set(m);
+        // someone not in this month's list does not stay chosen
+        if (!m.rows.some((r) => r.employee.id === this.employeeId())) this.employeeId.set(null);
+      },
       error: (err) => this.error.set(apiProblem(err).message),
     });
   }

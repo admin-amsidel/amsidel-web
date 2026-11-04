@@ -196,8 +196,15 @@ export class StaffMail implements OnInit {
     { value: null, label: 'All brands' },
     ...this.brands().map((b) => ({ value: b.id, label: b.name })),
   ]);
+  /** Customer & supplier email, Choose: which of the two the list shows. */
+  protected readonly partyKindOptions = [
+    { label: 'Customers', value: 'CUSTOMER' },
+    { label: 'Suppliers', value: 'SUPPLIER' },
+  ];
+  protected readonly partyKind = signal<'CUSTOMER' | 'SUPPLIER'>('CUSTOMER');
+  /** Someone already chosen stays listed under either filter, so one send can still go to both. */
   protected readonly peopleOptions = computed(() =>
-    this.employees().map((e) => ({
+    this.employees().filter((e) => !this.trade || e.kind === this.partyKind() || this.picked().includes(e.key)).map((e) => ({
       value: e.key,
       // this person's brand is at its limit for one send (those already chosen can still be taken off)
       disabled: !this.picked().includes(e.key) && this.pickFull(e.brandId),

@@ -16,7 +16,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { AuthService } from '../auth.service';
-import { apiProblem, toIsoDate } from '../portal.models';
+import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import {
   dateRange,
   days,
@@ -24,6 +24,7 @@ import {
   LeaveGrant,
   LeaveRequest,
   LeaveStatus,
+  MyLeaveCurrent,
   RestrictedHoliday,
   shortDate,
   STATUS_LABELS,
@@ -52,10 +53,9 @@ export class MyLeave implements OnInit {
   protected readonly days = days;
   protected readonly shortDate = shortDate;
 
-  private readonly thisYear = new Date().getFullYear();
+  /** The plan in force today: all this page shows; the next plan stays out of sight until it starts. */
+  protected readonly current = signal<MyLeaveCurrent | null>(null);
   protected readonly todayIso = toIsoDate(new Date())!;
-  protected readonly years = [this.thisYear, this.thisYear + 1].map((y) => ({ label: String(y), value: y }));
-  protected readonly year = signal(this.thisYear);
 
   protected readonly balances = signal<LeaveBalance[]>([]);
   protected readonly requests = signal<LeaveRequest[]>([]);
@@ -82,8 +82,8 @@ export class MyLeave implements OnInit {
   protected readonly formError = signal('');
 
   protected readonly selected = computed(() => this.balances().find((b) => b.leaveTypeId === this.typeId()));
-  protected readonly minDate = computed(() => new Date(this.year(), 0, 1));
-  protected readonly maxDate = computed(() => new Date(this.year(), 11, 31));
+  protected readonly minDate = computed(() => fromIsoDate(this.current()?.validFrom ?? null) ?? undefined);
+  protected readonly maxDate = computed(() => fromIsoDate(this.current()?.validUntil ?? null) ?? undefined);
   private readonly fromIso = computed(() => toIsoDate(this.from()));
   private readonly toIso = computed(() => toIsoDate(this.to()) ?? this.fromIso());
   protected readonly canHalfDay = computed(
@@ -117,12 +117,6 @@ export class MyLeave implements OnInit {
   });
 
   ngOnInit(): void {
-    this.load();
-  }
-
-  protected changeYear(year: number): void {
-    this.year.set(year);
-    this.resetForm();
     this.load();
   }
 
@@ -223,23 +217,39 @@ export class MyLeave implements OnInit {
   }
 
   private load(): void {
-    const year = this.year();
     this.loading.set(true);
     this.loadError.set('');
-    forkJoin({
-      balances: this.leave.myBalances(year),
-      requests: this.leave.myRequests(year),
-      grants: this.leave.myGrants(year),
-      holidays: this.leave.holidays(year),
-      officeHolidays: this.leave.holidays(year, 'office'),
-    }).subscribe({
-      next: (r) => {
-        this.balances.set(r.balances);
-        this.requests.set(r.requests);
-        this.grants.set(r.grants);
-        this.holidays.set(r.holidays);
-        this.allOfficeHolidays.set(r.officeHolidays);
-        this.loading.set(false);
+    this.leave.myCurrent().subscribe({
+      next: (current) => {
+        this.current.set(current);
+        this.balances.set(current.balances);
+        if (!current.validFrom || !current.validUntil) {
+          this.requests.set([]);
+          this.grants.set([]);
+          this.holidays.set([]);
+          this.allOfficeHolidays.set([]);
+          this.loading.set(false);
+          return;
+        }
+        const period = { from: current.validFrom, to: current.validUntil };
+        forkJoin({
+          requests: this.leave.myRequests(),
+          grants: this.leave.myGrants(),
+          holidays: this.leave.holidays(period),
+          officeHolidays: this.leave.holidays(period, 'office'),
+        }).subscribe({
+          next: (r) => {
+            this.requests.set(r.requests);
+            this.grants.set(r.grants);
+            this.holidays.set(r.holidays);
+            this.allOfficeHolidays.set(r.officeHolidays);
+            this.loading.set(false);
+          },
+          error: (err) => {
+            this.loadError.set(apiProblem(err).message);
+            this.loading.set(false);
+          },
+        });
       },
       error: (err) => {
         this.loadError.set(apiProblem(err).message);

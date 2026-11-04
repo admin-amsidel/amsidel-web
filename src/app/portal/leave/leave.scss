@@ -80,3 +80,18 @@
   .add-holiday { grid-template-columns: 1fr; }
   .holidays li { grid-template-columns: 1fr auto; }
 }
+
+/* My leave: the period in force and today's date */
+.period { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 12px 16px; margin-bottom: 16px; background: var(--accent-softer); border: 1px solid #d6e4f5; border-radius: 10px; }
+.period span { display: grid; gap: 1px; }
+.period small { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.period b { font-size: .95rem; color: var(--ink); }
+
+/* Approvals: dates and brand */
+.la-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; margin-bottom: 14px; }
+.la-filters .pf { min-width: min(190px, 100%); }
+@media (max-width: 760px) {
+  .la-filters .pf { flex: 1 1 140px; }
+  /* five status filters do not fit a phone: on a second line rather than hidden behind a sideways swipe */
+  :host ::ng-deep .p-selectbutton.filter { flex-wrap: wrap; overflow: visible; }
+}

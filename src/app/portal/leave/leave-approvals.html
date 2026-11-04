@@ -1,7 +1,7 @@
 <div class="p-head">
   <div>
     <h1>Leave approvals</h1>
-    <p>Leave of the people you approve for, and days you can grant them.</p>
+    <p>Leave of the people reporting to you, and days you can grant them. Leave of someone with no reporting person is approved automatically.</p>
   </div>
 </div>
 
@@ -11,7 +11,23 @@
   <!-- one filter is always on: clicking the one already on does nothing, like tabs -->
   <span id="la-show" class="visually-hidden">Show requests</span>
   <p-selectbutton [options]="filters" optionLabel="label" optionValue="value" [allowEmpty]="false" [ngModel]="status()"
-                  (ngModelChange)="setStatus($event)" ariaLabelledBy="la-show" styleClass="filter" />
+                  (ngModelChange)="setStatus($event)" ariaLabelledBy="la-show" class="filter" />
+  <div class="la-filters">
+    <div class="pf"><label for="la-from">From</label>
+      <p-datepicker inputId="la-from" dateFormat="dd/mm/yy" [showIcon]="true" [showClear]="true" appendTo="body" placeholder="Any date"
+                    [ngModel]="fromDate()" (ngModelChange)="setFrom($event)" /></div>
+    <div class="pf"><label for="la-to">To</label>
+      <p-datepicker inputId="la-to" dateFormat="dd/mm/yy" [showIcon]="true" [showClear]="true" appendTo="body" placeholder="Any date"
+                    [minDate]="fromDate() ?? undefined" [ngModel]="toDate()" (ngModelChange)="setTo($event)" /></div>
+    @if (brandOptions().length > 1) {
+      <div class="pf"><label for="la-brand">Brand</label>
+        <p-select inputId="la-brand" [options]="brandOptions()" optionLabel="label" optionValue="value" [showClear]="true"
+                  placeholder="All brands" appendTo="body" [ngModel]="brandCode()" (ngModelChange)="setBrand($event)" /></div>
+    }
+    @if (fromDate() || toDate() || brandCode()) {
+      <p-button label="Clear" size="small" [text]="true" (onClick)="clearFilters()" />
+    }
+  </div>
 
   <p-table [value]="requests()" [loading]="loading()" dataKey="id" [tableStyle]="{ 'min-width': '920px' }" styleClass="p-stack"
            [paginator]="requests().length > 20" [rows]="20">
@@ -22,7 +38,7 @@
     </ng-template>
     <ng-template #body let-r>
       <tr>
-        <td class="who stack-full"><b>{{ r.employeeName }}</b><small>{{ r.empNumber }}</small></td>
+        <td class="who stack-full"><b>{{ r.employeeName }}</b><small>{{ r.empNumber }}{{ r.brandCode ? ' · ' + r.brandCode : '' }}</small></td>
         <td data-label="Leave">{{ r.leaveTypeName }}</td>
         <td data-label="Dates" class="nowrap">{{ dateRange(r) }}</td>
         <td data-label="Days">{{ days(r.days) }}</td>

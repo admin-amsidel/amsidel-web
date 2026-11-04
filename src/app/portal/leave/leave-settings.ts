@@ -14,6 +14,8 @@ import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { apiProblem } from '../portal.models';
 import { HolidayEditor } from './holiday-editor';
+import { LeavePlanAlerts } from './leave-plan-alerts';
+import { LeavePlans } from './leave-plans';
 import { ALLOCATION_LABELS, LeaveAllocation, LeaveType } from './leave.models';
 import { LeaveService, LeaveTypeBody } from './leave.service';
 
@@ -25,11 +27,11 @@ interface TypeDraft extends LeaveTypeBody {
   error: string;
 }
 
-/** Leave types with their yearly allowances, the office holiday list and the restricted holiday list. */
+/** Leave types, each brand's leave plans, and the office and restricted holidays of each brand. */
 @Component({
   selector: 'app-leave-settings',
   imports: [
-    FormsModule, ButtonModule, CheckboxModule, HolidayEditor, InputNumberModule, InputTextModule, MessageModule,
+    FormsModule, ButtonModule, CheckboxModule, HolidayEditor, LeavePlanAlerts, LeavePlans, InputNumberModule, InputTextModule, MessageModule,
     SelectModule, TableModule,
   ],
   templateUrl: './leave-settings.html',

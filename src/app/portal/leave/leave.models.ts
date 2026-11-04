@@ -9,7 +9,7 @@ export type LeaveAllocation = 'ANNUAL' | 'GRANTED' | 'UNLIMITED';
 export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 export const ALLOCATION_LABELS: Record<LeaveAllocation, string> = {
-  ANNUAL: 'Days every year',
+  ANNUAL: 'Days in the plan',
   GRANTED: 'Granted per person',
   UNLIMITED: 'No limit (unpaid)',
 };
@@ -41,7 +41,7 @@ export interface LeaveType {
   sortOrder: number;
 }
 
-/** entitled = quota + granted; available = entitled - used - pending; null for UNLIMITED. */
+/** entitled (the maximum) = quota + carried + granted; available (what remains) = entitled - used - pending; null for UNLIMITED. */
 export interface LeaveBalance {
   leaveTypeId: number;
   code: string;
@@ -50,6 +50,8 @@ export interface LeaveBalance {
   halfDayAllowed: boolean;
   restrictedDatesOnly: boolean;
   quota: number;
+  /** Came on from the brand's plan before. */
+  carried: number;
   granted: number;
   entitled: number | null;
   used: number;
@@ -95,12 +97,77 @@ export interface LeaveGrant {
   createdAt: string;
 }
 
+/** One type of leave in a plan. */
+export interface LeavePlanLine {
+  leaveTypeId: number;
+  code: string;
+  name: string;
+  allocation: LeaveAllocation;
+  days: number | null;
+  carryForward: boolean;
+  maxCarryDays: number | null;
+}
+
+/** One brand's leave for a period. */
+export interface LeavePlan {
+  id: number;
+  brandId: number | null;
+  brandCode: string | null;
+  brandName: string;
+  validFrom: string;
+  validUntil: string;
+  state: 'CURRENT' | 'FUTURE' | 'ENDED';
+  daysLeft: number | null;
+  editable: boolean;
+  removable: boolean;
+  lines: LeavePlanLine[];
+}
+
+/** A brand with its plans, newest first. canAdd: a new plan can be added now; addOpensOn: else the day it can. */
+export interface BrandPlans {
+  brandId: number | null;
+  brandCode: string | null;
+  brandName: string;
+  canAdd: boolean;
+  addOpensOn: string | null;
+  nextFrom: string;
+  plans: LeavePlan[];
+}
+
+export interface LeavePlanBody {
+  brandId: number | null;
+  validFrom: string;
+  validUntil: string;
+  lines: { leaveTypeId: number; days: number | null; carryForward: boolean; maxCarryDays: number | null }[];
+}
+
+/** A plan ending within 10 days with no next one; validUntil null = the brand has no plan. */
+export interface LeavePlanAlert {
+  brandId: number;
+  brandCode: string;
+  brandName: string;
+  validUntil: string | null;
+  daysLeft: number | null;
+}
+
+/** What the person sees: the plan in force today (null dates when there is none) and their balances in it. */
+export interface MyLeaveCurrent {
+  planId: number | null;
+  brandCode: string | null;
+  brandName: string | null;
+  validFrom: string | null;
+  validUntil: string | null;
+  today: string;
+  balances: LeaveBalance[];
+}
+
 /** A listed holiday: a restricted holiday (optional, taken as leave) or an office holiday (closed for everyone). */
 export interface RestrictedHoliday {
   id: number;
   date: string;
   name: string;
   brandId: number | null;
+  brandCode: string | null;
   brandName: string | null;
 }
 
@@ -112,6 +179,7 @@ export interface TeamMember {
   empNumber: string;
   role: Role;
   brandCode: string | null;
+  brandName: string | null;
 }
 
 /** "2027-01-04" -> "Mon, 4 Jan", without time-zone shifts. */

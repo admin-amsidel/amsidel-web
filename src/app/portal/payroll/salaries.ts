@@ -17,7 +17,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { Avatar } from '../avatar';
 import { apiProblem } from '../portal.models';
-import { currentFy, fyLabel, PayrollYear, rupeesRound, SalaryRow } from './payroll.models';
+import { currentFy, fyLabel, payBrandKey, payBrandOptions, payEmployeeOptions, PayrollYear, rupeesRound, SalaryRow } from './payroll.models';
 import { PayrollService } from './payroll.service';
 
 /**
@@ -49,23 +49,23 @@ import { PayrollService } from './payroll.service';
       <section class="tiles" aria-label="Payroll totals">
         <article class="tile">
           <span class="lbl">Salaries set</span>
-          <b class="big">{{ d.withSalary }}<small> of {{ d.rows.length }}</small></b>
-          <span class="meta">{{ d.rows.length - d.withSalary }} still to set</span>
+          <b class="big">{{ summary().set }}<small> of {{ scoped().length }}</small></b>
+          <span class="meta">{{ scoped().length - summary().set }} still to set</span>
         </article>
         <article class="tile">
           <span class="lbl">Monthly payroll</span>
-          <b class="big">{{ round(d.totals.monthlyGross) }}</b>
-          <span class="meta">Net {{ round(d.totals.monthlyNet) }} a month</span>
+          <b class="big">{{ round(summary().monthlyGross) }}</b>
+          <span class="meta">Net {{ round(summary().monthlyNet) }} a month</span>
         </article>
         <article class="tile">
           <span class="lbl">Yearly packages</span>
-          <b class="big">{{ round(d.totals.annualGross) }}</b>
+          <b class="big">{{ round(summary().annualGross) }}</b>
           <span class="meta">Gross earnings × 12</span>
         </article>
         <article class="tile tile--accent">
           <span class="lbl">Paid in {{ d.fyLabel }}</span>
-          <b class="big">{{ round(d.totals.yearGross) }}</b>
-          <span class="meta">Net {{ round(d.totals.yearNet) }}, from each start date</span>
+          <b class="big">{{ round(summary().yearGross) }}</b>
+          <span class="meta">Net {{ round(summary().yearNet) }}, from each start date</span>
         </article>
       </section>
 
@@ -73,6 +73,12 @@ import { PayrollService } from './payroll.service';
         <div class="filters">
           <p-selectbutton [options]="showOptions()" optionLabel="label" optionValue="value" [allowEmpty]="false"
                           [ngModel]="show()" (ngModelChange)="show.set($event)" />
+          @if (brandOptions().length > 1) {
+            <p-select class="pick" [options]="brandOptions()" optionLabel="label" optionValue="value" [showClear]="true" placeholder="All brands"
+                      ariaLabel="Filter by brand" appendTo="body" [ngModel]="brand()" (ngModelChange)="setBrand($event)" />
+          }
+          <p-select class="pick" [options]="employeeOptions()" optionLabel="label" optionValue="value" [showClear]="true" [filter]="true" filterBy="label"
+                    placeholder="All employees" ariaLabel="Filter by employee" appendTo="body" [ngModel]="employeeId()" (ngModelChange)="employeeId.set($event ?? null)" />
           <p-iconfield class="search">
             <p-inputicon styleClass="pi pi-search" />
             <input pInputText type="search" placeholder="Name, number or designation" aria-label="Search people"
@@ -128,7 +134,7 @@ import { PayrollService } from './payroll.service';
             <tr><td colspan="8" class="p-empty">{{ data()?.rows?.length ? 'Nobody matches.' : 'No employees yet.' }}</td></tr>
           </ng-template>
         </p-table>
-        @if (d.rows.length && lastChange(d); as c) {
+        @if (d.rows.length && lastChange(); as c) {
           <p class="note">Last change: {{ c.employee.name }}'s salary, by {{ c.updatedByName ?? 'someone' }} on {{ c.updatedAt | date: 'd MMM y, h:mm a' }}.</p>
         }
       </section>
@@ -149,8 +155,9 @@ import { PayrollService } from './payroll.service';
     .big small { font-size: .85rem; font-weight: 500; color: var(--muted); }
     .tile--accent .big small { color: #d6e8fb; }
     .meta { font-size: .8rem; color: var(--muted); }
-    .filters { display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
-    .search { flex: 0 1 320px; }
+    .filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .pick { flex: 0 1 240px; min-width: 0; }
+    .search { flex: 0 1 320px; margin-left: auto; }
     .search input { width: 100%; }
     .person { display: inline-flex; align-items: center; gap: 10px; }
     .person > span { display: grid; line-height: 1.25; }
@@ -167,7 +174,7 @@ import { PayrollService } from './payroll.service';
     .note { margin: 12px 0 0; font-size: .8rem; color: var(--muted); }
     @media (max-width: 1100px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 760px) {
-      .search { flex: 1 1 100%; }
+      .pick, .search { flex: 1 1 100%; margin-left: 0; }
       .num { text-align: left; }
       .big { font-size: 1.2rem; }
     }
@@ -183,12 +190,36 @@ export class Salaries implements OnInit {
   protected readonly query = signal('');
   protected readonly show = signal<'ALL' | 'SET' | 'NOT_SET'>('ALL');
   protected readonly round = rupeesRound;
+  /** A brand's code (or NO_BRAND); null = every brand. */
+  protected readonly brand = signal<string | null>(null);
+  protected readonly employeeId = signal<number | null>(null);
+
+  protected readonly brandOptions = computed(() => payBrandOptions(this.data()?.rows ?? []));
+  protected readonly employeeOptions = computed(() => payEmployeeOptions(this.data()?.rows ?? [], this.brand()));
+  /** The people of the chosen brand and employee: what the totals, the counts and the list are about. */
+  protected readonly scoped = computed(() => {
+    const brand = this.brand();
+    const id = this.employeeId();
+    return (this.data()?.rows ?? []).filter((r) => (brand === null || payBrandKey(r.employee) === brand) && (id === null || r.employee.id === id));
+  });
+  protected readonly summary = computed(() => {
+    const set = this.scoped().filter((r) => r.set);
+    const sum = (pick: (r: SalaryRow) => number) => set.reduce((t, r) => t + Number(pick(r)), 0);
+    return {
+      set: set.length,
+      monthlyGross: sum((r) => r.totals.monthlyGross),
+      monthlyNet: sum((r) => r.totals.monthlyNet),
+      annualGross: sum((r) => r.totals.annualGross),
+      yearGross: sum((r) => r.totals.yearGross),
+      yearNet: sum((r) => r.totals.yearNet),
+    };
+  });
 
   protected readonly yearOptions = computed(() =>
     (this.data()?.years ?? [this.fy()]).map((y) => ({ value: y, label: fyLabel(y) + (y === currentFy() ? ' (this year)' : '') })),
   );
   protected readonly showOptions = computed(() => {
-    const rows = this.data()?.rows ?? [];
+    const rows = this.scoped();
     const set = rows.filter((r) => r.set).length;
     return [
       { label: `All ${rows.length}`, value: 'ALL' },
@@ -199,7 +230,7 @@ export class Salaries implements OnInit {
   protected readonly rows = computed(() => {
     const q = this.query().trim().toLowerCase();
     const show = this.show();
-    return (this.data()?.rows ?? []).filter(
+    return this.scoped().filter(
       (r) =>
         (show === 'ALL' || (show === 'SET') === r.set) &&
         (!q || [r.employee.name, r.employee.empNumber, r.employee.designationName ?? ''].some((v) => v.toLowerCase().includes(q))),
@@ -215,16 +246,27 @@ export class Salaries implements OnInit {
     this.fy.set(fy);
     this.error.set('');
     this.payroll.year(fy).subscribe({
-      next: (d) => this.data.set(d),
+      next: (d) => {
+        this.data.set(d);
+        // someone not in this year's list does not stay chosen
+        if (!d.rows.some((r) => r.employee.id === this.employeeId())) this.employeeId.set(null);
+      },
       error: (err) => this.error.set(apiProblem(err).message),
     });
+  }
+
+  /** Someone of another brand does not stay chosen. */
+  protected setBrand(value: string | null): void {
+    this.brand.set(value ?? null);
+    const id = this.employeeId();
+    if (id !== null && !this.employeeOptions().some((o) => o.value === id)) this.employeeId.set(null);
   }
 
   protected open(r: SalaryRow): void {
     this.router.navigate(['/portal/payroll', r.employee.id], { queryParams: { fy: this.fy() } });
   }
 
-  protected lastChange(d: PayrollYear): SalaryRow | null {
-    return d.rows.filter((r) => r.updatedAt).sort((a, b) => (b.updatedAt! > a.updatedAt! ? 1 : -1))[0] ?? null;
+  protected lastChange(): SalaryRow | null {
+    return this.scoped().filter((r) => r.updatedAt).sort((a, b) => (b.updatedAt! > a.updatedAt! ? 1 : -1))[0] ?? null;
   }
 }

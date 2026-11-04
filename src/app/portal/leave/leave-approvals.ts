@@ -55,10 +55,21 @@ export class LeaveApprovals implements OnInit {
     { value: 'PENDING', label: 'Waiting' },
     { value: 'APPROVED', label: 'Approved' },
     { value: 'REJECTED', label: 'Rejected' },
+    { value: 'CANCELLED', label: 'Cancelled' },
     { value: 'ALL', label: 'All' },
   ];
 
   protected readonly status = signal<LeaveStatus | 'ALL'>('PENDING');
+  /** Leave touching these dates; null = no limit on that side. */
+  protected readonly fromDate = signal<Date | null>(null);
+  protected readonly toDate = signal<Date | null>(null);
+  protected readonly brandCode = signal<string | null>(null);
+  /** The brands of the people I decide for. */
+  protected readonly brandOptions = computed(() => {
+    const brands = new Map<string, string>();
+    for (const m of this.team()) if (m.brandCode) brands.set(m.brandCode, m.brandName ? `${m.brandCode} · ${m.brandName}` : m.brandCode);
+    return [...brands.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([value, label]) => ({ value, label }));
+  });
   protected readonly requests = signal<LeaveRequest[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal('');
@@ -109,6 +120,30 @@ export class LeaveApprovals implements OnInit {
     this.loadRequests();
   }
 
+  protected setFrom(d: Date | null): void {
+    this.fromDate.set(d);
+    const to = this.toDate();
+    if (d && to && to < d) this.toDate.set(d);
+    this.loadRequests();
+  }
+
+  protected setTo(d: Date | null): void {
+    this.toDate.set(d);
+    this.loadRequests();
+  }
+
+  protected setBrand(code: string | null): void {
+    this.brandCode.set(code ?? null);
+    this.loadRequests();
+  }
+
+  protected clearFilters(): void {
+    this.fromDate.set(null);
+    this.toDate.set(null);
+    this.brandCode.set(null);
+    this.loadRequests();
+  }
+
   protected statusLabel(s: LeaveStatus): string {
     return STATUS_LABELS[s];
   }
@@ -141,7 +176,7 @@ export class LeaveApprovals implements OnInit {
     this.grantEmployee.set(id);
     this.memberBalances.set([]);
     if (id) {
-      this.leave.balancesOf(id, new Date().getFullYear()).subscribe({
+      this.leave.balancesOf(id).subscribe({
         next: (b) => this.memberBalances.set(b.filter((x) => x.allocation !== 'UNLIMITED')),
         error: () => undefined,
       });
@@ -167,7 +202,7 @@ export class LeaveApprovals implements OnInit {
           this.toast.add({
             severity: 'success',
             summary: 'Leave granted',
-            detail: `${days(g.days)} day(s) of ${g.leaveTypeName} for ${g.employeeName} (${g.year}).`,
+            detail: `${days(g.days)} day(s) of ${g.leaveTypeName} for ${g.employeeName}.`,
           });
           this.grantReason.set('');
           this.grantWorkedOn.set(null);
@@ -208,7 +243,12 @@ export class LeaveApprovals implements OnInit {
   private loadRequests(): void {
     this.loading.set(true);
     const status = this.status();
-    this.leave.toDecide(status === 'ALL' ? null : status).subscribe({
+    this.leave.toDecide({
+      status: status === 'ALL' ? null : status,
+      brandCode: this.brandCode(),
+      from: toIsoDate(this.fromDate()),
+      to: toIsoDate(this.toDate()),
+    }).subscribe({
       next: (list) => {
         this.requests.set(list);
         this.loading.set(false);

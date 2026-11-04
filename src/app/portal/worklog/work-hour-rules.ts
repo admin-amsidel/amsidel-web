@@ -2,40 +2,45 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { apiProblem } from '../portal.models';
-import { StaffService } from '../staff.service';
-import { WorkHourRule } from './worklog.models';
+import { BrandWorkRule } from './worklog.models';
 import { WorkLogService } from './worklog.service';
 
-/** One row: a level (0 = default) and its numbers; empty numbers = that level uses the default. */
-interface RuleRow {
-  levelNumber: number;
-  label: string;
-  dailyMinHours: number | null;
-  weeklyMinHours: number | null;
-  halfDayBelow: number | null;
-  fullDayBelow: number | null;
+/** One row of the table, with the numbers being typed. */
+interface RuleRow extends BrandWorkRule {
+  key: string;
+  daily: number | null;
+  weekly: number | null;
+  half: number | null;
+  full: number | null;
 }
 
-/** Owners and admins: minimum working hours per designation level, and the default for everyone else. */
+/** The value for the group-level people in the Brand filter (no brand). */
+const NO_BRAND = 'none';
+
+/**
+ * Owners and admins: minimum working hours for each brand: its default, and optionally a designation's. Empty numbers
+ * mean the row above applies (a designation: the brand's default; a brand's default: the group default). Filters by
+ * brand and designation. Someone with a brand sees only theirs.
+ */
 @Component({
   selector: 'app-work-hour-rules',
-  imports: [FormsModule, RouterLink, ButtonModule, InputNumberModule, MessageModule, TableModule],
+  imports: [FormsModule, RouterLink, ButtonModule, InputNumberModule, MessageModule, SelectModule, TableModule],
   template: `
     <div class="p-head">
       <div>
         <a class="back" routerLink="/portal/worklog"><span aria-hidden="true">←</span> Work log</a>
         <h1>Work hour rules</h1>
-        <p>Minimum hours to log per designation level. Leave a level empty to use the default.
+        <p>Minimum hours to log for each brand: its default and, if needed, for a designation. Empty numbers use the default shown in them.
           Managers can also set a personal target for one person from their work log.</p>
       </div>
     </div>
@@ -43,75 +48,118 @@ interface RuleRow {
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
 
     <section class="p-card">
-      <p-table [value]="rows()" [loading]="loading()" [tableStyle]="{ 'min-width': '760px' }" styleClass="rules p-stack">
+      <div class="filters">
+        @if (brandOptions().length > 1) {
+          <div class="pf"><label for="wr-brand">Brand</label>
+            <p-select inputId="wr-brand" [options]="brandOptions()" optionLabel="label" optionValue="value" [showClear]="true" placeholder="All brands"
+                      appendTo="body" [ngModel]="brand()" (ngModelChange)="pickBrand($event)" /></div>
+        }
+        <div class="pf"><label for="wr-des">Designation</label>
+          <p-select inputId="wr-des" [options]="designationOptions()" optionLabel="label" optionValue="value" [showClear]="true" [filter]="true" filterBy="label"
+                    placeholder="All designations" appendTo="body" [ngModel]="designation()" (ngModelChange)="designation.set($event ?? null)" /></div>
+      </div>
+
+      <p-table [value]="shown()" [loading]="loading()" dataKey="key" [tableStyle]="{ 'min-width': '980px' }" styleClass="rules p-stack">
         <ng-template #header>
           <tr>
-            <th>Level</th><th>Hours a day</th><th>Hours a week</th>
+            <th>Brand</th><th>Applies to</th><th>Hours a day</th><th>Hours a week</th>
             <th>"Half Day Leave" below</th><th>"Full Day Leave" below</th><th></th>
           </tr>
         </ng-template>
         <ng-template #body let-r>
-          <tr [class.default]="r.levelNumber === 0">
+          <tr [class.default]="!r.designationId">
             <td class="stack-full">
               <span class="lvlcell">
-                @if (r.levelNumber) { <span class="lvl">L{{ r.levelNumber }}</span> }
-                <span>{{ r.label }}</span>
+                @if (r.brandCode) { <span class="code">{{ r.brandCode }}</span> }
+                <span>{{ r.brandName }}</span>
               </span>
             </td>
-            <td data-label="Hours a day"><p-inputnumber [(ngModel)]="r.dailyMinHours" [min]="0" [max]="24" [maxFractionDigits]="2" inputStyleClass="num"
-                               [placeholder]="ph(r, 'dailyMinHours')" [ariaLabel]="'Hours a day, ' + r.label" /></td>
-            <td data-label="Hours a week"><p-inputnumber [(ngModel)]="r.weeklyMinHours" [min]="0" [max]="168" [maxFractionDigits]="2" inputStyleClass="num"
-                               [placeholder]="ph(r, 'weeklyMinHours')" [ariaLabel]="'Hours a week, ' + r.label" /></td>
-            <td data-label="Half Day Leave below"><p-inputnumber [(ngModel)]="r.halfDayBelow" [min]="0" [max]="24" [maxFractionDigits]="2" inputStyleClass="num"
-                               [placeholder]="ph(r, 'halfDayBelow')" [ariaLabel]="'Half day below, ' + r.label" /></td>
-            <td data-label="Full Day Leave below"><p-inputnumber [(ngModel)]="r.fullDayBelow" [min]="0" [max]="24" [maxFractionDigits]="2" inputStyleClass="num"
-                               [placeholder]="ph(r, 'fullDayBelow')" [ariaLabel]="'Full day below, ' + r.label" /></td>
+            <td class="stack-full">
+              @if (r.designationId) {
+                <span class="lvlcell"><span class="code">L{{ r.levelNumber }}</span><span>{{ r.designationName }}</span></span>
+              } @else {
+                <b>{{ r.brandId === null ? 'Group default' : 'Brand default' }}</b>
+              }
+            </td>
+            <td data-label="Hours a day"><p-inputnumber [(ngModel)]="r.daily" [min]="0" [max]="24" [maxFractionDigits]="2" inputStyleClass="num"
+                               [placeholder]="ph(r.inherited.dailyMinHours)" [ariaLabel]="'Hours a day, ' + label(r)" /></td>
+            <td data-label="Hours a week"><p-inputnumber [(ngModel)]="r.weekly" [min]="0" [max]="168" [maxFractionDigits]="2" inputStyleClass="num"
+                               [placeholder]="ph(r.inherited.weeklyMinHours)" [ariaLabel]="'Hours a week, ' + label(r)" /></td>
+            <td data-label="Half Day Leave below"><p-inputnumber [(ngModel)]="r.half" [min]="0" [max]="24" [maxFractionDigits]="2" inputStyleClass="num"
+                               [placeholder]="ph(r.inherited.halfDayBelow)" [ariaLabel]="'Half day below, ' + label(r)" /></td>
+            <td data-label="Full Day Leave below"><p-inputnumber [(ngModel)]="r.full" [min]="0" [max]="24" [maxFractionDigits]="2" inputStyleClass="num"
+                               [placeholder]="ph(r.inherited.fullDayBelow)" [ariaLabel]="'Full day below, ' + label(r)" /></td>
             <td class="act stack-end">
-              @if (r.levelNumber && filled(r)) {
-                <p-button label="Use default" size="small" [text]="true" (onClick)="clear(r)" />
+              @if (changed(r)) {
+                <p-button label="Save" size="small" [loading]="savingKey() === r.key" [ariaLabel]="'Save, ' + label(r)" (onClick)="save(r)" />
+              } @else if (r.dailyMinHours !== null && removable(r)) {
+                <p-button label="Use default" size="small" [text]="true" [loading]="savingKey() === r.key" [ariaLabel]="'Use the default for ' + label(r)" (onClick)="remove(r)" />
               }
             </td>
           </tr>
         </ng-template>
+        <ng-template #emptymessage>
+          <tr><td colspan="7" class="p-empty">Nothing matches these filters.</td></tr>
+        </ng-template>
       </p-table>
-      <div class="p-actions">
-        <p-button label="Save rules" icon="pi pi-check" [loading]="saving()" (onClick)="save()" />
-      </div>
-      <p class="note">Hours a week count Monday to Sunday; with Sunday off, 9 hours × 6 days = 54. Approved leave lowers a
-        person's minimum for that day and week.</p>
+      <p class="note">Someone's minimum comes from their designation's rule in their brand, else their brand's default, else the group default.
+        Hours a week count Monday to Sunday; with Sunday off, 9 hours × 6 days = 54. Approved leave lowers a person's minimum for that day and week.</p>
     </section>
   `,
   styles: `
-    :host ::ng-deep .rules .num { width: 110px; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 280px)); gap: 14px; margin-bottom: 14px; }
+    .filters p-select { width: 100%; }
+    :host ::ng-deep .rules .num { width: 96px; }
     :host ::ng-deep .rules tr.default > td { background: var(--accent-softer); font-weight: 600; }
     /* the flex box sits inside the cell: a flex <td> stops being a table cell and loses the row's height and lines */
     :host ::ng-deep .rules td { vertical-align: middle; }
     .lvlcell { display: flex; align-items: center; gap: 8px; }
-    .act { text-align: right; }
-    .note { margin: 16px 0 0; font-size: .84rem; color: var(--muted); max-width: 75ch; }
+    .code { font-size: .74rem; font-weight: 700; color: var(--brass-dark); background: var(--accent-soft); border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
+    .act { text-align: right; white-space: nowrap; }
+    .note { margin: 16px 0 0; font-size: .84rem; color: var(--muted); max-width: 90ch; }
+    @media (max-width: 760px) { .filters { grid-template-columns: 1fr; gap: 10px; } }
   `,
 })
 export class WorkHourRules implements OnInit {
   private readonly worklog = inject(WorkLogService);
-  private readonly staff = inject(StaffService);
   private readonly toast = inject(MessageService);
 
   protected readonly rows = signal<RuleRow[]>([]);
   protected readonly loading = signal(true);
-  protected readonly saving = signal(false);
   protected readonly error = signal('');
+  protected readonly savingKey = signal<string | null>(null);
+  /** A brand id, NO_BRAND for the group-level people, null = every brand. */
+  protected readonly brand = signal<string | null>(null);
+  protected readonly designation = signal<number | null>(null);
+
+  protected readonly brandOptions = computed(() => {
+    const seen = new Map<string, string>();
+    for (const r of this.rows()) seen.set(keyOf(r), r.brandCode ? `${r.brandCode} · ${r.brandName}` : r.brandName);
+    return [...seen.entries()].map(([value, label]) => ({ value, label }));
+  });
+  /** The designations of the chosen brand (of every brand when none is chosen). */
+  protected readonly designationOptions = computed(() => {
+    const brand = this.brand();
+    const seen = new Map<number, string>();
+    for (const r of this.rows()) {
+      if (r.designationId && (brand === null || keyOf(r) === brand)) seen.set(r.designationId, `L${r.levelNumber} · ${r.designationName}`);
+    }
+    return [...seen.entries()].map(([value, label]) => ({ value, label }));
+  });
+  /** A designation filter keeps the brand's default in view: it is what an empty row uses. */
+  protected readonly shown = computed(() => {
+    const brand = this.brand();
+    const designation = this.designation();
+    return this.rows().filter((r) => (brand === null || keyOf(r) === brand) && (designation === null || r.designationId === designation || r.designationId === null));
+  });
 
   ngOnInit(): void {
-    forkJoin({ rules: this.worklog.rules(), designations: this.staff.designations() }).subscribe({
-      next: ({ rules, designations }) => {
-        const byLevel = new Map(rules.map((r) => [r.levelNumber, r]));
-        const names = new Map<number, string[]>();
-        for (const d of designations) names.set(d.levelNumber, [...(names.get(d.levelNumber) ?? []), d.name]);
-        const levels = [...new Set([...names.keys(), ...rules.map((r) => r.levelNumber)])].filter((l) => l > 0).sort((a, b) => a - b);
-        this.rows.set([
-          row(0, 'Default (everyone else)', byLevel.get(0)),
-          ...levels.map((l) => row(l, (names.get(l) ?? ['Level ' + l]).join(', '), byLevel.get(l))),
-        ]);
+    this.worklog.rules().subscribe({
+      next: (rows) => {
+        this.rows.set(rows.map(toRow));
+        // one brand at a time to start with: a whole group's ladders are a long list
+        const first = this.rows().find((r) => r.brandId !== null);
+        if (first) this.brand.set(keyOf(first));
         this.loading.set(false);
       },
       error: (err) => {
@@ -121,59 +169,88 @@ export class WorkHourRules implements OnInit {
     });
   }
 
-  /** Empty cells of a level show the default's number. */
-  protected ph(r: RuleRow, field: keyof Omit<RuleRow, 'levelNumber' | 'label'>): string {
-    const d = this.rows()[0]?.[field];
-    return r.levelNumber && d != null ? String(d) : '';
+  /** A designation of another ladder does not stay chosen. */
+  protected pickBrand(value: string | null): void {
+    this.brand.set(value ?? null);
+    const d = this.designation();
+    if (d !== null && !this.designationOptions().some((o) => o.value === d)) this.designation.set(null);
   }
 
-  protected filled(r: RuleRow): boolean {
-    return [r.dailyMinHours, r.weeklyMinHours, r.halfDayBelow, r.fullDayBelow].some((v) => v != null);
+  protected ph(value: number): string {
+    return String(value);
   }
 
-  protected clear(r: RuleRow): void {
-    this.rows.update((list) => list.map((x) => (x === r ? { ...x, dailyMinHours: null, weeklyMinHours: null, halfDayBelow: null, fullDayBelow: null } : x)));
+  protected label(r: RuleRow): string {
+    return `${r.brandCode ?? r.brandName}, ${r.designationName ?? 'default'}`;
   }
 
-  protected save(): void {
+  protected changed(r: RuleRow): boolean {
+    return r.daily !== r.dailyMinHours || r.weekly !== r.weeklyMinHours || r.half !== r.halfDayBelow || r.full !== r.fullDayBelow;
+  }
+
+  /** The group default stays: every other rule falls back to it. */
+  protected removable(r: RuleRow): boolean {
+    return r.designationId !== null || r.brandId !== null;
+  }
+
+  protected save(r: RuleRow): void {
     this.error.set('');
-    const rules: WorkHourRule[] = [];
-    for (const r of this.rows()) {
-      const values = [r.dailyMinHours, r.weeklyMinHours, r.halfDayBelow, r.fullDayBelow];
-      if (values.every((v) => v == null) && r.levelNumber > 0) continue;
-      if (values.some((v) => v == null)) {
-        this.error.set(`Fill in all four numbers for ${r.label}${r.levelNumber ? ', or clear them to use the default' : ''}.`);
-        return;
-      }
-      rules.push({
-        levelNumber: r.levelNumber,
-        dailyMinHours: r.dailyMinHours!,
-        weeklyMinHours: r.weeklyMinHours!,
-        halfDayBelow: r.halfDayBelow!,
-        fullDayBelow: r.fullDayBelow!,
-      });
+    // all four empty: back to what applies above
+    if (r.daily === null && r.weekly === null && r.half === null && r.full === null) return this.remove(r);
+    if (r.daily === null || r.weekly === null || r.half === null || r.full === null) {
+      return this.error.set(`Fill in all four numbers for ${this.label(r)}, or empty them to use the default.`);
     }
-    this.saving.set(true);
-    this.worklog.saveRules(rules).subscribe({
-      next: (saved) => {
-        this.saving.set(false);
-        this.toast.add({ severity: 'success', summary: 'Rules saved', detail: `${saved.length} rule(s) in use` });
+    this.savingKey.set(r.key);
+    this.worklog.saveRule({ brandId: r.brandId, designationId: r.designationId, dailyMinHours: r.daily, weeklyMinHours: r.weekly, halfDayBelow: r.half, fullDayBelow: r.full }).subscribe({
+      next: (rows) => {
+        this.merge(rows, r.key);
+        this.toast.add({ severity: 'success', summary: 'Rule saved', detail: this.label(r) });
       },
       error: (err) => {
-        this.saving.set(false);
+        this.savingKey.set(null);
+        const p = apiProblem(err);
+        this.error.set(Object.values(p.fields)[0] ?? p.message);
+      },
+    });
+  }
+
+  protected remove(r: RuleRow): void {
+    this.error.set('');
+    this.savingKey.set(r.key);
+    this.worklog.removeRule(r.brandId, r.designationId).subscribe({
+      next: (rows) => {
+        this.merge(rows, r.key);
+        this.toast.add({ severity: 'success', summary: 'Using the default', detail: this.label(r) });
+      },
+      error: (err) => {
+        this.savingKey.set(null);
         this.error.set(apiProblem(err).message);
       },
     });
+  }
+
+  /** Fresh rows: what applies above may have changed; numbers typed but not saved in other rows stay. */
+  private merge(fresh: BrandWorkRule[], savedKey: string): void {
+    this.savingKey.set(null);
+    this.rows.update((list) => fresh.map(toRow).map((n) => {
+      const old = list.find((x) => x.key === n.key);
+      if (!old || old.key === savedKey || !this.changed(old)) return n;
+      return { ...n, daily: old.daily, weekly: old.weekly, half: old.half, full: old.full };
+    }));
   }
 }
 
-function row(levelNumber: number, label: string, rule: WorkHourRule | undefined): RuleRow {
+function keyOf(r: { brandId: number | null }): string {
+  return r.brandId === null ? NO_BRAND : String(r.brandId);
+}
+
+function toRow(r: BrandWorkRule): RuleRow {
   return {
-    levelNumber,
-    label,
-    dailyMinHours: rule ? Number(rule.dailyMinHours) : null,
-    weeklyMinHours: rule ? Number(rule.weeklyMinHours) : null,
-    halfDayBelow: rule ? Number(rule.halfDayBelow) : null,
-    fullDayBelow: rule ? Number(rule.fullDayBelow) : null,
+    ...r,
+    key: `${r.brandId}:${r.designationId}`,
+    daily: r.dailyMinHours,
+    weekly: r.weeklyMinHours,
+    half: r.halfDayBelow,
+    full: r.fullDayBelow,
   };
 }

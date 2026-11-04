@@ -5,6 +5,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth.service';
+import { LeavePlanAlerts } from '../leave/leave-plan-alerts';
 import { NewsBoard } from '../news-board';
 import { MenuNode } from '../portal.models';
 
@@ -22,7 +23,7 @@ interface Shortcut {
  */
 @Component({
   selector: 'app-portal-home',
-  imports: [RouterLink, NewsBoard],
+  imports: [RouterLink, NewsBoard, LeavePlanAlerts],
   template: `
     <div class="p-head">
       <div>
@@ -30,6 +31,7 @@ interface Shortcut {
         <p>{{ partCount() > 1 ? 'Choose where to work. You can switch at any time from the top bar.' : 'The latest news, and your pages.' }}</p>
       </div>
     </div>
+    <app-leave-plan-alerts />
     <app-news-board />
     <div class="parts" [class.single]="partCount() === 1" [class.triple]="partCount() === 3">
       <a class="part" routerLink="/portal/profile">

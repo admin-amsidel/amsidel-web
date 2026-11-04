@@ -194,7 +194,9 @@ import { hrs, TaskCustomer, TaskStatus, WorkTask } from './worklog.models';
             <p-multiselect inputId="t-who" name="who" [options]="peopleOptions()" optionLabel="label" optionValue="value"
                            [filter]="true" filterPlaceholder="Search people" placeholder="Choose people" display="chip"
                            [maxSelectedLabels]="3" selectedItemsLabel="{0} people" appendTo="body"
+                           [emptyMessage]="brandId() ? 'Nobody in this brand' : 'No people'"
                            [ngModel]="assigneeIds()" (ngModelChange)="assigneeIds.set($event)" />
+            @if (brandId()) { <small class="hint">Only people of this brand.</small> }
           </div>
         </div>
         @if (formError()) { <p-message severity="error" styleClass="dlg-msg">{{ formError() }}</p-message> }
@@ -292,11 +294,14 @@ export class Tasks implements OnInit {
   });
   private readonly manyBrands = computed(() => new Set(this.customers().map((c) => c.brandId)).size > 1);
 
-  protected readonly peopleOptions = computed(() =>
-    this.people()
-      .filter((p) => p.active)
-      .map((p) => ({ value: p.id, label: `${p.name} · ${p.empNumber}` })),
-  );
+  /** People of the task's brand (everyone for a group-wide task); someone already chosen stays listed. */
+  protected readonly peopleOptions = computed(() => {
+    const brand = this.brandId();
+    const chosen = new Set(this.assigneeIds());
+    return this.people()
+      .filter((p) => chosen.has(p.id) || (p.active && (brand == null || p.brandId === brand)))
+      .map((p) => ({ value: p.id, label: `${p.name} · ${p.empNumber}${brand == null && p.brandCode ? ' · ' + p.brandCode : ''}` }));
+  });
   protected readonly canPickGroup = computed(() => this.auth.user()?.role === 'OWNER' || this.auth.user()?.brandId == null);
   protected readonly brandOptions = computed(() => {
     const own = this.auth.user()?.brandId;
@@ -331,11 +336,15 @@ export class Tasks implements OnInit {
     this.load();
   }
 
-  /** A customer of another brand does not stay on the task when the brand changes. */
+  /** A customer or people of another brand do not stay on the task when the brand changes. */
   protected setBrand(id: number | null): void {
     this.brandId.set(id);
     const c = this.customers().find((x) => x.id === this.customerId());
     if (c && id != null && c.brandId !== id) this.customerId.set(null);
+    if (id != null) {
+      const own = new Set(this.people().filter((p) => p.brandId === id).map((p) => p.id));
+      this.assigneeIds.update((ids) => ids.filter((x) => own.has(x)));
+    }
   }
 
   protected setStatus(value: TaskStatus | 'ALL'): void {

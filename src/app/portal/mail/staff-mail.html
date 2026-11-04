@@ -214,10 +214,17 @@
         </div>
       }
     } @else {
+      @if (trade) {
+        <div class="pf mt">
+          <span class="pf-label" id="m-kind-lbl">Customer or supplier</span>
+          <p-selectbutton [options]="partyKindOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
+                          ariaLabelledBy="m-kind-lbl" [ngModel]="partyKind()" (ngModelChange)="partyKind.set($event)" />
+        </div>
+      }
       <div class="pf mt">
-        <label for="m-people">{{ t.people }}</label>
+        <label for="m-people">{{ trade ? (partyKind() === 'CUSTOMER' ? 'Customers' : 'Suppliers') : t.people }}</label>
         <p-multiselect inputId="m-people" [options]="peopleOptions()" optionLabel="label" optionValue="value" optionDisabled="disabled" [filter]="true"
-                       [filterPlaceHolder]="t.search" [placeholder]="t.pick" display="chip"
+                       [filterPlaceHolder]="t.search" [placeholder]="trade ? (partyKind() === 'CUSTOMER' ? 'Choose customers' : 'Choose suppliers') : t.pick" display="chip"
                        [maxSelectedLabels]="4" [selectedItemsLabel]="t.chosen" appendTo="body" [loading]="loading()"
                        [ngModel]="picked()" (ngModelChange)="pick($event)" />
         @if (pickUsage().length) {

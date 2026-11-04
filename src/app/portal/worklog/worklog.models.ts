@@ -55,9 +55,28 @@ export interface WorkLogMonth {
   holidays: { date: string; name: string }[];
 }
 
-export interface WorkHourRule {
-  id?: number;
-  levelNumber: number;
+/**
+ * One row of the work hour rules: a brand's default (designationId null) or a designation in it, with its own hours (null
+ * when it has no rule of its own) and what applies without them. brandId null = the group-level people.
+ */
+export interface BrandWorkRule {
+  brandId: number | null;
+  brandCode: string | null;
+  brandName: string;
+  designationId: number | null;
+  designationName: string | null;
+  levelNumber: number | null;
+  levelCode: string | null;
+  dailyMinHours: number | null;
+  weeklyMinHours: number | null;
+  halfDayBelow: number | null;
+  fullDayBelow: number | null;
+  inherited: { dailyMinHours: number; weeklyMinHours: number; halfDayBelow: number; fullDayBelow: number; source: string };
+}
+
+export interface WorkRuleBody {
+  brandId: number | null;
+  designationId: number | null;
   dailyMinHours: number;
   weeklyMinHours: number;
   halfDayBelow: number;

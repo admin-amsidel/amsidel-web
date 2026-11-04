@@ -124,6 +124,15 @@
                     optionValue="value" placeholder="Nobody (top of the line)" [showClear]="true" [filter]="true"
                     filterPlaceholder="Search people" />
         </div>
+        @if (canEdit()) {
+          <div class="pf check-field">
+            <span class="pf-label">Leave approval</span>
+            <label class="auto-approve" for="f-auto">
+              <p-checkbox inputId="f-auto" formControlName="autoApproveReports" [binary]="true" />
+              Auto-approve leave of the people reporting to this person
+            </label>
+          </div>
+        }
         <div class="pf">
           <label for="f-empno">Employee number</label>
           <input pInputText id="f-empno" formControlName="empNumber" placeholder="Automatic, e.g. DW0001"

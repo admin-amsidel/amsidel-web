@@ -18,7 +18,7 @@ import { LeaveService } from './leave.service';
 
 /**
  * A year's holiday list with add and remove, for Leave settings: office holidays (closed for everyone) or
- * restricted holidays (optional days taken as leave). Each holiday is for the whole group or one brand.
+ * restricted holidays (optional days taken as leave). Each new holiday is mapped to one brand; older ones may be for all.
  */
 @Component({
   selector: 'app-holiday-editor',
@@ -27,8 +27,14 @@ import { LeaveService } from './leave.service';
     <section class="p-card">
       <div class="head-row">
         <h2>{{ title() }}</h2>
-        <p-select [options]="years" optionLabel="label" optionValue="value" [ngModel]="year()" (ngModelChange)="changeYear($event)"
-                  [ariaLabel]="title() + ' year'" />
+        <span class="head-filters">
+          @if (brandOptions().length > 1) {
+            <p-select [options]="brandOptions()" optionLabel="label" optionValue="value" [showClear]="true" placeholder="All brands"
+                      [ngModel]="filterBrand()" (ngModelChange)="changeFilter($event)" [ariaLabel]="title() + ' brand'" />
+          }
+          <p-select [options]="years" optionLabel="label" optionValue="value" [ngModel]="year()" (ngModelChange)="changeYear($event)"
+                    [ariaLabel]="title() + ' year'" />
+        </span>
       </div>
       <p class="p-intro">{{ intro() }}</p>
 
@@ -40,7 +46,7 @@ import { LeaveService } from './leave.service';
             <li>
               <span class="h-date">{{ date(h.date) }}</span>
               <span class="h-name">{{ h.name }}</span>
-              <span class="muted">{{ h.brandName ?? 'All brands' }}</span>
+              <span class="muted">{{ h.brandCode ? h.brandCode + ' · ' + h.brandName : 'All brands' }}</span>
               <p-button label="Remove" size="small" [text]="true" severity="danger" (onClick)="remove(h)" />
             </li>
           }
@@ -59,9 +65,9 @@ import { LeaveService } from './leave.service';
                  [ngModel]="newName()" (ngModelChange)="newName.set($event)" />
         </div>
         <div class="pf">
-          <label [for]="kind() + '-brand'">For</label>
+          <label [for]="kind() + '-brand'">Brand *</label>
           <p-select [inputId]="kind() + '-brand'" name="brand" [options]="brandOptions()" optionLabel="label" optionValue="value"
-                    [showClear]="true" placeholder="All brands" [ngModel]="newBrand()" (ngModelChange)="newBrand.set($event)" />
+                    placeholder="Choose the brand" [ngModel]="newBrand()" (ngModelChange)="newBrand.set($event)" />
         </div>
         <p-button type="submit" label="Add" icon="pi pi-plus" [loading]="busy()" />
       </form>
@@ -69,7 +75,7 @@ import { LeaveService } from './leave.service';
     </section>
   `,
   styleUrl: './leave.scss',
-  styles: `:host { display: block; margin-top: 20px; }`,
+  styles: `:host { display: block; margin-top: 20px; } .head-filters { display: inline-flex; flex-wrap: wrap; gap: 8px; }`,
 })
 export class HolidayEditor implements OnInit {
   private readonly leave = inject(LeaveService);
@@ -87,7 +93,8 @@ export class HolidayEditor implements OnInit {
   protected readonly year = signal(this.thisYear);
   protected readonly holidays = signal<RestrictedHoliday[]>([]);
   private readonly brands = signal<Brand[]>([]);
-  protected readonly brandOptions = computed(() => this.brands().map((b) => ({ value: b.id, label: b.name })));
+  protected readonly brandOptions = computed(() => this.brands().map((b) => ({ value: b.id, label: `${b.code} · ${b.name}` })));
+  protected readonly filterBrand = signal<number | null>(null);
   protected readonly newDate = signal<Date | null>(null);
   protected readonly newName = signal('');
   protected readonly newBrand = signal<number | null>(null);
@@ -95,7 +102,13 @@ export class HolidayEditor implements OnInit {
   protected readonly busy = signal(false);
 
   ngOnInit(): void {
-    this.staff.brands().subscribe({ next: (b) => this.brands.set(b), error: () => undefined });
+    this.staff.brands().subscribe({
+      next: (b) => {
+        this.brands.set(b);
+        if (b.length === 1) this.newBrand.set(b[0].id);
+      },
+      error: () => undefined,
+    });
     this.load();
   }
 
@@ -104,11 +117,20 @@ export class HolidayEditor implements OnInit {
     this.load();
   }
 
+  protected changeFilter(brandId: number | null): void {
+    this.filterBrand.set(brandId ?? null);
+    this.load();
+  }
+
   protected add(): void {
     this.error.set('');
     const date = toIsoDate(this.newDate());
     if (!date || !this.newName().trim()) {
       this.error.set('Give the date and the name of the holiday.');
+      return;
+    }
+    if (this.newBrand() == null) {
+      this.error.set('Choose the brand of this holiday.');
       return;
     }
     this.busy.set(true);
@@ -149,7 +171,7 @@ export class HolidayEditor implements OnInit {
   }
 
   private load(): void {
-    this.leave.holidays(this.year(), this.kind()).subscribe({
+    this.leave.holidays({ year: this.year(), brandId: this.filterBrand() }, this.kind()).subscribe({
       next: (list) => this.holidays.set(list),
       error: (err) => this.error.set(apiProblem(err).message),
     });

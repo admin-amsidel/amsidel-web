@@ -64,6 +64,8 @@ export interface Employee {
   emergencyContact: string | null;
   active: boolean;
   mustChangePassword: boolean;
+  /** Leave of the people reporting to this person is approved automatically (set by owners and admins). */
+  autoApproveReports?: boolean;
   locked: boolean;
   /** When it locked after too many wrong PINs; it stays locked until an admin sets a temporary PIN. */
   lockedAt?: string | null;
@@ -108,6 +110,8 @@ export interface EmployeeRequest {
   brandId: number | null;
   designationId: number | null;
   reportsToId: number | null;
+  /** Owners and admins only. */
+  autoApproveReports?: boolean | null;
   address: string;
   phone: string;
   photoPath: string;

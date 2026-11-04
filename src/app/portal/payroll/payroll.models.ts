@@ -31,6 +31,7 @@ export interface PayPerson {
   empNumber: string;
   designationName: string | null;
   brandCode: string | null;
+  brandName: string | null;
   joinedDate: string | null;
   active: boolean;
   photoPath: string | null;
@@ -61,7 +62,7 @@ export interface SalaryRow {
   employee: PayPerson;
   set: boolean;
   effectiveFrom: string | null;
-  /** Working days in a month (default 26). */
+  /** Working days in a month (default 30). */
   workingDays: number;
   totals: PayTotals;
   editable: boolean;
@@ -99,7 +100,7 @@ export interface Salary {
   fyEnd: string;
   set: boolean;
   effectiveFrom: string;
-  /** Working days in a month: per-day pay = monthly earnings / working days (default 26). */
+  /** Working days in a month: per-day pay = monthly earnings / working days (default 30). */
   workingDays: number;
   notes: string | null;
   lines: SalaryLine[];
@@ -324,7 +325,7 @@ export interface Payslip {
   status: PayslipStatus;
   payDate: string;
   daysInMonth: number;
-  /** Working days this month (the salary's, default 26, or set by payroll). */
+  /** Working days this month (the salary's, default 30, or set by payroll). */
   workingDays: number;
   /** Working days employed: all of them, or fewer from a mid-month start. */
   employedDays: number;
@@ -364,8 +365,34 @@ export interface PayslipSave {
   publish: boolean;
 }
 
+/** The Brand filter's value for group-level people, who have no brand. */
+export const NO_BRAND = 'NONE';
+
+export function payBrandKey(p: Pick<PayPerson, 'brandCode'>): string {
+  return p.brandCode ?? NO_BRAND;
+}
+
+/** The brands of these people, by code; group-level people last. */
+export function payBrandOptions(rows: readonly { employee: PayPerson }[]): { value: string; label: string }[] {
+  const seen = new Map<string, string>();
+  for (const { employee: e } of rows) {
+    seen.set(payBrandKey(e), e.brandCode ? `${e.brandCode}${e.brandName ? ' · ' + e.brandName : ''}` : 'Group (no brand)');
+  }
+  return [...seen.entries()]
+    .sort(([a], [b]) => (a === NO_BRAND ? 1 : b === NO_BRAND ? -1 : a.localeCompare(b)))
+    .map(([value, label]) => ({ value, label }));
+}
+
+/** These people, of one brand or (null) all of them, by name. */
+export function payEmployeeOptions(rows: readonly { employee: PayPerson }[], brand: string | null): { value: number; label: string }[] {
+  return rows
+    .filter((r) => brand === null || payBrandKey(r.employee) === brand)
+    .map((r) => ({ value: r.employee.id, label: `${r.employee.name} · ${r.employee.empNumber}` }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 /** Working days in a month unless the salary says otherwise. */
-export const DEFAULT_WORKING_DAYS = 26;
+export const DEFAULT_WORKING_DAYS = 30;
 
 /**
  * Working days employed if the month had `working` days: a full month is all of them; a mid-month start keeps

@@ -455,7 +455,7 @@ export class SalaryEditor {
     this.formError.set('');
     if (!this.from()) return this.formError.set('Choose the date this salary starts from.');
     const days = this.workingDays();
-    if (!days || days < 1 || days > 31) return this.formError.set('Working days in a month: 1 to 31 (usually 26).');
+    if (!days || days < 1 || days > 31) return this.formError.set(`Working days in a month: 1 to 31 (usually ${DEFAULT_WORKING_DAYS}).`);
     if (!s.lines.some((l) => this.amount(l.componentId) > 0)) return this.formError.set('Enter at least one amount.');
     if (this.net() < 0) return this.formError.set('Deductions are more than the pay; check the amounts.');
     const pan = this.pan().trim();

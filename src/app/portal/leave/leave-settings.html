@@ -1,9 +1,11 @@
 <div class="p-head">
   <div>
     <h1>Leave settings</h1>
-    <p>Types of leave and how many days everyone gets each year (January to December), for every brand.</p>
+    <p>The types of leave, each brand's leave plans (dates, days, carry forward), and each brand's holidays.</p>
   </div>
 </div>
+
+<app-leave-plan-alerts [link]="false" />
 
 <section class="p-card">
   <h2>Types of leave</h2>
@@ -11,7 +13,7 @@
   <p-table [value]="drafts()" [tableStyle]="{ 'min-width': '920px' }" styleClass="types p-stack">
     <ng-template #header>
       <tr>
-        <th>Code</th><th>Name</th><th>Allowance</th><th>Days / year</th>
+        <th>Code</th><th>Name</th><th>Allowance</th><th>Default days</th>
         <th>Half day</th><th>Listed dates only</th><th>In use</th><th></th>
       </tr>
     </ng-template>
@@ -23,10 +25,10 @@
           <p-select [options]="allocationOptions" optionLabel="label" optionValue="value" [(ngModel)]="row.allocation"
                     (ngModelChange)="touch(row)" ariaLabel="Allowance" appendTo="body" />
         </td>
-        <td data-label="Days / year">
+        <td data-label="Default days">
           @if (row.allocation === 'ANNUAL') {
             <p-inputnumber [(ngModel)]="row.annualQuota" (ngModelChange)="touch(row)" [min]="0" [max]="365"
-                           inputStyleClass="num" ariaLabel="Days per year" />
+                           inputStyleClass="num" ariaLabel="Default days" />
           } @else {
             <span class="muted">{{ row.allocation === 'GRANTED' ? 'Granted' : 'No limit' }}</span>
           }
@@ -48,17 +50,19 @@
     <p-button label="Add leave type" icon="pi pi-plus" [outlined]="true" size="small" (onClick)="addType()" />
   </div>
   <ul class="legend">
-    <li><b>Days every year</b>: everyone gets this many days each year (Casual, Sick, Earned, Restricted Holiday).</li>
+    <li><b>Days in the plan</b>: everyone gets the days the brand's leave plan gives (Casual, Sick, Earned, Restricted Holiday). "Default days" only starts off a new plan.</li>
     <li><b>Granted per person</b>: no yearly days; managers and admins grant them under Approvals (Comp-off, Paternity).</li>
     <li><b>No limit</b>: no balance, only counted (Leave Without Pay).</li>
     <li><b>Listed dates only</b>: can be taken only on the restricted holiday dates below, one day at a time.</li>
   </ul>
 </section>
 
+<app-leave-plans />
+
 <app-holiday-editor kind="office" title="Office holidays"
-                    intro="Days the office is closed for everyone (Christmas, New Year, Onam…). Nobody applies for them: leave across them does not count them, and the work log expects no hours."
+                    intro="Days a brand's office is closed (Christmas, New Year, Onam…). Nobody applies for them: leave across them does not count them, and the work log expects no hours."
                     placeholder="e.g. Christmas" />
 
-<app-holiday-editor kind="restricted" title="Restricted holidays"
+<app-holiday-editor kind="restricted" title="Restricted / optional holidays"
                     intro="Optional festival days. People pick from this list, up to their Restricted Holiday allowance."
                     placeholder="e.g. Holi" />

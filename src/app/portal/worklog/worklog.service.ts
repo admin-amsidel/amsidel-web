@@ -7,7 +7,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { TeamMember } from '../leave/leave.models';
 import { API_BASE } from '../portal.config';
-import { WorkHourRule, WorkLogEntry, WorkLogMonth, WorkTarget } from './worklog.models';
+import { BrandWorkRule, WorkRuleBody, WorkLogEntry, WorkLogMonth, WorkTarget } from './worklog.models';
 
 const WORKLOG = `${API_BASE}/api/worklog`;
 
@@ -46,12 +46,21 @@ export class WorkLogService {
     return this.http.delete<void>(`${WORKLOG}/entries/${id}`);
   }
 
-  rules(): Observable<WorkHourRule[]> {
-    return this.http.get<WorkHourRule[]>(`${WORKLOG}/rules`);
+  rules(): Observable<BrandWorkRule[]> {
+    return this.http.get<BrandWorkRule[]>(`${WORKLOG}/rules`);
   }
 
-  saveRules(rules: WorkHourRule[]): Observable<WorkHourRule[]> {
-    return this.http.put<WorkHourRule[]>(`${WORKLOG}/rules`, rules);
+  /** One brand's default, or its hours for one designation. */
+  saveRule(rule: WorkRuleBody): Observable<BrandWorkRule[]> {
+    return this.http.put<BrandWorkRule[]>(`${WORKLOG}/rules`, rule);
+  }
+
+  /** Takes a rule off: what is above it applies again. */
+  removeRule(brandId: number | null, designationId: number | null): Observable<BrandWorkRule[]> {
+    const params: Record<string, number> = {};
+    if (brandId !== null) params['brandId'] = brandId;
+    if (designationId !== null) params['designationId'] = designationId;
+    return this.http.delete<BrandWorkRule[]>(`${WORKLOG}/rules`, { params });
   }
 
   /** null values = back to the person's level rule. */
