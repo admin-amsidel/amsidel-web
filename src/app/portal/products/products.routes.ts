@@ -138,13 +138,8 @@ export const PRODUCT_ROUTES: Routes = [
     data: { menu: 'PROD_RECONCILE' },
     loadComponent: () => import('./reconciler').then((m) => m.Reconciler),
   },
-  {
-    path: 'mail',
-    title: 'Customer & supplier mail' + T,
-    canActivate: [menuGuard],
-    data: { menu: 'PROD_MAIL', audience: 'TRADE' },
-    loadComponent: () => import('../mail/staff-mail').then((m) => m.StaffMail),
-  },
+  // moved to the customer portal; old links still work
+  { path: 'mail', redirectTo: '/portal/customers/mail', pathMatch: 'full' },
   {
     path: 'pay',
     title: 'Pay bill' + T,

@@ -115,10 +115,17 @@ export const PORTAL_ROUTES: Routes = [
         loadComponent: () => import('./leave/leave-settings').then((m) => m.LeaveSettings),
       },
       {
+        path: 'mail/config',
+        canActivate: [menuGuard],
+        data: { menu: 'MAIL_CONFIG' },
+        title: 'Staff Email Config · Amsidel Company Portal',
+        loadComponent: () => import('./mail/staff-mail-config').then((m) => m.StaffMailConfig),
+      },
+      {
         path: 'mail',
         canActivate: [menuGuard],
-        data: { menu: 'STAFF_MAIL' },
-        title: 'Staff Mail · Amsidel Company Portal',
+        data: { menu: 'STAFF_MAIL', freshAccess: true },
+        title: 'Staff Email · Amsidel Company Portal',
         loadComponent: () => import('./mail/staff-mail').then((m) => m.StaffMail),
       },
       {

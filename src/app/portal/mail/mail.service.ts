@@ -92,10 +92,31 @@ export interface MailResult {
   at: string;
 }
 
-/** Staff mail: how many people Choose people may reach in one send, and whether I may change that. */
-export interface StaffMailRules {
+/** One brand's staff email limits and today's count; brandId null = the group-level people; null limits = none. */
+export interface BrandMailLimits {
+  brandId: number | null;
+  brandCode: string | null;
+  brandName: string;
+  /** People of this brand Choose people may reach in one send. */
   pickLimit: number;
-  canChangeLimit: boolean;
+  dailyLimit: number | null;
+  sentToday: number;
+  leftToday: number | null;
+  /** The address copied (CC) on every mail to this brand's people. */
+  alwaysCc: string;
+  /** The brand's own address; null = it uses the default office address. */
+  ccOverride: string | null;
+  /** The brand has its own Brevo account (else the default one); the SMTP key never comes back from the server. */
+  ownAccount: boolean;
+  /** The config screens only. */
+  accountLogin: string | null;
+  accountFrom: string | null;
+  accountFromName: string | null;
+  /** The lines at the top and the bottom of the mail: the brand's own (null = the defaults). */
+  mailHeader: string | null;
+  mailFooter: string | null;
+  defaultHeader: string;
+  defaultFooter: string;
 }
 
 /** Staff mail, and customer and supplier mail: the same calls under their own API. */
@@ -119,13 +140,33 @@ export class MailService {
     return this.http.post<MailResult>(`${API_BASE}${api}/send`, body);
   }
 
-  rules(): Observable<StaffMailRules> {
-    return this.http.get<StaffMailRules>(`${API_BASE}${STAFF_MAIL_API}/rules`);
+  /** The limits, office copy and today's count of the brands I may mail. */
+  rules(api = STAFF_MAIL_API): Observable<BrandMailLimits[]> {
+    return this.http.get<BrandMailLimits[]>(`${API_BASE}${api}/rules`, { context: silent() });
   }
 
-  /** Owners and group admins. */
-  savePickLimit(pickLimit: number): Observable<StaffMailRules> {
-    return this.http.put<StaffMailRules>(`${API_BASE}${STAFF_MAIL_API}/rules/pick-limit`, { pickLimit });
+  /** The config screens. */
+  config(api = STAFF_MAIL_API): Observable<BrandMailLimits[]> {
+    return this.http.get<BrandMailLimits[]>(`${API_BASE}${api}/config`);
+  }
+
+  saveConfig(body: { brandId: number | null; pickLimit: number; dailyLimit: number | null; alwaysCc: string | null; mailHeader: string | null; mailFooter: string | null }, api = STAFF_MAIL_API): Observable<BrandMailLimits[]> {
+    return this.http.put<BrandMailLimits[]>(`${API_BASE}${api}/config`, body);
+  }
+
+  /** A brand's own Brevo account, for all its mail; a blank key keeps the saved one. */
+  saveBrevo(body: { brandId: number | null; smtpLogin: string; smtpKey: string; fromEmail: string; fromName: string }, api = STAFF_MAIL_API): Observable<BrandMailLimits[]> {
+    return this.http.put<BrandMailLimits[]>(`${API_BASE}${api}/config/brevo`, body);
+  }
+
+  /** The brand goes back to the default account. */
+  removeBrevo(brandId: number | null, api = STAFF_MAIL_API): Observable<BrandMailLimits[]> {
+    return this.http.delete<BrandMailLimits[]>(`${API_BASE}${api}/config/brevo`, { params: brandId === null ? {} : { brandId } });
+  }
+
+  /** Signs in to Brevo with the saved account; nothing is sent. */
+  testBrevo(brandId: number | null, api = STAFF_MAIL_API): Observable<{ ok: boolean; message: string }> {
+    return this.http.post<{ ok: boolean; message: string }>(`${API_BASE}${api}/config/brevo/test`, null, { params: brandId === null ? {} : { brandId } });
   }
 
   /** The customers and suppliers who can be mailed (customer and supplier mail only). */

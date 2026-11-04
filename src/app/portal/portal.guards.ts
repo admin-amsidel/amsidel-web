@@ -31,7 +31,9 @@ export const menuGuard: CanActivateFn = (route) => {
   const router = inject(Router);
   // data.menu, or data.menus: any one of them opens the page
   const codes = (route.data['menus'] as string[] | undefined) ?? [route.data['menu'] as string];
-  return auth.ensureAccess().pipe(map(() => codes.some((c) => auth.can(c)) || router.createUrlTree(['/portal/profile'])));
+  // data.freshAccess: the page sets itself up once from its ticks, so last time's menus will not do
+  const access$ = route.data['freshAccess'] ? auth.ensureFreshAccess() : auth.ensureAccess();
+  return access$.pipe(map(() => codes.some((c) => auth.can(c)) || router.createUrlTree(['/portal/profile'])));
 };
 
 /**

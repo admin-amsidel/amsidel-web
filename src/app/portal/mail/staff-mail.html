@@ -7,10 +7,10 @@
 
 @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
 @if (setup(); as s) {
-  @if (!s.ready && byEmail()) {
+  @if (mailBlocked()) {
     <p-message severity="warn" styleClass="page-message">
-      Mail is not set up on the server yet, so nothing can be sent. The backend needs the mail service key (MAIL_PASSWORD) for
-      {{ s.from || 'the sending account' }}.
+      Mail is not set up on the server yet, so nothing can be sent. Set up the brand's Brevo account in its Email config, or
+      the backend needs the mail service key (MAIL_PASSWORD) for {{ s.from || 'the sending account' }}.
     </p-message>
   }
 }
@@ -216,28 +216,16 @@
     } @else {
       <div class="pf mt">
         <label for="m-people">{{ t.people }}</label>
-        <p-multiselect inputId="m-people" [options]="peopleOptions()" optionLabel="label" optionValue="value" [filter]="true"
+        <p-multiselect inputId="m-people" [options]="peopleOptions()" optionLabel="label" optionValue="value" optionDisabled="disabled" [filter]="true"
                        [filterPlaceHolder]="t.search" [placeholder]="t.pick" display="chip"
                        [maxSelectedLabels]="4" [selectedItemsLabel]="t.chosen" appendTo="body" [loading]="loading()"
-                       [selectionLimit]="trade ? undefined : (pickLimit() ?? undefined)"
                        [ngModel]="picked()" (ngModelChange)="pick($event)" />
-        @if (!trade && pickLimit(); as limit) {
-          <small class="hint" [class.warn]="picked().length >= limit">
-            {{ picked().length }} of at most {{ limit }} {{ limit === 1 ? 'person' : 'people' }} in one send.
+        @if (pickUsage().length) {
+          <small class="hint" [class.warn]="pickAtLimit()">In one send:
+            @for (u of pickUsage(); track u.label; let last = $last) { {{ u.label }} {{ u.count }} of {{ u.limit }}{{ last ? '' : ' · ' }} }
           </small>
         }
       </div>
-      @if (!trade && canChangeLimit()) {
-        <div class="limit">
-          <label for="m-limit">Limit for Choose people</label>
-          <p-inputnumber inputId="m-limit" [min]="1" [max]="500" [showButtons]="true" buttonLayout="horizontal" size="small"
-                         incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" inputStyleClass="limit__num"
-                         [ngModel]="limitDraft()" (ngModelChange)="limitDraft.set($event)" />
-          <p-button label="Save" size="small" [outlined]="true" [loading]="limitBusy()"
-                    [disabled]="!limitDraft() || limitDraft() === pickLimit()" (onClick)="saveLimit()" />
-          <small class="hint">Owners and group admins: how many people anyone may choose in one send.</small>
-        </div>
-      }
     }
     <p class="count">
       @if (loading()) { {{ t.loading }} }
@@ -247,6 +235,10 @@
             <b>{{ recipients().length - noEmail() }}</b> by email
             @if (noEmail()) { <span class="warn">· {{ noEmail() }} {{ t.noEmail }}</span> }
           </span>
+          @for (u of dayUsage(); track u.label) {
+            <span class="line day" [class.warn]="u.left !== null && u.mails > u.left"><i class="pi pi-calendar" aria-hidden="true"></i>
+              {{ u.label }} today: {{ u.sent }}{{ u.daily !== null ? ' of ' + u.daily : '' }} sent{{ u.left !== null ? ', ' + u.left + ' left' : '' }}</span>
+          }
         }
         @if (byWhatsApp()) {
           <span class="line"><i class="pi pi-whatsapp" aria-hidden="true"></i>
@@ -260,9 +252,10 @@
     <div class="preview" aria-label="Preview">
       <div class="preview__bar"><span>Preview for {{ preview().name }}</span></div>
       <div class="preview__subj">{{ preview().subject }}</div>
-      @if (byEmail() && (cc().length || bcc().length || alwaysCc())) {
+      @if (byEmail() && previewLook(); as l) { <div class="preview__head">{{ l.header }}</div> }
+      @if (byEmail() && (cc().length || bcc().length || previewCc())) {
         <div class="preview__cc">
-          @if (cc().length || alwaysCc()) { <span>CC: {{ (alwaysCc() ? [alwaysCc()] : []).concat(cc()).join(', ') }}</span> }
+          @if (cc().length || previewCc()) { <span>CC: {{ (previewCc() ? [previewCc()] : []).concat(cc()).join(', ') }}</span> }
           @if (bcc().length) { <span>BCC: {{ bcc().join(', ') }}</span> }
         </div>
       }
@@ -280,6 +273,7 @@
         }
         <div class="pv-sig" [innerHTML]="rich(preview().signature)"></div>
       </div>
+      @if (byEmail() && previewLook(); as l) { <div class="preview__foot">{{ l.footer }}</div> }
       @if (byEmail() && attachments().length) {
         <div class="preview__files">
           @for (a of attachments(); track a.key) {
@@ -301,7 +295,7 @@
     <div class="p-actions">
       <p-button [label]="sendLabel()" [icon]="channel() === 'WHATSAPP' ? 'pi pi-whatsapp' : 'pi pi-send'"
                 [disabled]="running() || mailBlocked() || (byEmail() && uploading()) || !!notAllowed" (onClick)="send()" />
-      @if (setup(); as s) { @if (s.ready && byEmail()) { <small class="muted">From {{ s.fromName }} &lt;{{ s.from }}&gt;</small> } }
+      @if (previewFrom(); as f) { @if (byEmail()) { <small class="muted">From {{ f.name }} &lt;{{ f.email }}&gt;</small> } }
     </div>
   </section>
 </div>

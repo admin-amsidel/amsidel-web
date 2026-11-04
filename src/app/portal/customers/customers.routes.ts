@@ -7,7 +7,10 @@ import { menuGuard } from '../portal.guards';
 
 const T = ' · Amsidel Company Portal';
 
-/** The customer portal, under /portal/customers: the list (add, change, delete) and one customer's details page. */
+/**
+ * The customer portal, under /portal/customers: the list (add, change, delete), one customer's details page, and
+ * customer & supplier email with its limits per brand.
+ */
 export const CUSTOMER_ROUTES: Routes = [
   {
     path: '',
@@ -16,6 +19,20 @@ export const CUSTOMER_ROUTES: Routes = [
     canActivate: [menuGuard],
     data: { menu: 'CUSTOMERS' },
     loadComponent: () => import('./customers').then((m) => m.Customers),
+  },
+  {
+    path: 'mail/config',
+    title: 'Customer & Supplier Email Config' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'TMAIL_CONFIG', audience: 'TRADE' },
+    loadComponent: () => import('../mail/staff-mail-config').then((m) => m.StaffMailConfig),
+  },
+  {
+    path: 'mail',
+    title: 'Customer & Supplier Email' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_MAIL', audience: 'TRADE', freshAccess: true },
+    loadComponent: () => import('../mail/staff-mail').then((m) => m.StaffMail),
   },
   {
     path: ':id',

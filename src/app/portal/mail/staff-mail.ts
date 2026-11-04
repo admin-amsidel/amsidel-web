@@ -19,12 +19,11 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { AuthService } from '../auth.service';
 import { Avatar } from '../avatar';
 import { apiProblem, Employee } from '../portal.models';
 import { StaffService } from '../staff.service';
-import { MailBody, MailRecipient, MailService, MailSetup, PictureAlign, PictureSize, STAFF_MAIL_API, TRADE_MAIL_API } from './mail.service';
+import { BrandMailLimits, MailBody, MailRecipient, MailService, MailSetup, PictureAlign, PictureSize, STAFF_MAIL_API, TRADE_MAIL_API } from './mail.service';
 
 /** Email delivery; 'off' when this send is WhatsApp only. */
 type Delivery = 'queued' | 'sending' | 'sent' | 'failed' | 'off';
@@ -127,7 +126,7 @@ const PARALLEL = 3;
 @Component({
   selector: 'app-staff-mail',
   imports: [
-    FormsModule, DatePipe, Avatar, ButtonModule, InputNumberModule, InputTextModule, MessageModule, MultiSelectModule, ProgressBarModule, ProgressTone,
+    FormsModule, DatePipe, Avatar, ButtonModule, InputTextModule, MessageModule, MultiSelectModule, ProgressBarModule, ProgressTone,
     SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
   ],
   templateUrl: './staff-mail.html',
@@ -147,17 +146,17 @@ export class StaffMail implements OnInit {
   /** The words that differ between the two. */
   protected readonly t = this.trade
     ? {
-      title: 'Customer & supplier mail', intro: 'Write once; each customer or supplier gets it personally, by email, WhatsApp or both.',
+      title: 'Customer & supplier email', intro: 'Write once; each customer or supplier gets it personally, by email, WhatsApp or both.',
       person: 'customer or supplier', people: 'Customers / suppliers', theirName: "customer's or supplier's name", loading: 'Loading customers and suppliers…',
       emailCol: 'Email', noEmail: 'without an email', noEmailAll: 'None of them has an email on record.', who: 'Customer / supplier',
-      confirm: 'Send customer & supplier mail', placeholder: 'e.g. Your quotation for the villa windows', pick: 'Choose customers or suppliers',
+      confirm: 'Send customer & supplier email', placeholder: 'e.g. Your quotation for the villa windows', pick: 'Choose customers or suppliers',
       search: 'Search by name, code or email', chosen: '{0} chosen', bodyHint: 'What they should know: an offer, a quotation, an order, a reminder…',
     }
     : {
-      title: 'Staff mail', intro: 'Write once; each employee gets it personally, by office email, WhatsApp or both.',
+      title: 'Staff email', intro: 'Write once; each employee gets it personally, by office email, WhatsApp or both.',
       person: 'employee', people: 'People', theirName: "employee's name", loading: 'Loading employees…',
       emailCol: 'Office email', noEmail: 'without an office email', noEmailAll: 'None of these people has an office email on record.', who: 'Employee',
-      confirm: 'Send staff mail', placeholder: 'e.g. New client: Kumar residence', pick: 'Choose people',
+      confirm: 'Send staff email', placeholder: 'e.g. New client: Kumar residence', pick: 'Choose people',
       search: 'Search by name or number', chosen: '{0} people', bodyHint: 'What everyone should know: a new process, a new client, a reminder…',
     };
 
@@ -170,29 +169,29 @@ export class StaffMail implements OnInit {
   protected readonly brands = signal<{ id: number; name: string }[]>([]);
   protected readonly brandId = signal<number | null>(null);
   /**
-   * Staff mail's ticks under Menu access (Send by email / WhatsApp, All employees, Choose people); customer and
-   * supplier mail has none. Both needs email and WhatsApp.
+   * The ticks under each portal's Email menu in Menu access (Send by email / WhatsApp, whom to, Add picture, Attach
+   * files). Both needs email and WhatsApp.
    */
-  private readonly allows = (code: string) => this.trade || this.auth.can(code);
+  private readonly ticks = this.trade
+    ? { email: 'TMAIL_EMAIL', whatsapp: 'TMAIL_WHATSAPP', picture: 'TMAIL_PICTURE', attach: 'TMAIL_ATTACH', pick: 'TMAIL_PICK' }
+    : { email: 'MAIL_EMAIL', whatsapp: 'MAIL_WHATSAPP', picture: 'MAIL_PICTURE', attach: 'MAIL_ATTACH', pick: 'MAIL_PICK' };
+  private readonly allows = (code: string) => this.auth.can(code);
   protected readonly modeOptions = this.trade
     ? [
-      { label: 'All customers', value: 'CUSTOMERS' },
-      { label: 'All suppliers', value: 'SUPPLIERS' },
-      { label: 'Choose', value: 'PICK' },
+      ...(this.allows('TMAIL_ALL_CUSTOMERS') ? [{ label: 'All customers', value: 'CUSTOMERS' }] : []),
+      ...(this.allows('TMAIL_ALL_SUPPLIERS') ? [{ label: 'All suppliers', value: 'SUPPLIERS' }] : []),
+      ...(this.allows(this.ticks.pick) ? [{ label: 'Choose', value: 'PICK' }] : []),
     ]
     : [
       ...(this.allows('MAIL_ALL') ? [{ label: 'All employees', value: 'ALL' }] : []),
-      ...(this.allows('MAIL_PICK') ? [{ label: 'Choose people', value: 'PICK' }] : []),
+      ...(this.allows(this.ticks.pick) ? [{ label: 'Choose people', value: 'PICK' }] : []),
     ];
   protected readonly mode = signal<'ALL' | 'CUSTOMERS' | 'SUPPLIERS' | 'PICK'>(
     (this.modeOptions[0]?.value ?? 'PICK') as 'ALL' | 'CUSTOMERS' | 'SUPPLIERS' | 'PICK',
   );
   protected readonly picked = signal<number[]>([]);
-  /** Staff mail: at most this many chosen people in one send (set by owners and group admins); null = no limit. */
-  protected readonly pickLimit = signal<number | null>(null);
-  protected readonly canChangeLimit = signal(false);
-  protected readonly limitDraft = signal<number | null>(null);
-  protected readonly limitBusy = signal(false);
+  /** Each brand's limits, office copy and today's count (the Email config screen). */
+  protected readonly limits = signal<BrandMailLimits[]>([]);
   protected readonly brandOptions = computed(() => [
     { value: null, label: 'All brands' },
     ...this.brands().map((b) => ({ value: b.id, label: b.name })),
@@ -200,6 +199,8 @@ export class StaffMail implements OnInit {
   protected readonly peopleOptions = computed(() =>
     this.employees().map((e) => ({
       value: e.key,
+      // this person's brand is at its limit for one send (those already chosen can still be taken off)
+      disabled: !this.picked().includes(e.key) && this.pickFull(e.brandId),
       label: `${this.trade ? (e.kind === 'CUSTOMER' ? 'Customer' : 'Supplier') + ' · ' : ''}${e.code} · ${e.name}`
         + (e.email ? (this.trade ? ' · ' + e.email : '') : this.trade ? ' (no email)' : ' (no office email)'),
     })),
@@ -214,6 +215,23 @@ export class StaffMail implements OnInit {
     return this.employees().filter((e) => e.kind === kind && (brand === null || e.brandId === brand));
   });
   protected readonly noEmail = computed(() => this.recipients().filter((e) => !e.email).length);
+  /** Choose people, brand by brand: how many are chosen of the limit for one send (every brand when nobody is chosen yet). */
+  protected readonly pickUsage = computed(() => {
+    const counts = this.pickedByBrand();
+    return this.limits()
+      .filter((l) => !counts.size || counts.has(l.brandId))
+      .map((l) => ({ label: l.brandCode ?? l.brandName, count: counts.get(l.brandId) ?? 0, limit: l.pickLimit }));
+  });
+  protected readonly pickAtLimit = computed(() => this.pickUsage().some((u) => u.count >= u.limit));
+  /** Emails this send needs, brand by brand, with what is left of each brand's day. */
+  protected readonly dayUsage = computed(() => {
+    if (!this.byEmail()) return [];
+    const mails = new Map<number | null, number>();
+    for (const e of this.recipients()) if (e.email) mails.set(e.brandId, (mails.get(e.brandId) ?? 0) + 1);
+    return this.limits()
+      .filter((l) => mails.has(l.brandId))
+      .map((l) => ({ label: l.brandCode ?? l.brandName, mails: mails.get(l.brandId)!, sent: l.sentToday, daily: l.dailyLimit, left: l.leftToday }));
+  });
   protected readonly noPhone = computed(() => this.recipients().filter((e) => !whatsappNumber(e.phone)).length);
 
   // how
@@ -222,24 +240,45 @@ export class StaffMail implements OnInit {
     { label: 'WhatsApp', value: 'WHATSAPP', icon: 'pi pi-whatsapp' },
     { label: 'Both', value: 'BOTH', icon: 'pi pi-clone' },
   ].filter((o) =>
-    o.value === 'EMAIL' ? this.allows('MAIL_EMAIL')
-      : o.value === 'WHATSAPP' ? this.allows('MAIL_WHATSAPP')
-        : this.allows('MAIL_EMAIL') && this.allows('MAIL_WHATSAPP'),
+    o.value === 'EMAIL' ? this.allows(this.ticks.email)
+      : o.value === 'WHATSAPP' ? this.allows(this.ticks.whatsapp)
+        : this.allows(this.ticks.email) && this.allows(this.ticks.whatsapp),
   );
-  /** Staff mail: Add picture and Attach files ticks (customer and supplier mail has both). */
-  protected readonly canPicture = this.allows('MAIL_PICTURE');
-  protected readonly canAttach = this.allows('MAIL_ATTACH');
+  /** Add picture and Attach files ticks. */
+  protected readonly canPicture = this.allows(this.ticks.picture);
+  protected readonly canAttach = this.allows(this.ticks.attach);
   protected readonly channel = signal<Channel>((this.channelOptions[0]?.value ?? 'EMAIL') as Channel);
   /** What is missing for sending at all: no way to send, or nobody it may go to. */
   protected readonly notAllowed = !this.channelOptions.length
-    ? 'You may not send by email or WhatsApp. Ask your admin for "Send by email" or "Send by WhatsApp" under Staff mail in Menu access.'
+    ? 'You may not send by email or WhatsApp. Ask your admin for "Send by email" or "Send by WhatsApp" under Email in Menu access.'
     : !this.modeOptions.length
-      ? 'You may not send to anyone. Ask your admin for "All employees" or "Choose people" under Staff mail in Menu access.'
+      ? (this.trade ? 'You may not send to anyone. Ask your admin for "All customers", "All suppliers" or "Choose" under Email in Menu access.'
+        : 'You may not send to anyone. Ask your admin for "All employees" or "Choose people" under Email in Menu access.')
       : '';
   protected readonly byEmail = computed(() => this.channel() !== 'WHATSAPP');
   protected readonly byWhatsApp = computed(() => this.channel() !== 'EMAIL');
   /** Email is needed for this send but the server cannot send mail yet. */
-  protected readonly mailBlocked = computed(() => this.byEmail() && this.setup()?.ready === false);
+  protected readonly mailBlocked = computed(() => {
+    if (!this.byEmail() || this.setup()?.ready !== false) return false;
+    // the default account cannot send: only if a brand in this send has its own Brevo account
+    const people = this.recipients();
+    const own = (brandId: number | null) => !!this.limits().find((l) => l.brandId === brandId)?.ownAccount;
+    return people.length ? !people.some((e) => e.email && own(e.brandId)) : !this.limits().some((l) => l.ownAccount);
+  });
+  /** The lines at the top and the bottom of the mail in the preview. */
+  protected readonly previewLook = computed(() => {
+    const person = this.recipients().find((e) => e.email) ?? this.recipients()[0];
+    const brand = person ? this.limits().find((l) => l.brandId === person.brandId) : this.limits()[0];
+    return brand ? { header: brand.mailHeader || brand.defaultHeader, footer: brand.mailFooter || brand.defaultFooter } : null;
+  });
+  /** Where the mail in the preview comes from: the brand's own Brevo account, else the default one. */
+  protected readonly previewFrom = computed(() => {
+    const person = this.recipients().find((e) => e.email) ?? this.recipients()[0];
+    const brand = person ? this.limits().find((l) => l.brandId === person.brandId) : null;
+    const s = this.setup();
+    if (brand?.ownAccount) return { name: brand.accountFromName || s?.fromName || '', email: brand.accountFrom ?? '' };
+    return s?.ready ? { name: s.fromName, email: s.from } : null;
+  });
   protected readonly sendLabel = computed(() =>
     this.channel() === 'WHATSAPP' ? 'Prepare WhatsApp' : this.channel() === 'BOTH' ? 'Send email + WhatsApp' : 'Send',
   );
@@ -278,8 +317,24 @@ export class StaffMail implements OnInit {
   protected readonly cc = computed(() => addresses(this.ccText()));
   protected readonly bcc = computed(() => addresses(this.bccText()));
   protected readonly badAddresses = computed(() => [...this.cc(), ...this.bcc()].filter((a) => !EMAIL.test(a)));
-  /** The office address the server copies on every mail (shown, cannot be taken off). */
-  protected readonly alwaysCc = computed(() => this.setup()?.alwaysCc?.trim() ?? '');
+  /**
+   * The office address the server copies on every mail (shown, cannot be taken off): the one of the person's brand,
+   * from the Email config screen, so a send to several brands has several.
+   */
+  private ccOf(brandId: number | null): string {
+    return this.limits().find((l) => l.brandId === brandId)?.alwaysCc?.trim() || this.setup()?.alwaysCc?.trim() || '';
+  }
+  protected readonly alwaysCc = computed(() => {
+    const people = this.recipients();
+    const list = people.length ? people.map((e) => this.ccOf(e.brandId)) : this.limits().map((l) => l.alwaysCc?.trim() ?? '');
+    const all = [...new Set(list.filter(Boolean))];
+    return all.length ? all.join(', ') : this.setup()?.alwaysCc?.trim() ?? '';
+  });
+  /** The office copy on the mail in the preview. */
+  protected readonly previewCc = computed(() => {
+    const person = this.recipients().find((e) => e.email) ?? this.recipients()[0];
+    return person ? this.ccOf(person.brandId) : this.alwaysCc();
+  });
   protected readonly attachments = signal<Upload[]>([]);
   protected readonly pictures = signal<Picture[]>([]);
   protected readonly attachAccept = ATTACH_TYPES.map((t) => '.' + t).join(',');
@@ -372,6 +427,7 @@ export class StaffMail implements OnInit {
   ngOnInit(): void {
     this.mail.setup(this.api).subscribe({ next: (s) => this.setup.set(s), error: () => undefined });
     this.mail.signature(this.api).subscribe({ next: (s) => this.fillSignature(s), error: () => undefined });
+    this.loadLimits();
     const failed = (err: unknown) => {
       this.error.set(apiProblem(err).message);
       this.loading.set(false);
@@ -387,14 +443,6 @@ export class StaffMail implements OnInit {
       });
       return;
     }
-    this.mail.rules().subscribe({
-      next: (r) => {
-        this.pickLimit.set(r.pickLimit);
-        this.limitDraft.set(r.pickLimit);
-        this.canChangeLimit.set(r.canChangeLimit);
-      },
-      error: () => undefined,
-    });
     this.staff.brands().subscribe({ next: (b) => this.brands.set(b), error: () => undefined });
     this.staff.employees().subscribe({
       next: (list) => {
@@ -405,30 +453,40 @@ export class StaffMail implements OnInit {
     });
   }
 
-  /** The chosen people, never more than the limit (the list also stops at it). */
-  protected pick(keys: number[]): void {
-    const limit = this.trade ? null : this.pickLimit();
-    this.picked.set(limit != null && keys.length > limit ? keys.slice(0, limit) : keys);
+  /** Each brand's limits and today's count: when the page opens, and after a send has gone out. */
+  private loadLimits(): void {
+    this.mail.rules(this.api).subscribe({ next: (list) => this.limits.set(list), error: () => undefined });
   }
 
-  /** Owners and group admins: how many people Choose people may reach in one send. */
-  protected saveLimit(): void {
-    const n = this.limitDraft();
-    if (n == null || n < 1) return;
-    this.limitBusy.set(true);
-    this.mail.savePickLimit(n).subscribe({
-      next: (r) => {
-        this.limitBusy.set(false);
-        this.pickLimit.set(r.pickLimit);
-        this.limitDraft.set(r.pickLimit);
-        this.pick(this.picked());
-        this.toast.add({ severity: 'success', summary: 'Limit saved', detail: `Choose people: up to ${r.pickLimit} in one send` });
-      },
-      error: (err) => {
-        this.limitBusy.set(false);
-        this.toast.add({ severity: 'error', summary: 'Limit not saved', detail: apiProblem(err).message });
-      },
+  /** How many are chosen, per brand. */
+  private readonly pickedByBrand = computed(() => {
+    const chosen = new Set(this.picked());
+    const counts = new Map<number | null, number>();
+    for (const e of this.employees()) if (chosen.has(e.key)) counts.set(e.brandId, (counts.get(e.brandId) ?? 0) + 1);
+    return counts;
+  });
+
+  private pickFull(brandId: number | null): boolean {
+    const limit = this.limits().find((l) => l.brandId === brandId)?.pickLimit;
+    return limit !== undefined && (this.pickedByBrand().get(brandId) ?? 0) >= limit;
+  }
+
+  /** The chosen people, never more of a brand than its limit (the list also stops at it; "select all" can pass it). */
+  protected pick(keys: number[]): void {
+    const brandOf = new Map(this.employees().map((e) => [e.key, e.brandId]));
+    const counts = new Map<number | null, number>();
+    const kept = keys.filter((k) => {
+      const brand = brandOf.get(k) ?? null;
+      const limit = this.limits().find((l) => l.brandId === brand)?.pickLimit;
+      const n = (counts.get(brand) ?? 0) + 1;
+      if (limit !== undefined && n > limit) return false;
+      counts.set(brand, n);
+      return true;
     });
+    if (kept.length < keys.length) {
+      this.toast.add({ severity: 'warn', summary: 'Limit for one send reached', detail: `${keys.length - kept.length} not added: each brand has its own limit.` });
+    }
+    this.picked.set(kept);
   }
 
   /** Puts {name} where the cursor is in the subject or the message. */
@@ -633,10 +691,6 @@ export class StaffMail implements OnInit {
     this.formError.set('');
     if (this.notAllowed) return this.formError.set(this.notAllowed);
     const people = this.recipients();
-    const limit = this.pickLimit();
-    if (!this.trade && this.mode() === 'PICK' && limit != null && people.length > limit) {
-      return this.formError.set(`Choose at most ${limit} ${limit === 1 ? 'person' : 'people'} in one send.`);
-    }
     if (!this.subject().trim()) return this.formError.set('Write a subject.');
     if (!this.body().trim()) return this.formError.set('Write the message.');
     if (this.byEmail()) {
@@ -661,6 +715,11 @@ export class StaffMail implements OnInit {
           : channel === 'WHATSAPP' ? 'None of them has a phone number on record.'
             : 'None of them has an email or a phone number on record.',
       );
+    }
+
+    const overDay = this.dayUsage().find((u) => u.left !== null && u.mails > u.left);
+    if (overDay) {
+      return this.formError.set(`${overDay.label} has ${overDay.left} ${this.trade ? 'customer & supplier' : 'staff'} ${overDay.left === 1 ? 'email' : 'emails'} left today (limit ${overDay.daily}), and this send needs ${overDay.mails}. Choose fewer people, or ask for the limit to be raised under ${this.trade ? 'Customer portal > Email > Email config' : 'Email > Staff email config'}.`);
     }
 
     const draft: Draft = {
@@ -767,6 +826,7 @@ export class StaffMail implements OnInit {
         next: (u) => this.patch(u.id, { status: u.status, note: u.note, at: u.at }),
         complete: () => {
           this.running.set(false);
+          this.loadLimits();
           const c = this.counts();
           this.toast.add({
             severity: c.failed ? 'warn' : 'success',

@@ -137,9 +137,7 @@
 .only-mode { margin: 0; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
 .only-mode i { color: var(--brass-dark); }
 .hint.warn { color: #b45309; }
-/* owners and group admins: the Choose people limit */
-.limit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px; padding: 10px 12px;
-  border: 1px dashed #b9d3ef; border-radius: 10px; background: var(--accent-softer); }
-.limit label { font-size: .86rem; font-weight: 600; }
-.limit .hint { flex-basis: 100%; margin: 0; }
-:host ::ng-deep .limit__num { width: 56px; text-align: center; }
+.count .day { font-size: .84rem; }
+/* the mail's own header and footer lines, as the brand set them */
+.preview__head { padding: 8px 18px; font-size: .8rem; font-weight: 700; letter-spacing: .25em; color: #1d5fa3; background: #e3eefa; border-bottom: 2px solid #2f74c0; }
+.preview__foot { padding: 8px 18px; font-size: .78rem; color: var(--muted); background: #f5f9fe; border-top: 1px solid #dbe7f5; }

@@ -44,6 +44,8 @@ export class AuthService {
   /** Set when the backend says no menus were given to me at all ("No permission granted..."). */
   readonly accessDenied = signal<string | null>(null);
   private access$: Observable<MyAccess | null> | null = null;
+  /** The load from the server behind last time's menus, while they are in use. */
+  private fresh$: Observable<MyAccess | null> | null = null;
 
   /** May I open this menu (a code such as TASKS)? */
   can(code: string): boolean {
@@ -76,12 +78,20 @@ export class AuthService {
       if (cached) {
         // the page goes on with last time's menus; the fresh ones replace them when they come
         load$.subscribe();
+        this.fresh$ = load$;
         this.access$ = of(cached);
       } else {
+        this.fresh$ = null;
         this.access$ = load$;
       }
     }
     return this.access$;
+  }
+
+  /** My menus as the server has them now, for a page that sets itself up once from its ticks. */
+  ensureFreshAccess(): Observable<MyAccess | null> {
+    const access$ = this.ensureAccess();
+    return this.fresh$ ?? access$;
   }
 
   /** After menu access was changed: loaded afresh (not from last time's). */
