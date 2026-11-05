@@ -15,6 +15,7 @@ import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { DEFAULT_ZONE, TIME_ZONES, zoneLabel } from '../portal-time';
 import { AuthService } from '../auth.service';
 import { UploadLimits } from '../upload-limits.service';
 import { CURRENCIES } from '../payroll/payroll.models';
@@ -90,6 +91,7 @@ import { PhoneInput, phoneProblem } from '../phone-input';
               } @else { — }
             </dd>
             <dt>Currency</dt><dd>{{ currencyLabel(b.currency) }}</dd>
+            <dt>Time zone</dt><dd>{{ zoneLabel(b.timeZone) }}</dd>
             <dt>Online pay</dt>
             <dd>{{ b.razorpayReady ? 'Razorpay ' + (b.razorpayKeyId?.startsWith('rzp_live_') ? 'live' : 'test') + ' · ' + b.razorpayKeyId : 'Not set up' }}</dd>
           </dl>
@@ -146,6 +148,10 @@ import { PhoneInput, phoneProblem } from '../phone-input';
           <p-select inputId="b-cur" [options]="currencies" optionLabel="label" optionValue="code" appendTo="body"
                     [ngModel]="currency()" (ngModelChange)="currency.set($event)" />
           <small class="hint">The symbol on its invoices, quotations and payslips; amounts are not converted. UPI is offered for rupees only.</small></div>
+        <div class="pf"><label for="b-zone">Time zone</label>
+          <p-select inputId="b-zone" [options]="zones()" optionLabel="label" optionValue="value" appendTo="body" [filter]="true" filterPlaceholder="Search"
+                    [ngModel]="timeZone()" (ngModelChange)="timeZone.set($event)" />
+          <small class="hint">Sets the top bar clock, meeting calendar and meeting reminders for this brand's people. Other dates and times are not affected yet.</small></div>
         <fieldset class="bank span">
           <legend>Bank details for invoices</legend>
           <div class="pf"><label for="b-acc">Bank account no</label>
@@ -299,6 +305,13 @@ export class Brands implements OnInit {
   protected readonly qrBusy = signal(false);
   protected readonly currency = signal('INR');
   protected readonly currencies = CURRENCIES;
+  protected readonly timeZone = signal(DEFAULT_ZONE);
+  protected readonly zoneLabel = zoneLabel;
+  /** The usual choices, and this brand's own if it has another. */
+  protected readonly zones = computed(() => {
+    const own = this.timeZone();
+    return TIME_ZONES.some((z) => z.value === own) ? TIME_ZONES : [...TIME_ZONES, { value: own, label: own }];
+  });
   protected readonly rzKey = signal('');
   protected readonly rzSecret = signal('');
   protected readonly rzBusy = signal(false);
@@ -340,6 +353,7 @@ export class Brands implements OnInit {
     this.showQr(b);
     this.rzKey.set(b?.razorpayKeyId ?? '');
     this.currency.set(b?.currency ?? 'INR');
+    this.timeZone.set(b?.timeZone ?? DEFAULT_ZONE);
     this.rzSecret.set('');
     this.open.set(true);
   }
@@ -467,10 +481,13 @@ export class Brands implements OnInit {
     const body = {
       name: this.name().trim(), code: this.code().trim(), active: this.active(), address: this.address().trim(),
       launchedDate: toIsoDate(this.launched()), owners: this.owners(), gstNumber: gst, category: (this.category() ?? '').trim(),
-      contactNumber: phone, email, bankAccount, ifsc, upi, currency: this.currency(),
+      contactNumber: phone, email, bankAccount, ifsc, upi, currency: this.currency(), timeZone: this.timeZone(),
     };
+    const zoneBefore = this.editing()?.timeZone ?? DEFAULT_ZONE;
     this.staff.saveBrand(body, this.editing()?.id).subscribe({
       next: (b) => {
+        // my own clock and calendar may follow this brand; everyone else's follow when they next open the portal
+        if (zoneBefore !== this.timeZone()) this.auth.reloadAccess().subscribe();
         const f = this.file();
         if (!f) return this.done(b);
         this.staff.uploadBrandLogo(b.id, f).subscribe({

@@ -3,7 +3,7 @@
  * Designed and developed by AMSIDEL Technologies.
  */
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, input, output, signal, untracked } from '@angular/core';
+import { Component, computed, DestroyRef, effect, ElementRef, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -15,8 +15,10 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TextareaModule } from 'primeng/textarea';
+import { AuthService } from '../auth.service';
 import { Avatar } from '../avatar';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
+import { zoneClock } from '../portal-time';
 import { TouchDatePicker } from '../touch-datepicker';
 import { DashboardService, Meeting, MeetingBody, MeetingPerson, timeLabel, timeRange } from './dashboard.service';
 
@@ -44,6 +46,9 @@ function minutesOf(time: string): number {
   return h * 60 + m;
 }
 
+/** How long a meeting with no end time is taken to last, to say when it is over. */
+const ASSUMED_MINUTES = 60;
+
 /** 90 as 1 hr 30 min. */
 function lengthLabel(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -54,7 +59,7 @@ function lengthLabel(minutes: number): string {
 /**
  * The dashboard's calendar: a dot marks the days with meetings; choosing a day lists its meetings with their details.
  * Anyone sees the meetings they are in; the Add meetings tick gives the Add button, and the changing and deleting of
- * the ones the person added.
+ * the ones the person added. A meeting that is over has its title struck through.
  */
 @Component({
   selector: 'app-meeting-calendar',
@@ -96,7 +101,7 @@ function lengthLabel(minutes: number): string {
           <div class="meet-top">
             <div class="meet-main">
               <span class="time">{{ range(m) }}</span>
-              <b>{{ m.title }}</b>
+              <b [class.over]="isOver(m)">{{ m.title }}</b>@if (isOver(m)) { <span class="hidden-text">Meeting over</span> }
             </div>
             @if (m.canChange) {
               <span class="acts">
@@ -197,6 +202,8 @@ function lengthLabel(minutes: number): string {
     .meet-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
     .meet-main { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
     .time { font-size: .76rem; font-weight: 700; color: var(--brass-dark); }
+    .over { text-decoration: line-through; color: var(--muted); }
+    .hidden-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .acts { display: inline-flex; flex: none; margin: -4px -6px 0 0; }
     .line { margin: 0; font-size: .82rem; color: var(--muted); display: flex; gap: 6px; align-items: baseline; min-width: 0; overflow-wrap: anywhere; }
     .line a { color: var(--brass-dark); }
@@ -235,6 +242,8 @@ export class MeetingCalendar {
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
 
   /** Show the meetings of my team instead of mine. */
   readonly team = input(false);
@@ -247,11 +256,16 @@ export class MeetingCalendar {
   protected readonly maxPeople = SHOWN_PEOPLE;
   protected readonly range = timeRange;
 
-  protected readonly today = signal(toIsoDate(new Date())!);
-  protected readonly selected = signal(toIsoDate(new Date())!);
-  protected readonly month = signal(firstOfMonth(new Date()));
+  /** In the person's time zone, not the device's. The first answer from the server confirms them. */
+  protected readonly today = signal(zoneClock(Date.now(), this.auth.zone()).date);
+  protected readonly selected = signal(this.today());
+  protected readonly month = signal(firstOfMonth(fromIsoDate(this.today())!));
   protected readonly canAdd = signal(false);
   private readonly meetings = signal<Meeting[]>([]);
+  private readonly zone = signal(this.auth.zone());
+  /** Moves on each minute, so that a meeting is struck through as it ends. */
+  private readonly ticking = signal(Date.now());
+  private readonly now = computed(() => zoneClock(this.ticking(), this.zone()));
   private asked = 0;
   protected readonly loading = signal(false);
   protected readonly loadedOnce = signal(false);
@@ -324,6 +338,8 @@ export class MeetingCalendar {
   });
 
   constructor() {
+    const minutes = setInterval(() => this.ticking.set(Date.now()), 60_000);
+    this.destroyRef.onDestroy(() => clearInterval(minutes));
     // at the start, and whenever the view changes between me, the team and one brand
     effect(() => {
       this.team();
@@ -357,6 +373,14 @@ export class MeetingCalendar {
     this.goToday();
     const motion = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
     this.host.nativeElement.querySelector('.day')?.scrollIntoView({ block: 'nearest', behavior: motion });
+  }
+
+  /** Over at its end time; with none, a while after it starts. Times are in the company's zone, wherever the device is. */
+  protected isOver(m: Meeting): boolean {
+    const now = this.now();
+    if (m.date !== now.date) return m.date < now.date;
+    const ends = m.endTime?.slice(0, 5) ?? clock(minutesOf(m.startTime) + ASSUMED_MINUTES);
+    return ends <= now.time;
   }
 
   protected shown(m: Meeting): MeetingPerson[] {
@@ -410,8 +434,7 @@ export class MeetingCalendar {
   /** Today, the next quarter of an hour; another day, 10:00. Also where the list opens. */
   private suggestedStart(): string {
     if (this.selected() !== this.today()) return '10:00';
-    const now = new Date();
-    const next = (Math.floor((now.getHours() * 60 + now.getMinutes()) / SLOT_MINUTES) + 1) * SLOT_MINUTES;
+    const next = (Math.floor(minutesOf(this.now().time) / SLOT_MINUTES) + 1) * SLOT_MINUTES;
     return next < 24 * 60 ? clock(next) : '';
   }
 
@@ -482,6 +505,7 @@ export class MeetingCalendar {
         // a slower answer for a month or view no longer shown is dropped
         if (asked !== this.asked) return;
         this.today.set(p.today);
+        this.zone.set(p.zone);
         this.canAdd.set(p.canAdd);
         this.meetings.set(p.meetings);
         this.loadError.set(null);

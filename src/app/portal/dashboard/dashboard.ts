@@ -21,8 +21,10 @@ import {
   BrandRow, DashAttendance, DashboardService, DashHours, DashLeave, DashMail, DashPay, DashProfile, DashSummary, DashTasks, LeaveRow, Meeting, Period,
   TeamAttendance, TeamMember, TeamPay, TeamPeople, TeamProfile, TeamSummary, timeLabel,
 } from './dashboard.service';
+import { zoneClock } from '../portal-time';
 import { MeetingCalendar } from './meeting-calendar';
 import { Part, PartLoader, PartState } from './part';
+import { StorageCard } from './storage-card';
 
 type Mode = 'me' | 'team';
 
@@ -52,7 +54,7 @@ type Ticked = keyof typeof TICKS.me;
   selector: 'app-dashboard',
   imports: [
     DatePipe, FormsModule, RouterLink, InputTextModule, MessageModule, SelectModule, SelectButtonModule, SkeletonModule, TableModule,
-    Avatar, Columns, Gauge, SplitBar, LeavePlanAlerts, MeetingCalendar, PartLoader,
+    Avatar, Columns, Gauge, SplitBar, LeavePlanAlerts, MeetingCalendar, PartLoader, StorageCard,
   ],
   template: `
     <div class="p-head">
@@ -72,6 +74,7 @@ type Ticked = keyof typeof TICKS.me;
       }
     </div>
     <app-leave-plan-alerts />
+    @if (mode() === 'me' && auth.can('STORAGE_USAGE')) { <app-storage-card /> }
 
     @if (mode() === 'me' && me.summary.failed()) {
       <p-message severity="error" styleClass="page-message">Today's details could not be loaded. The sections below load on their own.</p-message>
@@ -434,7 +437,7 @@ type Ticked = keyof typeof TICKS.me;
   `,
 })
 export class Dashboard implements OnInit {
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly service = inject(DashboardService);
 
   protected readonly calendar = viewChild(MeetingCalendar);
@@ -542,8 +545,7 @@ export class Dashboard implements OnInit {
   protected readonly nextMeeting = computed(() => {
     const list = this.meetingsToday() ?? [];
     if (!list.length) return 'Nothing today';
-    const now = new Date();
-    const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const clock = zoneClock(Date.now(), this.auth.zone()).time;
     const next = list.find((m) => m.startTime.slice(0, 5) >= clock);
     return next ? `Next at ${timeLabel(next.startTime)}: ${next.title}` : 'All done for today';
   });

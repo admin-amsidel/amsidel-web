@@ -228,6 +228,13 @@ export const PORTAL_ROUTES: Routes = [
         loadComponent: () => import('./pages/brands').then((m) => m.Brands),
       },
       {
+        path: 'admin/storage',
+        title: 'Storage · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'STORAGE_USAGE' },
+        loadComponent: () => import('./pages/storage').then((m) => m.Storage),
+      },
+      {
         path: 'admin/menu-access',
         title: 'Menu Access · Amsidel Company Portal',
         canActivate: [menuGuard],

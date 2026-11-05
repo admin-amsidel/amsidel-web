@@ -9,6 +9,7 @@ import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
 import { silent } from './busy';
 import { API_BASE } from './portal.config';
 import { Employee, LoginResponse, MyAccess, MyDetails } from './portal.models';
+import { DEFAULT_ZONE } from './portal-time';
 
 interface Session {
   token: string;
@@ -41,6 +42,8 @@ export class AuthService {
    * backend checks every call anyway, so a stale copy for a moment only shows a menu, never its data.
    */
   readonly access = signal<MyAccess | null>(restoreAccess(this.session()?.user.id));
+  /** The time zone I work in: my brand's, else India's. */
+  readonly zone = computed(() => this.access()?.timeZone ?? DEFAULT_ZONE);
   /** Set when the backend says no menus were given to me at all ("No permission granted..."). */
   readonly accessDenied = signal<string | null>(null);
   private access$: Observable<MyAccess | null> | null = null;

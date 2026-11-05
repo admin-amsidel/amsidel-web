@@ -33,6 +33,8 @@ export interface Meeting {
 
 export interface MeetingPage {
   today: string;
+  /** The time zone meeting times are in. */
+  zone: string;
   canAdd: boolean;
   meetings: Meeting[];
 }

@@ -22,6 +22,7 @@ import { NotificationBell } from '../notifications/notification-bell';
 import { PortalStyles } from '../portal-styles';
 import { MenuNode, ROLE_LABELS } from '../portal.models';
 import { CREDITS } from '../../shared/credits';
+import { TopClock } from './top-clock';
 
 interface NavLink {
   kind: 'link';
@@ -65,7 +66,7 @@ function sectionOf(path: string): Section {
   selector: 'app-portal-shell',
   imports: [
     RouterOutlet, RouterLink, NgTemplateOutlet, Avatar, ButtonModule, DrawerModule, MenuModule, ToastModule, TooltipModule,
-    ConfirmDialogModule, PortalStyles, TeamChat, NotificationBell,
+    ConfirmDialogModule, PortalStyles, TeamChat, NotificationBell, TopClock,
   ],
   encapsulation: ViewEncapsulation.None,
   template: `
@@ -98,6 +99,7 @@ function sectionOf(path: string): Section {
         </nav>
       }
       @if (auth.user(); as me) {
+        <app-top-clock class="p-clock" />
         <!-- photo and name open the account menu: My profile, Change PIN, Sign out -->
         <button type="button" class="p-me" aria-haspopup="menu" [attr.aria-label]="'Account menu for ' + me.name"
                 (click)="accountMenu.toggle($event)">
@@ -149,6 +151,7 @@ function sectionOf(path: string): Section {
         </ng-template>
         <ng-container *ngTemplateOutlet="tree; context: { mini: false, drawer: true }" />
         <ng-template #footer>
+          <app-top-clock class="dr-clock" />
           <div class="dr-foot">
             <p-button label="Change PIN" icon="pi pi-key" [text]="true" severity="secondary" routerLink="/portal/change-pin"
                       (onClick)="drawerOpen.set(false)" />
@@ -272,6 +275,7 @@ function sectionOf(path: string): Section {
     .dr-switch a.on { background: #fff; color: var(--brass-dark); box-shadow: 0 1px 4px rgba(23,59,99,.12); }
     .p-mark img { height: 24px; width: auto; }
     .p-mark span { font-family: var(--body); font-weight: 600; font-size: .95rem; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
+    .p-clock { margin-right: 4px; padding-right: 12px; border-right: 1px solid var(--line); }
     .p-me {
       display: flex; align-items: center; gap: 10px; color: inherit; cursor: pointer; text-align: left;
       background: none; border: 0; padding: 4px 8px 4px 4px; border-radius: 40px; font: inherit;
@@ -330,15 +334,21 @@ function sectionOf(path: string): Section {
     .dr-me b { font-size: .95rem; }
     .dr-me small { font-size: .78rem; color: var(--muted); }
     .dr-foot { display: flex; justify-content: space-between; gap: 8px; }
+    .dr-clock { margin-bottom: 10px; }
 
     @media (max-width: 1024px) {
       .p-side, .p-top .p-collapse { display: none; }
       .p-top .p-burger { display: inline-flex; }
       .p-top { padding: 0 10px 0 6px; }
       .p-me__text, .p-me__caret { display: none; }
+      .p-clock { margin-right: 0; padding-right: 0; border-right: 0; }
       .p-mark span { font-size: .92rem; letter-spacing: .1em; }
       .p-switch { display: none; }
       .p-mark:has(+ .p-switch) { margin-right: auto; }
+    }
+    /* a phone's top bar has no room for the clock beside "Company Portal"; its menu shows it */
+    @media (max-width: 480px) {
+      .p-top .p-clock { display: none; }
     }
     /* small phones (iPhone SE, Galaxy S9+): keep "Company Portal" clear of the photo */
     @media (max-width: 380px) {

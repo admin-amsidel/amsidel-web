@@ -101,6 +101,8 @@ export interface MyAccess {
   all: boolean;
   codes: string[];
   menus: MenuNode[];
+  /** Their brand's time zone, else the company's. */
+  timeZone?: string;
 }
 
 /** Body of POST/PUT /api/employees (password only when creating). */
@@ -156,6 +158,8 @@ export interface Brand {
   upiQrPayee: string | null;
   /** The currency its invoices, quotations and payslips show (INR, USD, EUR, GBP). */
   currency: string;
+  /** The time zone its people work in; null = the default (India). */
+  timeZone: string | null;
   /** The brand's Razorpay account for bills paid online (the secret is never sent back). */
   razorpayKeyId: string | null;
   razorpayReady: boolean;
