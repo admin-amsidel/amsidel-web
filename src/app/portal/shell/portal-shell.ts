@@ -18,6 +18,7 @@ import { AuthService } from '../auth.service';
 import { BusyService } from '../busy';
 import { Avatar } from '../avatar';
 import { TeamChat } from '../chat/team-chat';
+import { NotificationBell } from '../notifications/notification-bell';
 import { PortalStyles } from '../portal-styles';
 import { MenuNode, ROLE_LABELS } from '../portal.models';
 import { CREDITS } from '../../shared/credits';
@@ -64,7 +65,7 @@ function sectionOf(path: string): Section {
   selector: 'app-portal-shell',
   imports: [
     RouterOutlet, RouterLink, NgTemplateOutlet, Avatar, ButtonModule, DrawerModule, MenuModule, ToastModule, TooltipModule,
-    ConfirmDialogModule, PortalStyles, TeamChat,
+    ConfirmDialogModule, PortalStyles, TeamChat, NotificationBell,
   ],
   encapsulation: ViewEncapsulation.None,
   template: `
@@ -84,7 +85,7 @@ function sectionOf(path: string): Section {
       </a>
       @if (hasSections()) {
         <nav class="p-switch" aria-label="Portal section">
-          <a routerLink="/portal/profile" [class.on]="section() === 'EMPLOYEE'" [attr.aria-current]="section() === 'EMPLOYEE' ? 'page' : null">
+          <a routerLink="/portal/dashboard" [class.on]="section() === 'EMPLOYEE'" [attr.aria-current]="section() === 'EMPLOYEE' ? 'page' : null">
             <i class="pi pi-users" aria-hidden="true"></i><span>Employee portal</span></a>
           @if (productStart(); as start) {
             <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" [attr.aria-current]="section() === 'PRODUCT' ? 'page' : null">
@@ -162,7 +163,7 @@ function sectionOf(path: string): Section {
     <ng-template #tree let-mini="mini" let-drawer="drawer">
       @if (drawer && hasSections()) {
         <div class="dr-switch" role="group" aria-label="Portal section">
-          <a routerLink="/portal/profile" [class.on]="section() === 'EMPLOYEE'" (click)="drawerOpen.set(false)">
+          <a routerLink="/portal/dashboard" [class.on]="section() === 'EMPLOYEE'" (click)="drawerOpen.set(false)">
             <i class="pi pi-users" aria-hidden="true"></i> Employee</a>
           @if (productStart(); as start) {
             <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" (click)="drawerOpen.set(false)">
@@ -216,6 +217,8 @@ function sectionOf(path: string): Section {
 
     <!-- team chat: the chat button and window, for people given the Team chat checkpoint -->
     @if (auth.can('CHAT')) { <app-team-chat /> }
+    <!-- the bell: only for people with the tick, so nobody else makes these calls -->
+    @if (auth.can('NOTIFICATIONS')) { <app-notification-bell [besideChat]="auth.can('CHAT')" /> }
 
     <p-toast position="top-right" [breakpoints]="{ '760px': { width: 'calc(100vw - 24px)', right: '12px', left: '12px' } }" />
     <p-confirmdialog [style]="{ width: '440px' }" [breakpoints]="{ '760px': 'calc(100vw - 24px)' }" />
@@ -399,7 +402,7 @@ export class PortalShell {
 
   /**
    * The menus this person may open in the current section, from menu access (the menus table, in its order); a
-   * group with a single page shows as a plain link. My profile is always there in the employee portal.
+   * group with a single page shows as a plain link. Overview and My profile are always there in the employee portal.
    */
   protected readonly nav = computed<NavEntry[]>(() => {
     const me = this.auth.user();
@@ -414,7 +417,7 @@ export class PortalShell {
     // a link is "exact" when another page lives below its address (My leave /portal/leave vs /portal/leave/approvals)
     const paths = menus.flatMap((m) => [m.path, ...m.children.map((c) => c.path)]).filter((x): x is string => !!x);
     const exact = (path: string) => paths.some((other) => other.startsWith(path + '/'));
-    const entries: NavEntry[] = section !== 'EMPLOYEE' ? [] : [link('My profile', 'pi-user', '/portal/profile')];
+    const entries: NavEntry[] = section !== 'EMPLOYEE' ? [] : [link('Overview', 'pi-th-large', '/portal/dashboard'), link('My profile', 'pi-user', '/portal/profile')];
     for (const m of menus) {
       // sub-menus without a page (ticks such as Customers > New invoice button) leave the menu a plain link
       const pages = m.children.filter((c) => c.path);

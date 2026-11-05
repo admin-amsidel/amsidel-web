@@ -34,7 +34,7 @@ const STATUS: Record<NewsStatus, { label: string; severity: 'success' | 'info' |
 };
 
 /**
- * Administration > News & announcements: what the dashboard slider shows (and the website, for customers). Each
+ * Administration > News & announcements: what the home page slider shows (and the website, for customers). Each
  * item has a heading, text, picture, what it is about, who it is for, a brand (or the whole group), the days it
  * shows, and can be pinned first or hidden. Deleting removes it and its picture.
  */
@@ -48,7 +48,7 @@ const STATUS: Record<NewsStatus, { label: string; severity: 'success' | 'info' |
     <div class="p-head">
       <div>
         <h1>News & announcements</h1>
-        <p>What everyone sees on the dashboard after signing in: discounts, promotions, birthday wishes, important notices.
+        <p>What everyone sees on the home page after signing in: discounts, promotions, birthday wishes, important notices.
           News for customers also shows on the website. Birthdays come up by themselves from the employees' dates of birth.</p>
       </div>
       <div class="head-actions"><p-button label="Add news" icon="pi pi-plus" (onClick)="add()" /></div>
@@ -416,7 +416,7 @@ export class NewsAdmin implements OnInit {
 
   protected remove(n: News): void {
     this.confirm.confirm({
-      header: 'Delete news', message: `Delete "${n.title}" and its picture? To take it off the dashboard for now, hide it instead.`,
+      header: 'Delete news', message: `Delete "${n.title}" and its picture? To take it off the home page for now, hide it instead.`,
       icon: 'pi pi-trash', acceptLabel: 'Delete', rejectLabel: 'Keep', acceptButtonProps: { severity: 'danger' }, rejectButtonProps: { outlined: true },
       accept: () => this.newsService.delete(n.id).subscribe({
         next: () => {

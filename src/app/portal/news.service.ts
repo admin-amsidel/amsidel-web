@@ -25,10 +25,10 @@ export const NEWS_CATEGORY_OPTIONS = (Object.keys(NEWS_CATEGORIES) as NewsCatego
 
 /** Only Public or All news goes on the public website (discounts as its Offers). */
 export const NEWS_AUDIENCES: { value: NewsAudience; label: string; hint: string }[] = [
-  { value: 'EMPLOYEES', label: 'Employees', hint: 'Only for staff, on the dashboard. Not on the website.' },
-  { value: 'CUSTOMERS', label: 'Customers', hint: 'For staff to pass on to their customers (Share on WhatsApp from the dashboard). Not on the website.' },
-  { value: 'PUBLIC', label: 'Public', hint: 'On the public website (a discount shows under Offers); staff see it on the dashboard too.' },
-  { value: 'EVERYONE', label: 'All', hint: 'On the dashboard and on the public website (a discount shows under Offers).' },
+  { value: 'EMPLOYEES', label: 'Employees', hint: 'Only for staff, on the home page. Not on the website.' },
+  { value: 'CUSTOMERS', label: 'Customers', hint: 'For staff to pass on to their customers (Share on WhatsApp from the home page). Not on the website.' },
+  { value: 'PUBLIC', label: 'Public', hint: 'On the public website (a discount shows under Offers); staff see it on the home page too.' },
+  { value: 'EVERYONE', label: 'All', hint: 'On the home page and on the public website (a discount shows under Offers).' },
 ];
 
 /** Public and All news is on the public website. */

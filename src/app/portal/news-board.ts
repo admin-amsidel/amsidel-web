@@ -50,181 +50,129 @@ export class NewsPicture {
 }
 
 /**
- * The dashboard's news: a slider of today's news (pinned first) and birthdays, moving on by itself (paused while
- * pointed at, focused or the tab is hidden; not at all when the person prefers less motion), then every news item
- * showing today as cards. Opening one shows all of it. People with the News menu get a link to manage them.
+ * The home page's news: a small block sliding through today's news (pinned first) and birthdays, moving on by itself
+ * (paused while pointed at, focused or the tab is hidden; not at all when the person prefers less motion). Choosing one
+ * opens a popup with all of it. People with the News menu get a link to manage them.
  */
 @Component({
   selector: 'app-news-board',
   imports: [DatePipe, RouterLink, ButtonModule, DialogModule, Avatar, NewsPicture],
   template: `
-    @if (feed(); as f) {
-      @if (slides().length || f.canManage) {
-        <section class="board" aria-labelledby="nb-title">
-          <div class="board__head">
-            <h2 id="nb-title"><i class="pi pi-megaphone" aria-hidden="true"></i> News & announcements</h2>
-            @if (f.canManage) { <a class="manage" routerLink="/portal/admin/news"><i class="pi pi-cog" aria-hidden="true"></i> Manage news</a> }
-          </div>
+    <section class="board" aria-labelledby="nb-title">
+      <div class="board__head">
+        <h2 id="nb-title"><i class="pi pi-megaphone" aria-hidden="true"></i> News &amp; announcements</h2>
+        @if (feed()?.canManage) { <a class="manage" routerLink="/portal/admin/news" aria-label="Manage news"><i class="pi pi-cog" aria-hidden="true"></i></a> }
+      </div>
 
-          @if (slides().length) {
-            <div class="slider" role="region" aria-roledescription="carousel" aria-label="News" (mouseenter)="hold.set(true)" (mouseleave)="hold.set(false)"
-                 (focusin)="hold.set(true)" (focusout)="hold.set(false)" (pointerdown)="swipeStart($event)" (pointerup)="swipeEnd($event)">
-              @for (s of slides(); track $index; let i = $index) {
-                <article class="slide" [class.on]="i === at()" [attr.aria-hidden]="i !== at()" aria-roledescription="slide"
-                         [attr.aria-label]="(i + 1) + ' of ' + slides().length" [class]="'slide tone-' + tone(s)">
-                  @if (s.kind === 'news') {
-                    <div class="slide__pic"><app-news-picture [news]="s.news" [alt]="s.news.title" [whole]="true" /></div>
-                    <div class="slide__text">
-                      <span class="chip"><i [class]="cat(s.news).icon" aria-hidden="true"></i> {{ cat(s.news).label }}
-                        @if (s.news.pinned) { · <i class="pi pi-thumbtack" aria-hidden="true"></i> }</span>
-                      <h3>{{ s.news.title }}</h3>
-                      @if (s.news.body) { <p class="body">{{ s.news.body }}</p> }
-                      <div class="meta">
-                        @if (s.news.brandCode) { <span>{{ s.news.brandName }}</span> }
-                        @if (s.news.audience !== 'EMPLOYEES') { <span><i [class]="s.news.audience === 'CUSTOMERS' ? 'pi pi-users' : 'pi pi-globe'" aria-hidden="true"></i> {{ audienceNote(s.news) }}</span> }
-                        @if (s.news.endDate) { <span>Till {{ s.news.endDate | date: 'd MMM' }}</span> }
-                      </div>
-                      <button type="button" class="more" [tabindex]="i === at() ? 0 : -1" (click)="open.set(s.news)">Read more <i class="pi pi-arrow-right" aria-hidden="true"></i></button>
-                    </div>
-                  } @else {
-                    <div class="slide__pic bday">
-                      <div class="faces">
-                        @for (p of s.people.slice(0, 4); track p.id) {
-                          <app-avatar [name]="p.name" [employeeId]="p.id" [photoVersion]="p.photoUpdatedAt" [size]="s.people.length > 1 ? 72 : 120" />
-                        }
-                      </div>
-                    </div>
-                    <div class="slide__text">
-                      <span class="chip"><i class="pi pi-gift" aria-hidden="true"></i> Birthday today</span>
-                      <h3>Happy birthday, {{ names(s.people) }}! 🎂</h3>
-                      <p class="body">Wishing you a wonderful year ahead, from everyone at Amsidel.</p>
-                      <div class="meta">
-                        @for (p of s.people; track p.id) { <span>{{ p.name }}{{ p.designation ? ' · ' + p.designation : '' }}</span> }
-                      </div>
-                    </div>
-                  }
-                </article>
+      @if (slides().length) {
+        <div class="slider" role="region" aria-roledescription="carousel" aria-label="News" (mouseenter)="hold.set(true)" (mouseleave)="hold.set(false)"
+             (focusin)="hold.set(true)" (focusout)="hold.set(false)" (pointerdown)="swipeStart($event)" (pointerup)="swipeEnd($event)">
+          @for (s of slides(); track $index; let i = $index) {
+            <button type="button" class="slide" [class.on]="i === at()" [attr.aria-hidden]="i !== at()" [tabindex]="i === at() ? 0 : -1"
+                    aria-roledescription="slide" [attr.aria-label]="'Open: ' + slideTitle(s)" (click)="open.set(s)">
+              @if (s.kind === 'news') {
+                <span class="pic"><app-news-picture [news]="s.news" [alt]="s.news.title" [whole]="true" /></span>
+                <span class="chip"><i [class]="cat(s.news).icon" aria-hidden="true"></i> {{ cat(s.news).label }}@if (s.news.pinned) { <i class="pi pi-thumbtack" aria-hidden="true"></i> }</span>
+                <b class="title">{{ s.news.title }}</b>
+                <small class="muted">{{ s.news.startDate | date: 'd MMM' }}{{ s.news.endDate ? ' – ' + (s.news.endDate | date: 'd MMM') : '' }}{{ s.news.brandCode ? ' · ' + s.news.brandCode : '' }}</small>
+              } @else {
+                <span class="pic bday">
+                  <span class="faces">
+                    @for (p of s.people.slice(0, 3); track p.id) {
+                      <app-avatar [name]="p.name" [employeeId]="p.id" [photoVersion]="p.photoUpdatedAt" [size]="s.people.length > 1 ? 56 : 84" />
+                    }
+                  </span>
+                </span>
+                <span class="chip"><i class="pi pi-gift" aria-hidden="true"></i> Birthday today</span>
+                <b class="title">Happy birthday, {{ names(s.people) }}! 🎂</b>
+                <small class="muted">Wish them well today</small>
               }
-              @if (slides().length > 1) {
-                <button type="button" class="nav prev" aria-label="Previous news" (click)="go(at() - 1)"><i class="pi pi-chevron-left" aria-hidden="true"></i></button>
-                <button type="button" class="nav next" aria-label="Next news" (click)="go(at() + 1)"><i class="pi pi-chevron-right" aria-hidden="true"></i></button>
-                <div class="dots" role="tablist" aria-label="Choose news">
-                  @for (s of slides(); track $index; let i = $index) {
-                    <button type="button" role="tab" [attr.aria-selected]="i === at()" [attr.aria-label]="'News ' + (i + 1)" [class.on]="i === at()" (click)="go(i)">
-                      @if (i === at() && moving()) { <span class="fill" [style.animation-duration.ms]="slideMs"></span> }
-                    </button>
-                  }
-                </div>
-              }
+            </button>
+          }
+          @if (slides().length > 1) {
+            <div class="controls">
+              <button type="button" class="nav" aria-label="Previous news" (click)="go(at() - 1)"><i class="pi pi-chevron-left" aria-hidden="true"></i></button>
+              <div class="dots" aria-hidden="true">
+                @for (s of slides(); track $index; let i = $index) {
+                  <span [class.on]="i === at()">@if (i === at() && moving()) { <span class="fill" [style.animation-duration.ms]="slideMs"></span> }</span>
+                }
+              </div>
+              <span class="count">{{ at() + 1 }} / {{ slides().length }}</span>
+              <button type="button" class="nav" aria-label="Next news" (click)="go(at() + 1)"><i class="pi pi-chevron-right" aria-hidden="true"></i></button>
             </div>
-          } @else {
-            <p class="empty">No news showing today. <a routerLink="/portal/admin/news">Add the first one</a>.</p>
           }
-
-          @if (f.news.length > 1) {
-            <ul class="cards" aria-label="All news showing today">
-              @for (n of f.news; track n.id) {
-                <li>
-                  <button type="button" class="card" [class]="'card tone-' + cat(n).tone" (click)="open.set(n)">
-                    <span class="card__pic"><app-news-picture [news]="n" /></span>
-                    <span class="card__text">
-                      <small class="card__cat"><i [class]="cat(n).icon" aria-hidden="true"></i> {{ cat(n).label }}</small>
-                      <b>{{ n.title }}</b>
-                      <small class="muted">{{ n.startDate | date: 'd MMM' }}{{ n.endDate ? ' – ' + (n.endDate | date: 'd MMM') : '' }}{{ n.brandCode ? ' · ' + n.brandCode : '' }}</small>
-                    </span>
-                  </button>
-                </li>
-              }
-            </ul>
-          }
-        </section>
+        </div>
+      } @else if (feed()) {
+        <p class="empty">No news today.@if (feed()?.canManage) { <a routerLink="/portal/admin/news"> Add one</a> }</p>
       }
-    }
+    </section>
 
-    <p-dialog [header]="open()?.title ?? ''" [modal]="true" [visible]="!!open()" (visibleChange)="!$event && open.set(null)" [draggable]="false"
+    <p-dialog [header]="open() ? slideTitle(open()!) : ''" [modal]="true" [visible]="!!open()" (visibleChange)="!$event && open.set(null)" [draggable]="false"
               [dismissableMask]="true" appendTo="body" [style]="{ width: '640px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }">
-      @if (open(); as n) {
-        @if (n.imageUpdatedAt) { <div class="full-pic"><app-news-picture [news]="n" [alt]="n.title" /></div> }
-        <p class="full-cat"><i [class]="cat(n).icon" aria-hidden="true"></i> {{ cat(n).label }}{{ n.brandName ? ' · ' + n.brandName : '' }}
-          · {{ n.startDate | date: 'd MMM y' }}{{ n.endDate ? ' to ' + (n.endDate | date: 'd MMM y') : '' }}</p>
-        @if (n.body) { <p class="full-body">{{ n.body }}</p> }
-        @if (n.audience !== 'EMPLOYEES') {
-          <a class="share" [href]="whatsapp(n)" target="_blank" rel="noopener"><i class="pi pi-whatsapp" aria-hidden="true"></i> Share on WhatsApp</a>
+      @if (open(); as o) {
+        @if (o.kind === 'news') {
+          @let n = o.news;
+          @if (n.imageUpdatedAt) { <div class="full-pic"><app-news-picture [news]="n" [alt]="n.title" /></div> }
+          <p class="full-cat"><i [class]="cat(n).icon" aria-hidden="true"></i> {{ cat(n).label }}{{ n.brandName ? ' · ' + n.brandName : '' }}
+            · {{ n.startDate | date: 'd MMM y' }}{{ n.endDate ? ' to ' + (n.endDate | date: 'd MMM y') : '' }}</p>
+          @if (n.body) { <p class="full-body">{{ n.body }}</p> }
+          @if (n.audience !== 'EMPLOYEES') {
+            <a class="share" [href]="whatsapp(n)" target="_blank" rel="noopener"><i class="pi pi-whatsapp" aria-hidden="true"></i> Share on WhatsApp</a>
+          }
+        } @else {
+          <p class="full-body">Wishing you a wonderful year ahead, from everyone at Amsidel.</p>
+          <ul class="bday-list">
+            @for (p of o.people; track p.id) {
+              <li>
+                <app-avatar [name]="p.name" [employeeId]="p.id" [photoVersion]="p.photoUpdatedAt" [size]="44" />
+                <span><b>{{ p.name }}</b>@if (p.designation) { <small class="muted">{{ p.designation }}</small> }</span>
+              </li>
+            }
+          </ul>
         }
       }
     </p-dialog>
   `,
   styles: `
-    .board { margin-bottom: 22px; }
-    .board__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .board__head h2 { margin: 0; font-size: 1.2rem; display: flex; gap: 10px; align-items: center; }
+    :host { display: block; min-width: 0; }
+    .board { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+    .board__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .board__head h2 { margin: 0; font-size: .98rem; display: flex; gap: 8px; align-items: center; }
     .board__head h2 i { color: var(--brass-dark); }
-    .manage { font-size: .86rem; font-weight: 600; color: var(--brass-dark); text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
-    .manage:hover { text-decoration: underline; }
-
-    /* every kind of news on plain white: the poster carries the colour */
-    .slider { position: relative; height: 340px; border-radius: 16px; overflow: hidden; background: #fff; border: 1px solid var(--line);
-      box-shadow: 0 10px 30px rgba(23, 59, 99, .08); touch-action: pan-y; }
-    .slide { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 70%) minmax(0, 1fr); opacity: 0; visibility: hidden;
-      transform: translateX(24px); transition: opacity .6s ease, transform .6s ease, visibility .6s; color: var(--ink); background: #fff; }
+    .manage { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--brass-dark); text-decoration: none; }
+    .manage:hover { background: var(--accent-soft); }
+    .slider { position: relative; height: 322px; touch-action: pan-y; }
+    .slide { position: absolute; inset: 0 0 38px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 0; border: 0; border-radius: 10px;
+      background: #fff; color: var(--ink); text-align: left; font: inherit; cursor: pointer; opacity: 0; visibility: hidden; transform: translateX(14px);
+      transition: opacity .5s ease, transform .5s ease, visibility .5s; }
     .slide.on { opacity: 1; visibility: visible; transform: none; z-index: 1; }
-    .slide__pic { position: relative; overflow: hidden; background: #f4f4f5; border-right: 1px solid var(--line); }
-    .bday { display: grid; place-items: center; }
-    .faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 20px; }
-    .faces ::ng-deep .av { box-shadow: 0 0 0 4px #fff, 0 2px 10px rgba(0, 0, 0, .12); }
-    /* the poster gets 70%, the details 30%: a narrow column, so smaller type and the text clipped to fit */
-    .slide__text { padding: 24px 58px 44px 22px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-    .chip { align-self: flex-start; font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-      background: #f4f4f5; color: var(--brass-dark); border: 1px solid var(--line); padding: 5px 10px; border-radius: 999px; display: inline-flex; gap: 6px; align-items: center; }
-    .slide h3 { margin: 0; font-size: 1.25rem; line-height: 1.3; font-weight: 600; color: var(--ink); overflow-wrap: anywhere;
-      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .body { margin: 0; font-size: .9rem; line-height: 1.5; color: #3f3f46; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
-    .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .8rem; color: var(--muted); }
-    .more { align-self: flex-start; margin-top: auto; background: #fff; color: var(--ink); border: 1px solid #d4d4d8; border-radius: 8px; padding: 8px 14px;
-      font-weight: 600; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; font: inherit; font-weight: 600; }
-    .more:hover { background: #f4f4f5; }
-    .nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 38px; height: 38px; border-radius: 50%; border: 0;
-      background: rgba(255, 255, 255, .92); color: var(--ink); border: 1px solid #d4d4d8; box-shadow: 0 2px 8px rgba(0, 0, 0, .1); cursor: pointer; display: grid; place-items: center; }
-    .nav:hover, .nav:focus-visible { background: #fff; border-color: #a1a1aa; }
-    .prev { left: 10px; }
-    .next { right: 10px; }
-    .dots { position: absolute; z-index: 2; bottom: 14px; right: 20px; display: flex; gap: 6px; }
-    .dots button { width: 22px; height: 6px; border-radius: 4px; border: 0; padding: 0; background: #d4d4d8; cursor: pointer; overflow: hidden; position: relative; }
-    .dots button.on { width: 40px; background: #d4d4d8; }
-    .fill { position: absolute; inset: 0; background: #52525b; transform-origin: left; animation: fill linear forwards; }
-    @keyframes fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-    .empty { margin: 0; padding: 18px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); background: #fff; }
-
-    .cards { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-    .card { width: 100%; text-align: left; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px;
-      background: #fff; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font: inherit; color: var(--ink); background-image: none; }
-    .card:hover { border-color: #a1a1aa; box-shadow: 0 6px 18px rgba(0, 0, 0, .06); }
-    .card__pic { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; background: #f4f4f5; border: 1px solid var(--line); display: block; }
-    .card__pic ::ng-deep .ph { font-size: 1.3rem; }
-    .card__text { display: grid; gap: 2px; min-width: 0; }
-    .card__text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .card__cat { color: var(--brass-dark); font-weight: 600; font-size: .74rem; }
+    .slide:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+    .pic { display: block; width: 100%; height: 170px; flex: none; margin-bottom: 3px; border-radius: 10px; overflow: hidden; background: #f4f4f5; }
+    .bday { display: grid; place-items: center; background: var(--accent-soft); }
+    .faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--brass-dark); }
+    .title { width: 100%; font-size: .94rem; line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .muted { color: var(--muted); font-size: .76rem; }
-
+    .controls { position: absolute; inset: auto 0 0; z-index: 2; display: flex; align-items: center; gap: 8px; height: 32px; }
+    .nav { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--ink); font-size: .72rem; cursor: pointer; }
+    .nav:hover, .nav:focus-visible { border-color: var(--brass); color: var(--brass-dark); }
+    .dots { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; justify-content: center; overflow: hidden; }
+    .dots > span { position: relative; flex: 0 1 18px; min-width: 4px; height: 5px; border-radius: 3px; background: #d4dde8; overflow: hidden; }
+    .dots > span.on { flex-basis: 30px; }
+    .count { flex: none; font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .fill { position: absolute; inset: 0; background: var(--brass-dark); transform-origin: left; animation: fill linear forwards; }
+    @keyframes fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .empty { margin: 0; padding: 14px 4px; color: var(--muted); font-size: .88rem; }
+    .empty a { color: var(--brass-dark); }
     .full-pic { margin: -4px 0 14px; border-radius: 10px; overflow: hidden; max-height: 360px; }
     .full-pic app-news-picture { height: auto; }
-    .full-pic ::ng-deep img { height: auto; max-height: 360px; }
+    .full-pic ::ng-deep img { height: auto; max-height: 360px; object-fit: contain; }
     .full-cat { margin: 0 0 10px; color: var(--muted); font-size: .86rem; }
     .full-body { margin: 0 0 14px; line-height: 1.6; white-space: pre-line; }
     .share { display: inline-flex; gap: 8px; align-items: center; color: #1f7a45; font-weight: 600; text-decoration: none; }
-
-    @media (max-width: 760px) {
-      .slider { height: 470px; }
-      .slide { grid-template-columns: 1fr; grid-template-rows: 210px minmax(0, 1fr); }
-      .slide__pic { border-right: 0; border-bottom: 1px solid var(--line); }
-      .slide__text { padding: 16px 18px 44px; }
-      .slide h3 { font-size: 1.2rem; }
-      .body { -webkit-line-clamp: 2; }
-      .slide__text { gap: 8px; }
-      .nav { top: 105px; }
-      .body { -webkit-line-clamp: 2; }
-      .dots { left: 18px; right: auto; }
-    }
+    .bday-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    .bday-list li { display: flex; align-items: center; gap: 12px; }
+    .bday-list span { display: grid; }
     @media (prefers-reduced-motion: reduce) { .slide { transition: none; } .fill { animation: none; } }
   `,
 })
@@ -236,7 +184,7 @@ export class NewsBoard implements OnInit {
   protected readonly feed = signal<NewsFeed | null>(null);
   protected readonly at = signal(0);
   protected readonly hold = signal(false);
-  protected readonly open = signal<News | null>(null);
+  protected readonly open = signal<Slide | null>(null);
   private readonly hidden = signal(document.hidden);
   private readonly calm = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -287,21 +235,17 @@ export class NewsBoard implements OnInit {
     if (Math.abs(dx) > 40) this.go(this.at() + (dx < 0 ? 1 : -1));
   }
 
-  protected cat(n: News) {
-    return NEWS_CATEGORIES[n.category];
+  protected slideTitle(s: Slide): string {
+    return s.kind === 'news' ? s.news.title : `Happy birthday, ${this.names(s.people)}!`;
   }
 
-  protected tone(s: Slide): string {
-    return s.kind === 'birthdays' ? 'bday' : NEWS_CATEGORIES[s.news.category].tone;
+  protected cat(n: News) {
+    return NEWS_CATEGORIES[n.category];
   }
 
   protected names(people: Birthday[]): string {
     const first = people.map((p) => p.name.split(' ')[0]);
     return first.length <= 1 ? first.join('') : first.slice(0, -1).join(', ') + ' and ' + first[first.length - 1];
-  }
-
-  protected audienceNote(n: News): string {
-    return n.audience === 'CUSTOMERS' ? 'For customers: share it' : n.audience === 'PUBLIC' ? 'Public · on the website' : 'All · also on the website';
   }
 
   protected whatsapp(n: News): string {

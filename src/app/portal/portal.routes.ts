@@ -28,6 +28,13 @@ export const PORTAL_ROUTES: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'home' },
       {
+        // for everyone, like My profile; each part follows its own menu, and adding meetings its tick
+        path: 'dashboard',
+        title: 'Overview · Amsidel Company Portal',
+        canActivate: [homeGuard],
+        loadComponent: () => import('./dashboard/dashboard').then((m) => m.Dashboard),
+      },
+      {
         path: 'home',
         title: 'Company Portal · Amsidel',
         canActivate: [homeGuard],
