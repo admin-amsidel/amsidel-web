@@ -94,6 +94,13 @@ export const PORTAL_ROUTES: Routes = [
         loadComponent: () => import('./worklog/work-hour-rules').then((m) => m.WorkHourRules),
       },
       {
+        path: 'worklog/approvals',
+        canActivate: [menuGuard],
+        data: { menu: 'WORK_APPROVALS' },
+        title: 'Attendance & Work Approvals · Amsidel Company Portal',
+        loadComponent: () => import('./worklog/work-approvals').then((m) => m.WorkApprovals),
+      },
+      {
         path: 'worklog/tasks',
         canActivate: [menuGuard],
         data: { menu: 'TASKS' },

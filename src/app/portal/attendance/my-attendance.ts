@@ -16,6 +16,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ExportExcel } from '../export-excel';
 import { apiProblem } from '../portal.models';
 import { AttendanceEntries } from './attendance-entries';
+import { AttendanceShortfallCard } from './attendance-shortfall';
 import {
   AttendanceDaySummary, AttendanceToday, FLAG_LABELS, IST, LocationFlag, MODE_LABELS, WORK_MODES, WorkMode, worked,
 } from './attendance.models';
@@ -31,6 +32,7 @@ import { captureFrame, currentFix, deviceInfo, locationPermission, startCamera, 
 @Component({
   selector: 'app-my-attendance',
   imports: [
+    AttendanceShortfallCard,
     ExportExcel, FormsModule, DatePipe, AttendanceEntries, ButtonModule, InputTextModule, MessageModule, SelectButtonModule, TableModule,
     TagModule, TextareaModule,
   ],
@@ -54,6 +56,7 @@ export class MyAttendance implements OnInit {
   protected readonly loading = signal(true);
   protected readonly error = signal('');
   protected readonly history = signal<AttendanceDaySummary[]>([]);
+  protected readonly thisMonth = new Date();
 
   // starting an entry: the day's first, or another field visit
   protected readonly startingVisit = signal(false);

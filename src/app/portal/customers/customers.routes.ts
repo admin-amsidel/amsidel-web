@@ -35,6 +35,20 @@ export const CUSTOMER_ROUTES: Routes = [
     loadComponent: () => import('../mail/staff-mail').then((m) => m.StaffMail),
   },
   {
+    path: 'agents/commissions',
+    title: 'Agent Commissions' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'AGENT_COMMISSIONS' },
+    loadComponent: () => import('./agent-commissions').then((m) => m.AgentCommissions),
+  },
+  {
+    path: 'agents',
+    title: 'Agents' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'AGENTS' },
+    loadComponent: () => import('./agents').then((m) => m.Agents),
+  },
+  {
     path: ':id',
     title: 'Customer' + T,
     canActivate: [menuGuard],

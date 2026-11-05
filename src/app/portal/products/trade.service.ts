@@ -9,6 +9,7 @@ import { silent } from '../busy';
 import { API_BASE } from '../portal.config';
 import { toIsoDate } from '../portal.models';
 import {
+  AgentOption,
   BrandRef, Customer, HistoryEntry, PersonRef, Project, ProjectBody, ProjectRow, ProjectStatus, StockReceipt, TaskBody, TaskStatus, TradeSubject, DocKind, DocStatus, Item, ItemDetail, OwedReport, Overview, PaymentBody, PaymentReport, ProductType,
   PurchaseBill, PurchaseBody, PurchaseReport, PurchaseRow, SalesBody, SalesDoc, SalesReport, SalesRow, StockKind, StockReport,
   Supplier,
@@ -222,8 +223,13 @@ export class TradeService {
     return this.http.post<Project>(`${T}/projects/${id}/status`, { status, note });
   }
 
-  settleProject(id: number, text: string): Observable<Project> {
-    return this.http.post<Project>(`${T}/projects/${id}/settle`, { text });
+  settleProject(id: number, text: string, commissionAmount: number | null = null, commissionRemarks = ''): Observable<Project> {
+    return this.http.post<Project>(`${T}/projects/${id}/settle`, { text, commissionAmount, commissionRemarks });
+  }
+
+  /** Who can be named on a project. */
+  agents(brandId: number | null): Observable<AgentOption[]> {
+    return this.http.get<AgentOption[]>(`${T}/agents`, { params: params({ brandId }) });
   }
 
   reopenProject(id: number, text: string): Observable<Project> {

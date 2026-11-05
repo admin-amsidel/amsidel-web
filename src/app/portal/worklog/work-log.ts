@@ -30,7 +30,10 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 /**
  * Work log calendar: a month of days, each with its tasks, the day's total against the minimum, and a
  * "Half Day Leave" / "Full Day Leave" warning on short past days; the last column totals each week.
- * Clicking a day opens its tasks in order, where the person adds, edits or removes them.
+ * Each day also shows the hours checked in. Only approved hours count; the rest show as waiting or rejected. A day is yellow
+ * while anything is with the approver, blue once approved, and green when approved time reaches the working hours. With the
+ * Check attendance against work log tick, a day with fewer hours checked in than logged is highlighted, and the leave
+ * warnings follow checked-in time. Clicking a day opens its tasks in order, where the person adds, edits or removes them.
  * Managers, admins and owners can also look at (not change) the logs of people below them.
  */
 @Component({
@@ -80,6 +83,9 @@ export class WorkLog implements OnInit {
       pending: sum(started.map((d) => d.pending)),
       half: days.filter((d) => d.warning === 'HALF').length,
       full: days.filter((d) => d.warning === 'FULL').length,
+      waiting: sum(days.map((d) => d.waiting)),
+      checkedIn: sum(days.map((d) => (d.checkedIn ? d.checkedIn.hours : 0))),
+      mismatches: days.filter((d) => d.mismatch).length,
     };
   });
 
@@ -231,7 +237,7 @@ export class WorkLog implements OnInit {
   }
 
   protected entriesLabel(c: DayCell): string {
-    return c.entries.map((e) => `${e.sequence}. ${e.taskId} · ${hrs(e.hours)}`).join('\n');
+    return c.entries.map((e) => `${e.sequence}. ${e.taskId} · ${hrs(e.hours)}${e.approval === 'APPROVED' ? '' : e.approval === 'PENDING' ? ' (waiting)' : ' (rejected)'}`).join('\n');
   }
 
   private load(): void {

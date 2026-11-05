@@ -123,13 +123,21 @@
           <p-select inputId="f-boss" formControlName="reportsToId" [options]="reportsToOptions()" optionLabel="label"
                     optionValue="value" placeholder="Nobody (top of the line)" [showClear]="true" [filter]="true"
                     filterPlaceholder="Search people" />
+          <small class="muted">People of the chosen brand, and group-level people.</small>
+        </div>
+        <div class="pf">
+          <label for="f-approver">Approver</label>
+          <p-select inputId="f-approver" formControlName="approverId" [options]="approverOptions()" optionLabel="label"
+                    optionValue="value" placeholder="The person they report to" [showClear]="true" [filter]="true"
+                    filterPlaceholder="Search people" />
+          <small class="muted">Approves their attendance and work log before it counts.</small>
         </div>
         @if (canEdit()) {
           <div class="pf check-field">
-            <span class="pf-label">Leave approval</span>
+            <span class="pf-label">Auto approve</span>
             <label class="auto-approve" for="f-auto">
               <p-checkbox inputId="f-auto" formControlName="autoApproveReports" [binary]="true" />
-              Auto-approve leave of the people reporting to this person
+              Approve leave, attendance and tasks of this person's people automatically
             </label>
           </div>
         }

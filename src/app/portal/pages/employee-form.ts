@@ -91,6 +91,7 @@ export class EmployeeForm implements OnInit {
       brandId: this.fb.control<number | null>(null),
       designationId: this.fb.control<number | null>(null),
       reportsToId: this.fb.control<number | null>(null),
+      approverId: this.fb.control<number | null>(null),
       autoApproveReports: this.fb.control(false),
       name: ['', [Validators.required, Validators.maxLength(150)]],
       empNumber: ['', [Validators.maxLength(30), Validators.pattern(/^[A-Za-z0-9-]*$/)]],
@@ -156,6 +157,20 @@ export class EmployeeForm implements OnInit {
       const chosen = untracked(() => this.designations().find((d) => d.id === this.form.controls.designationId.value));
       if (chosen?.brandId != null && chosen.brandId !== brand) this.form.controls.designationId.setValue(null);
     });
+    // nor does someone of another brand as their superior or approver
+    effect(() => {
+      const brand = this.brandValue();
+      if (brand == null) return;
+      untracked(() => {
+        const elsewhere = (id: number | null) => {
+          const p = this.people().find((x) => x.id === id);
+          return !!p && p.brandId != null && p.brandId !== brand;
+        };
+        if (this.employee()?.brandId === brand) return;
+        if (elsewhere(this.form.controls.reportsToId.value)) this.form.controls.reportsToId.setValue(null);
+        if (elsewhere(this.form.controls.approverId.value)) this.form.controls.approverId.setValue(null);
+      });
+    });
   }
 
   protected loadStatus(id: number): void {
@@ -196,14 +211,20 @@ export class EmployeeForm implements OnInit {
   });
   private readonly brandValue = toSignal(this.form.controls.brandId.valueChanges, { initialValue: this.form.controls.brandId.value });
 
-  /** Possible superiors: everyone visible except this person, most senior first. */
-  protected readonly reportsToOptions = computed(() => {
+  /** Someone of the chosen brand or a group-level person (or everyone, for a group-level person), most senior first. */
+  private candidates(keep: number | null | undefined): { value: number; label: string }[] {
     const self = this.employee();
+    const brand = this.brandValue();
     return this.people()
-      .filter((p) => p.id !== self?.id && (p.active || p.id === self?.reportsToId))
+      .filter((p) => p.id !== self?.id && (p.id === keep || (p.active && (brand == null || p.brandId == null || p.brandId === brand))))
       .sort((a, b) => (b.levelNumber ?? 0) - (a.levelNumber ?? 0) || a.name.localeCompare(b.name))
-      .map((p) => ({ value: p.id, label: `${p.name} · ${p.empNumber}` }));
-  });
+      .map((p) => ({ value: p.id, label: `${p.name} · ${p.empNumber}${p.brandCode ? '' : ' · group'}` }));
+  }
+
+  /** Possible superiors; someone chosen before stays listed until the brand changes. */
+  protected readonly reportsToOptions = computed(() => this.candidates(this.employee()?.brandId === this.brandValue() ? this.employee()?.reportsToId : null));
+  /** Who may approve this person's attendance and work log. */
+  protected readonly approverOptions = computed(() => this.candidates(this.employee()?.brandId === this.brandValue() ? this.employee()?.approverId : null));
 
   /** Brand admins only see their brand; inactive brands only when the person is already in one. */
   protected readonly brandOptions = computed(() => {
@@ -304,6 +325,7 @@ export class EmployeeForm implements OnInit {
       brandId: v.brandId,
       designationId: v.designationId,
       reportsToId: v.reportsToId,
+      approverId: v.approverId,
       autoApproveReports: v.autoApproveReports,
       address: v.address,
       phone: v.phone,
@@ -387,6 +409,7 @@ export class EmployeeForm implements OnInit {
       brandId: e.brandId,
       designationId: e.designationId,
       reportsToId: e.reportsToId,
+      approverId: e.approverId,
       autoApproveReports: !!e.autoApproveReports,
       name: e.name,
       empNumber: e.empNumber,

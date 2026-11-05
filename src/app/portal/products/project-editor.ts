@@ -18,7 +18,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
-import { forkJoin, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../auth.service';
 import { rupees } from '../payroll/payroll.models';
 import { phoneSearchText } from '../phone-input';
@@ -29,7 +29,7 @@ import { ProjectStages } from './project-stages';
 import { ProjectStatusService, ProjectStatusView } from './project-status.service';
 import { TradeBrand } from './trade-brand';
 import {
-  Customer, DOC_STATUS, PAY_MODES, payLabel, PersonRef, Project, ProjectBody, ProjectStatus, TASK_STATUS, TASK_STATUS_OPTIONS, TaskStatus, ProjectTask, SalesRow, TaskBody, docLink,
+  AgentOption, Customer, DOC_STATUS, PAY_MODES, payLabel, PersonRef, Project, ProjectBody, ProjectStatus, TASK_STATUS, TASK_STATUS_OPTIONS, TaskStatus, ProjectTask, SalesRow, TaskBody, docLink,
 } from './trade.models';
 import { TradeService } from './trade.service';
 
@@ -98,7 +98,7 @@ import { TradeService } from './trade.service';
               @if (!p() && brand.many()) {
                 <div class="pf"><label for="pj-brand">Brand *</label>
                   <p-select inputId="pj-brand" [options]="brand.brands()" optionLabel="name" optionValue="id" placeholder="Choose the brand"
-                            [ngModel]="f.brandId()" (ngModelChange)="f.brandId.set($event); f.customerId.set(null)" /></div>
+                            [ngModel]="f.brandId()" (ngModelChange)="f.brandId.set($event); f.customerId.set(null); f.agentId.set(null)" /></div>
               }
               <div class="pf span"><label for="pj-name">Project name *</label>
                 <input pInputText id="pj-name" maxlength="150" placeholder="e.g. Varghese villa – all windows" [disabled]="!editable()"
@@ -116,6 +116,10 @@ import { TradeService } from './trade.service';
                 <p-multiselect inputId="pj-team" [options]="peopleOptions()" optionLabel="label" optionValue="value" [filter]="true" display="chip"
                                placeholder="Who works on it" appendTo="body" [disabled]="!editable()" [ngModel]="f.memberIds()"
                                (ngModelChange)="f.memberIds.set($event); dirty.set(true)" /></div>
+              <div class="pf span"><label for="pj-agent">Agent <span class="opt">(who helped find this project)</span></label>
+                <p-select inputId="pj-agent" [options]="agentOptions()" optionLabel="label" optionValue="value" [filter]="true" filterBy="label,phone" [showClear]="true"
+                          placeholder="None" emptyMessage="No agents for this brand" [disabled]="!editable()" [ngModel]="f.agentId()"
+                          (ngModelChange)="f.agentId.set($event); dirty.set(true)" /></div>
               <div class="pf"><label for="pj-start">Start date</label>
                 <p-datepicker inputId="pj-start" dateFormat="dd/mm/yy" [showIcon]="true" [disabled]="!editable()" [ngModel]="f.startDate()" (ngModelChange)="f.startDate.set($event); dirty.set(true)" /></div>
               <div class="pf"><label for="pj-end">End date</label>
@@ -273,6 +277,7 @@ import { TradeService } from './trade.service';
               <dl>
                 <dt>Customer</dt><dd><a routerLink="/portal/customers">{{ x.customer.name }}</a><small class="muted block">{{ x.customer.phone }}</small></dd>
                 <dt>Owner</dt><dd>{{ x.owner?.name ?? '—' }}<small class="muted block">{{ x.owner?.designation ?? '' }}</small></dd>
+                @if (x.agent; as ag) { <dt>Agent</dt><dd>{{ ag.name }}<small class="muted block">{{ ag.code }} · {{ ag.phone }}</small></dd> }
                 <dt>Team</dt><dd>@for (m of x.members; track m.id) { <span class="chip">{{ m.name }}</span> } @empty { — }</dd>
                 <dt>Created</dt><dd>{{ x.createdByName }}<small class="muted block">{{ x.createdAt | date: 'd MMM y, h:mm a' }}</small></dd>
                 <dt>Last updated</dt><dd>{{ x.updatedByName ?? '—' }}<small class="muted block">{{ x.updatedAt | date: 'd MMM y, h:mm a' }}</small></dd>
@@ -338,6 +343,21 @@ import { TradeService } from './trade.service';
         <p class="muted">After this, only admins and owners can change the project or its tasks.</p>
         <div class="pf"><label for="st-note">Note</label>
           <input pInputText id="st-note" maxlength="500" placeholder="e.g. Final payment received in cash" [ngModel]="settleNote()" (ngModelChange)="settleNote.set($event)" /></div>
+        @if (x.agent; as ag) {
+          @if (ag.commissionPaid) {
+            <p-message severity="info" styleClass="mt">The commission to {{ ag.name }} has already been paid, so it stays as it is.</p-message>
+          } @else {
+            <fieldset class="commission">
+              <legend>Commission for {{ ag.name }}</legend>
+              <div class="pf"><label for="st-amt">Amount * <span class="opt">(0 if none)</span></label>
+                <p-inputnumber inputId="st-amt" mode="decimal" [min]="0" [minFractionDigits]="0" [maxFractionDigits]="2" locale="en-IN"
+                               [ngModel]="settleAmount()" (ngModelChange)="settleAmount.set($event)" /></div>
+              <div class="pf"><label for="st-rem">Remarks</label>
+                <input pInputText id="st-rem" maxlength="500" placeholder="e.g. 5% of the finalized amount" [ngModel]="settleRemarks()" (ngModelChange)="settleRemarks.set($event)" /></div>
+            </fieldset>
+          }
+        }
+        @if (settleError()) { <p-message severity="error" styleClass="mt">{{ settleError() }}</p-message> }
       }
       <ng-template #footer>
         <p-button label="Not yet" [text]="true" (onClick)="settleOpen.set(false)" />
@@ -346,6 +366,8 @@ import { TradeService } from './trade.service';
     </p-dialog>
   `,
   styles: `
+    .commission { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 14px 0 0; }
+    .commission legend { font-size: .82rem; font-weight: 600; color: var(--pine); padding: 0 6px; }
     .su-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
     .su-open { font-size: .86rem; font-weight: 600; color: #1d5fa3; text-decoration: none; white-space: nowrap; }
     .su-share { margin: 0 0 10px; font-size: .85rem; }
@@ -426,12 +448,17 @@ export class ProjectEditor implements OnInit {
   protected readonly open = signal<ReadonlySet<number>>(new Set());
   protected readonly settleOpen = signal(false);
   protected readonly settleNote = signal('');
+  protected readonly settleAmount = signal<number | null>(null);
+  protected readonly settleRemarks = signal('');
+  protected readonly settleError = signal('');
+  protected readonly agents = signal<AgentOption[]>([]);
 
   protected readonly f = {
     brandId: signal<number | null>(null),
     name: signal(''),
     customerId: signal<number | null>(null),
     ownerId: signal<number | null>(null),
+    agentId: signal<number | null>(null),
     memberIds: signal<number[]>([]),
     startDate: signal<Date | null>(null),
     endDate: signal<Date | null>(null),
@@ -462,6 +489,10 @@ export class ProjectEditor implements OnInit {
     this.customers().filter((c) => c.brand.id === this.f.brandId() && (c.active || c.id === this.f.customerId()))
       .map((c) => ({ value: c.id, label: `${c.name} · ${c.phone}`, phone: phoneSearchText(c.phone, c.phone2) })),
   );
+  /** The brand's active agents, with the project's own even if they have since stopped. */
+  protected readonly agentOptions = computed(() =>
+    this.agents().filter((a) => a.brandId === this.f.brandId() && (a.active || a.id === this.f.agentId()))
+      .map((a) => ({ value: a.id, label: `${a.name} · ${a.code}`, phone: phoneSearchText(a.phone) })));
   protected readonly peopleOptions = computed(() =>
     this.people().map((x) => ({ value: x.id, label: `${x.name} · ${x.empNumber}` })));
   protected readonly billOptions = computed(() =>
@@ -509,12 +540,13 @@ export class ProjectEditor implements OnInit {
           this.f.ownerId.set(this.auth.user()?.id ?? null);
           this.f.startDate.set(new Date());
         }
-        return forkJoin([this.trade.customers(null), this.trade.people(x?.brand.id ?? this.f.brandId())]);
+        return forkJoin([this.trade.customers(null), this.trade.people(x?.brand.id ?? this.f.brandId()), this.trade.agents(null).pipe(catchError(() => of([] as AgentOption[])))]);
       }),
     ).subscribe({
-      next: ([c, people]) => {
+      next: ([c, people, agents]) => {
         this.customers.set(c);
         this.people.set(people);
+        this.agents.set(agents);
         if (presetCustomer && !this.p()) {
           const pc = c.find((x) => x.id === presetCustomer);
           if (pc) this.f.brandId.set(pc.brand.id);
@@ -531,6 +563,7 @@ export class ProjectEditor implements OnInit {
     this.f.name.set(x.name);
     this.f.customerId.set(x.customer.id);
     this.f.ownerId.set(x.owner?.id ?? null);
+    this.f.agentId.set(x.agent?.id ?? null);
     this.f.memberIds.set(x.members.map((m) => m.id));
     this.f.startDate.set(fromIsoDate(x.startDate));
     this.f.endDate.set(fromIsoDate(x.endDate));
@@ -563,7 +596,7 @@ export class ProjectEditor implements OnInit {
     if (!f.customerId()) return this.formError.set('Choose the customer.');
     const body: ProjectBody = {
       brandId: f.brandId(), name: f.name().trim(), customerId: f.customerId()!, description: f.description().trim() || null,
-      ownerId: f.ownerId(), memberIds: f.memberIds(), startDate: toIsoDate(f.startDate()), endDate: toIsoDate(f.endDate()),
+      ownerId: f.ownerId(), agentId: f.agentId(), memberIds: f.memberIds(), startDate: toIsoDate(f.startDate()), endDate: toIsoDate(f.endDate()),
       estimatedAmount: f.estimated(), finalAmount: f.final(), status: this.p()?.status ?? null, remarks: f.remarks().trim() || null,
     };
     this.busy.set(true);
@@ -586,13 +619,18 @@ export class ProjectEditor implements OnInit {
   protected settle(): void {
     const x = this.p();
     if (!x) return;
+    this.settleError.set('');
+    const asksCommission = !!x.agent && !x.agent.commissionPaid;
+    if (asksCommission && this.settleAmount() === null) return this.settleError.set(`Enter the commission for ${x.agent!.name} (0 if none).`);
     this.busy.set(true);
-    this.trade.settleProject(x.id, this.settleNote().trim()).subscribe({
+    this.trade.settleProject(x.id, this.settleNote().trim(), asksCommission ? this.settleAmount() : null, asksCommission ? this.settleRemarks().trim() : '').subscribe({
       next: (r) => {
         this.settleOpen.set(false);
+        this.settleAmount.set(null);
+        this.settleRemarks.set('');
         this.done(r, 'Settled & closed');
       },
-      error: (e) => this.failed(e),
+      error: (e) => this.failed(e, (m) => this.settleError.set(m)),
     });
   }
 

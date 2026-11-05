@@ -50,6 +50,9 @@ export interface AttendanceRecord {
   device: { platform: string | null; os: string | null; appVersion: string | null };
   /** A photo was taken (always for a field visit; optional at the office or at home). */
   hasPhoto: boolean;
+  /** With the approver; only approved time counts. */
+  approval: 'PENDING' | 'APPROVED' | 'REJECTED';
+  decisionNote: string | null;
 }
 
 /** A person's day put together from its entries. */
@@ -61,8 +64,12 @@ export interface AttendanceDaySummary {
   firstIn: string;
   /** Null while an entry is open. */
   lastOut: string | null;
-  /** Sum of the closed entries. */
+  /** Sum of the closed entries that are approved: only those count. */
   workedMinutes: number;
+  /** Sum of the closed entries still waiting for approval. */
+  waitingMinutes: number;
+  /** Some entry of the day is approved, so the person counts as present. */
+  counted: boolean;
   open: boolean;
   modes: WorkMode[];
   flags: LocationFlag[];

@@ -51,6 +51,9 @@ export interface Employee {
   levelCode: string | null;
   reportsToId: number | null;
   reportsToName: string | null;
+  /** Approves their attendance and work log; none = the person they report to. */
+  approverId: number | null;
+  approverName: string | null;
   address: string | null;
   phone: string | null;
   photoPath: string | null;
@@ -110,6 +113,7 @@ export interface EmployeeRequest {
   brandId: number | null;
   designationId: number | null;
   reportsToId: number | null;
+  approverId: number | null;
   /** Owners and admins only. */
   autoApproveReports?: boolean | null;
   address: string;

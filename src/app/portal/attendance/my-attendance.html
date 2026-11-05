@@ -25,7 +25,8 @@
             @if (d.entries.length > 1) { · {{ worked(dayTotal()) }} today in {{ d.entries.length }} entries }
           </p>
         } @else {
-          <h2>Checked out · {{ worked(d.workedMinutes) }} today</h2>
+          <h2>Checked out · {{ worked(d.workedMinutes + d.waitingMinutes) }} today</h2>
+          @if (d.waitingMinutes) { <p class="muted">Waiting for your approver: it counts once approved.</p> }
           <p class="times">
             {{ d.firstIn | date: 'hh:mm a' : IST }} – {{ d.lastOut | date: 'hh:mm a' : IST }}
             @if (d.entries.length > 1) { · {{ d.entries.length }} entries }
@@ -150,6 +151,8 @@
   }
 }
 
+<app-attendance-shortfall [month]="thisMonth" />
+
 <section class="p-card">
   <h2>My last 30 days</h2>
   <p-table [value]="history()" dataKey="workDate" styleClass="p-stack" [tableStyle]="{ 'min-width': '760px' }"
@@ -170,7 +173,7 @@
         </td>
         <td data-label="First in" class="nowrap">{{ d.firstIn | date: 'hh:mm a' : IST }}</td>
         <td data-label="Last out" class="nowrap">{{ d.lastOut ? (d.lastOut | date: 'hh:mm a' : IST) : (d.open ? 'Open' : '—') }}</td>
-        <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}</td>
+        <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}@if (d.waitingMinutes) { <small class="muted"> +{{ worked(d.waitingMinutes) }} waiting</small> }</td>
         <td data-label="Entries">{{ d.entries.length }}</td>
       </tr>
     </ng-template>

@@ -163,6 +163,26 @@ export interface Project {
   editable: boolean;
   /** Owner or admin: settle with money due, reopen, delete. */
   admin: boolean;
+  /** Who brought the project in. */
+  agent: ProjectAgent | null;
+}
+
+export interface ProjectAgent {
+  id: number;
+  code: string;
+  name: string;
+  phone: string;
+  /** Their commission on this project has been paid: it stays as it is. */
+  commissionPaid: boolean;
+}
+
+export interface AgentOption {
+  id: number;
+  code: string;
+  name: string;
+  phone: string;
+  brandId: number;
+  active: boolean;
 }
 
 export interface ProjectBody {
@@ -171,6 +191,7 @@ export interface ProjectBody {
   customerId: number;
   description: string | null;
   ownerId: number | null;
+  agentId: number | null;
   memberIds: number[];
   startDate: string | null;
   endDate: string | null;

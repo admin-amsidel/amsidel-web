@@ -40,6 +40,9 @@
     <span><b>{{ hrs(summary().logged) }}</b> logged this month</span>
     <span><b>{{ hrs(summary().required) }}</b> required so far</span>
     <span [class.warn]="summary().pending"><b>{{ hrs(summary().pending) }}</b> pending</span>
+    <span><i class="pi pi-sign-in" aria-hidden="true"></i> <b>{{ hrs(summary().checkedIn) }}</b> checked in</span>
+    @if (summary().waiting) { <span><b>{{ hrs(summary().waiting) }}</b> waiting for approval</span> }
+    @if (summary().mismatches) { <p-tag severity="danger" icon="pi pi-exclamation-triangle" [value]="summary().mismatches + (summary().mismatches === 1 ? ' day' : ' days') + ' logged more than checked in'" /> }
     @if (summary().half) { <p-tag severity="warn" [value]="summary().half + ' × Half Day Leave'" /> }
     @if (summary().full) { <p-tag severity="danger" [value]="summary().full + ' × Full Day Leave'" /> }
   </div>
@@ -54,8 +57,9 @@
         @for (c of week.days; track c.iso) {
           <button type="button" role="gridcell" class="cell" [class.out]="!c.inMonth" [class.off]="c.weeklyOff" [class.holiday]="!!c.holiday"
                   [class.today]="c.isToday" [class.future]="c.isFuture" [class.full]="c.warning === 'FULL'"
-                  [class.half]="c.warning === 'HALF'" (click)="openDay(c)"
-                  [attr.aria-label]="c.date.toDateString() + ', ' + hrs(c.total) + ' logged'">
+                  [class.half]="c.warning === 'HALF'" [class.mismatch]="c.mismatch" [class.st-wait]="c.state === 'WAITING'"
+                  [class.st-done]="c.state === 'APPROVED'" [class.st-met]="c.state === 'MET'" (click)="openDay(c)"
+                  [attr.aria-label]="c.date.toDateString() + ', ' + hrs(c.total) + ' logged' + (c.checkedIn ? ', ' + hrs(c.checkedIn.hours + c.checkedIn.waiting) + ' checked in' : '') + (c.mismatch ? ', logged more than checked in' : '') + (c.state === 'WAITING' ? ', waiting for approval' : c.state === 'MET' ? ', working hours reached' : c.state === 'APPROVED' ? ', approved' : '')">
             <span class="cell__head">
               <b class="num">{{ c.day }}</b>
               @if (c.total || (!c.weeklyOff && !c.holiday && !c.isFuture && !c.beforeJoining)) {
@@ -68,14 +72,21 @@
                 <span class="tot off">Holiday</span>
               }
             </span>
+            @if (c.checkedIn; as a) {
+              <span class="in" [class.wait]="a.pending" [title]="'Checked in: ' + hrs(a.hours) + ' approved' + (a.waiting ? ', ' + hrs(a.waiting) + ' waiting' : '')">
+                <i class="pi pi-sign-in" aria-hidden="true"></i> {{ hrs(a.hours + a.waiting) }}@if (a.open) { <small> so far</small> }
+              </span>
+            }
             @for (e of c.entries | slice: 0 : 3; track e.id) {
-              <span class="line"><b>{{ e.taskId }}</b><em>{{ hrs(e.hours) }}</em></span>
+              <span class="line" [class.wait]="e.approval === 'PENDING'" [class.rej]="e.approval === 'REJECTED'"><b>{{ e.taskId }}</b><em>{{ hrs(e.hours) }}</em></span>
             }
             @if (c.entries.length > 3) {
               <span class="more" [pTooltip]="entriesLabel(c)">+{{ c.entries.length - 3 }} more</span>
             }
             <span class="flags">
               @if (c.holiday) { <span class="flag holiday" [title]="c.holiday">{{ c.holiday }}</span> }
+              @if (c.mismatch) { <span class="flag mis" title="Logged more hours than checked in">Hours mismatch</span> }
+              @if (c.waiting) { <span class="flag wait">{{ hrs(c.waiting) }} waiting</span> }
               @if (c.leave) {
                 <span class="flag leave" [class.pending]="c.leave.status === 'PENDING'">
                   {{ c.leave.typeCode }}{{ c.leave.halfDay ? ' ½' : '' }} {{ c.leave.status === 'PENDING' ? 'leave pending' : 'leave' }}
@@ -100,11 +111,19 @@
       </div>
     }
   </div>
+  <p class="legend states">
+    <span class="key k-wait"></span> Waiting for approval
+    <span class="key k-done"></span> Approved
+    <span class="key k-met"></span> Working hours reached
+  </p>
   <p class="legend">
     <span class="flag half">Half Day Leave</span> under {{ hrs(data()?.target?.halfDayBelow) }} on a past working day ·
     <span class="flag full">Full Day Leave</span> under {{ hrs(data()?.target?.fullDayBelow) }} · Sundays are weekly off ·
     <span class="flag holiday">Office holidays</span> need no hours ·
-    approved leave lowers the day's and week's minimum.
+    approved leave lowers the day's and week's minimum ·
+    <i class="pi pi-sign-in" aria-hidden="true"></i> hours checked in ·
+    <span class="flag wait">Waiting</span> hours count once approved.
+    @if (data()?.hoursCheck) { Half and Full Day Leave follow hours checked in. <span class="flag mis">Hours mismatch</span> means more hours logged than checked in. }
   </p>
 </section>
 
@@ -137,6 +156,9 @@
   @if (selected(); as c) {
     <div class="dsum">
       <span>Logged <b>{{ hrs(c.total) }}</b>@if (c.required) { of {{ hrs(c.required) }} }</span>
+      @if (c.waiting) { <span><b>{{ hrs(c.waiting) }}</b> waiting for approval</span> }
+      @if (c.checkedIn; as a) { <span>Checked in <b>{{ hrs(a.hours + a.waiting) }}</b>@if (a.waiting) { ({{ hrs(a.waiting) }} waiting) }@if (a.open) { so far }</span> }
+      @if (c.mismatch) { <p-tag severity="danger" icon="pi pi-exclamation-triangle" value="Logged more than checked in" /> }
       @if (c.pending) { <span class="warn"><b>{{ hrs(c.pending) }}</b> {{ c.isToday ? 'to go' : 'pending' }}</span> }
       @if (c.weeklyOff) { <p-tag severity="secondary" value="Weekly off" /> }
       @if (c.holiday) { <p-tag severity="success" [value]="'Office holiday · ' + c.holiday" /> }
@@ -156,7 +178,11 @@
         <tr [class.editing]="editingId() === e.id">
           <td data-label="#" class="n">{{ i + 1 }}</td>
           <td data-label="Task ID" class="task"><b>{{ e.taskId }}</b>@if (e.taskTitle) {<small class="ttl">{{ e.taskTitle }}</small>}</td>
-          <td data-label="Hours">{{ hrs(e.hours) }}</td>
+          <td data-label="Hours">{{ hrs(e.hours) }}
+            @if (e.approval === 'PENDING') { <p-tag value="Waiting" severity="warn" /> }
+            @if (e.approval === 'REJECTED') { <p-tag value="Rejected" severity="danger" /> }
+            @if (e.decisionNote) { <small class="ttl">{{ e.decisionNote }}</small> }
+          </td>
           <td data-label="What was done" class="desc stack-full">{{ e.description }}</td>
           @if (data()?.editable) {
             <td class="act stack-end">

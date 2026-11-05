@@ -28,6 +28,7 @@ type Mode = 'me' | 'team';
 
 const STATUS: Record<NonNullable<TeamMember['status']>, { label: string; icon: string }> = {
   CHECKED_IN: { label: 'Checked in', icon: 'pi pi-check-circle' },
+  WAITING: { label: 'Waiting for approval', icon: 'pi pi-hourglass' },
   NOT_IN: { label: 'Not in yet', icon: 'pi pi-clock' },
   ON_LEAVE: { label: 'On leave', icon: 'pi pi-calendar-minus' },
   OFF: { label: 'Day off', icon: 'pi pi-minus-circle' },
@@ -484,7 +485,7 @@ export class Dashboard implements OnInit {
     }
     const a = this.me.attendance.value();
     if (!a) return null;
-    const note = a.checkedIn ? `Checked in at ${timeOf(a.firstIn!)} · ${durationText(a.minutesToday)} so far` : !a.working ? 'No hours expected today' : 'Not checked in yet';
+    const note = a.waiting ? `Checked in at ${timeOf(a.firstIn!)} · waiting for approval` : a.checkedIn ? `Checked in at ${timeOf(a.firstIn!)} · ${durationText(a.minutesToday)} so far` : !a.working ? 'No hours expected today' : 'Not checked in yet';
     return { percent: a.percent, week: a.week, month: a.month, daysWord: 'days', note };
   });
 

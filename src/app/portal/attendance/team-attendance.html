@@ -63,7 +63,7 @@
               @if (d.lastOut) { {{ d.lastOut | date: 'hh:mm a' : IST }} }
               @else { <span class="live">{{ openLabel(d) }}</span> }
             </td>
-            <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}</td>
+            <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}@if (d.waitingMinutes) { <small class="muted"> +{{ worked(d.waitingMinutes) }} waiting</small> }</td>
             <td data-label="Entries">{{ d.entries.length }}</td>
             <td data-label="Photo">
               <app-attendance-photo [attendanceId]="d.entries[0].id" [hasPhoto]="d.entries[0].hasPhoto" [name]="d.name" [when]="(d.firstIn | date: 'd MMM, hh:mm a' : IST) ?? ''" />
@@ -83,6 +83,7 @@
     </p-table>
   </section>
 } @else {
+  @if (personId(); as id) { <app-attendance-shortfall [employeeId]="id" [month]="month()" /> }
   <section class="p-card">
     <div class="bar">
       <div class="pf who">
@@ -126,7 +127,7 @@
             <td data-label="Last out" class="nowrap">
               @if (d.lastOut) { {{ d.lastOut | date: 'hh:mm a' : IST }} } @else { <span class="live">{{ openLabel(d) }}</span> }
             </td>
-            <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}</td>
+            <td data-label="Worked" class="nowrap">{{ worked(d.workedMinutes) }}@if (d.waitingMinutes) { <small class="muted"> +{{ worked(d.waitingMinutes) }} waiting</small> }</td>
             <td data-label="Entries">{{ d.entries.length }}</td>
             <td data-label="Photo">
               <app-attendance-photo [attendanceId]="d.entries[0].id" [hasPhoto]="d.entries[0].hasPhoto" [name]="d.name" [when]="(d.firstIn | date: 'd MMM, hh:mm a' : IST) ?? ''" />

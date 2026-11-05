@@ -93,6 +93,8 @@ export interface DashAttendance {
   percent: number | null;
   week: Period;
   month: Period;
+  /** Today's check-in is with the approver. */
+  waiting: boolean;
 }
 
 export interface DashLeave {
@@ -144,7 +146,7 @@ export interface TeamMember {
   photoPath: string | null;
   photoUpdatedAt: string | null;
   hoursToday: number | null;
-  status: 'CHECKED_IN' | 'NOT_IN' | 'ON_LEAVE' | 'OFF' | null;
+  status: 'CHECKED_IN' | 'WAITING' | 'NOT_IN' | 'ON_LEAVE' | 'OFF' | null;
   minutesToday: number | null;
   tasksCompleted: number | null;
   tasksPending: number | null;

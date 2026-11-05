@@ -17,6 +17,7 @@ import { TagModule } from 'primeng/tag';
 import { Avatar } from '../avatar';
 import { apiProblem } from '../portal.models';
 import { AttendanceEntries } from './attendance-entries';
+import { AttendanceShortfallCard } from './attendance-shortfall';
 import { AttendancePhoto } from './attendance-photo';
 import {
   AttendanceDay, AttendanceDayRow, AttendanceDaySummary, FLAG_LABELS, IST, isoDay, LocationFlag, MODE_LABELS, TeamMember, worked,
@@ -34,6 +35,7 @@ type Show = 'ALL' | 'IN' | 'OUT' | 'FLAGGED';
 @Component({
   selector: 'app-team-attendance',
   imports: [
+    AttendanceShortfallCard,
     ExportExcel, FormsModule, DatePipe, Avatar, AttendanceEntries, AttendancePhoto, ButtonModule, DatePickerModule, TouchDatePicker, MessageModule, SelectModule,
     SelectButtonModule, TableModule, TagModule,
   ],

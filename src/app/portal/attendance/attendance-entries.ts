@@ -26,6 +26,8 @@ import { AttendanceRecord, FLAG_LABELS, IST, LocationFlag, mapLink, MODE_LABELS,
               <b>{{ e.place || modeLabels[e.workMode] }}</b>
               @if (e.place) { <span class="muted">· {{ modeLabels[e.workMode] }}</span> }
               @if (!e.checkOut) { <p-tag value="Open" severity="success" /> }
+              @if (e.approval === 'PENDING') { <p-tag value="Waiting for approval" severity="warn" icon="pi pi-clock" /> }
+              @if (e.approval === 'REJECTED') { <p-tag value="Rejected" severity="danger" icon="pi pi-times" /> }
             </div>
             <div class="entry__times">
               {{ e.checkIn.at | date: 'hh:mm a' : IST }} – {{ e.checkOut ? (e.checkOut.at | date: 'hh:mm a' : IST) : 'now' }}
@@ -43,6 +45,7 @@ import { AttendanceRecord, FLAG_LABELS, IST, LocationFlag, mapLink, MODE_LABELS,
               @for (f of e.checkOut?.flags ?? []; track f) { <p-tag [value]="'Out: ' + flagLabels[f]" severity="warn" /> }
             </div>
             @if (e.note) { <p class="entry__note"><i class="pi pi-comment" aria-hidden="true"></i> {{ e.note }}</p> }
+            @if (e.decisionNote) { <p class="entry__note"><i class="pi pi-reply" aria-hidden="true"></i> {{ e.decisionNote }}</p> }
           </div>
           @if (canDelete()) {
             <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small" title="Delete this attendance"
