@@ -16,6 +16,7 @@ import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { AuthService } from '../auth.service';
+import { UploadLimits } from '../upload-limits.service';
 import { CURRENCIES } from '../payroll/payroll.models';
 import { apiProblem, Brand, BRAND_CATEGORIES, brandLogoUrl, fromIsoDate, toIsoDate } from '../portal.models';
 import { API_BASE } from '../portal.config';
@@ -111,7 +112,7 @@ import { PhoneInput, phoneProblem } from '../phone-input';
               <p-button label="Remove" icon="pi pi-trash" [text]="true" severity="danger" size="small" (onClick)="removeLogo()" />
             }
             <input #logoIn type="file" hidden accept=".png,.jpg,.jpeg,image/png,image/jpeg" (change)="pickLogo(logoIn)" />
-            <small class="hint block">PNG or JPEG, up to 1 MB. A square or wide logo on a white background prints best.</small>
+            <small class="hint block">PNG or JPEG, up to {{ limits.text('brandLogo') }}. A square or wide logo on a white background prints best.</small>
           </div>
         </div>
         <div class="pf span"><label for="b-name">Name *</label>
@@ -266,6 +267,7 @@ export class Brands implements OnInit {
   private readonly staff = inject(StaffService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(MessageService);
+  protected readonly limits = inject(UploadLimits);
 
   protected readonly categories = BRAND_CATEGORIES;
   /** The end of today, so a date picked today is still allowed as the latest. */
@@ -357,7 +359,8 @@ export class Brands implements OnInit {
     const b = this.editing();
     if (!f || !b) return;
     if (!/\.(png|jpe?g)$/i.test(f.name)) return this.formError.set('The QR code must be a PNG or JPEG picture.');
-    if (f.size > 2 * 1024 * 1024) return this.formError.set('The QR code picture must be 2 MB or smaller.');
+    const qrTooBig = this.limits.problem('upiQr', f.size, 'The QR code picture');
+    if (qrTooBig) return this.formError.set(qrTooBig);
     this.formError.set('');
     this.qrBusy.set(true);
     this.staff.uploadBrandUpiQr(b.id, f).subscribe({
@@ -421,7 +424,8 @@ export class Brands implements OnInit {
     input.value = '';
     if (!f) return;
     if (!/\.(png|jpe?g)$/i.test(f.name)) return this.formError.set('The logo must be a PNG or JPEG image.');
-    if (f.size > 1024 * 1024) return this.formError.set('The logo must be 1 MB or smaller.');
+    const logoTooBig = this.limits.problem('brandLogo', f.size, 'The logo');
+    if (logoTooBig) return this.formError.set(logoTooBig);
     this.formError.set('');
     this.clearFile();
     this.file.set(f);

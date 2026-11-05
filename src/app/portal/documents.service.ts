@@ -31,6 +31,14 @@ export interface ProfileItem {
   done: boolean;
 }
 
+/** Documents uploaded for this person this month; the count starts again on resetsOn. */
+export interface UploadQuota {
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsOn: string;
+}
+
 /** How complete a profile is: personal details, bank & tax details and documents. */
 export interface ProfileStatus {
   percent: number;
@@ -38,9 +46,6 @@ export interface ProfileStatus {
   total: number;
   items: ProfileItem[];
 }
-
-/** Largest file the server takes, per document. */
-export const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
 
 /** The colour of a completion: green when complete, yellow from 50%, orange below. */
 export type CompletionTone = 'done' | 'mid' | 'low';
@@ -64,6 +69,10 @@ export class DocumentsService {
 
   list(employeeId: number | null = null): Observable<EmployeeDocument[]> {
     return this.http.get<EmployeeDocument[]>(`${this.base(employeeId)}/documents`);
+  }
+
+  quota(employeeId: number | null = null): Observable<UploadQuota> {
+    return this.http.get<UploadQuota>(`${this.base(employeeId)}/document-quota`);
   }
 
   upload(employeeId: number | null, type: DocumentType, file: File): Observable<EmployeeDocument> {

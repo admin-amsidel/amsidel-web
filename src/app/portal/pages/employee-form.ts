@@ -13,6 +13,7 @@ import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TouchDatePicker } from '../touch-datepicker';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
@@ -53,7 +54,7 @@ function staffNeedsBrand(g: AbstractControl): ValidationErrors | null {
   selector: 'app-employee-form',
   imports: [
     DatePipe, PhoneInput, ReactiveFormsModule, RouterLink, Avatar, PhotoEditor, ReportingLine, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker,
-    InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, BankDetailsCard, EmployeeDocuments,
+    InputNumberModule, InputTextModule, MessageModule, SelectModule, TagModule, TextareaModule, BankDetailsCard, EmployeeDocuments,
   ],
   templateUrl: './employee-form.html',
   styles: `
@@ -93,6 +94,7 @@ export class EmployeeForm implements OnInit {
       reportsToId: this.fb.control<number | null>(null),
       approverId: this.fb.control<number | null>(null),
       autoApproveReports: this.fb.control(false),
+      documentUploadLimit: this.fb.control<number | null>(null, [Validators.min(0), Validators.max(1000)]),
       name: ['', [Validators.required, Validators.maxLength(150)]],
       empNumber: ['', [Validators.maxLength(30), Validators.pattern(/^[A-Za-z0-9-]*$/)]],
       phone: ['', [Validators.required, phoneValidator(true)]],
@@ -327,6 +329,7 @@ export class EmployeeForm implements OnInit {
       reportsToId: v.reportsToId,
       approverId: v.approverId,
       autoApproveReports: v.autoApproveReports,
+      documentUploadLimit: v.documentUploadLimit,
       address: v.address,
       phone: v.phone,
       // photos are uploaded separately (PhotoEditor); keep any older public/users path as it is
@@ -411,6 +414,7 @@ export class EmployeeForm implements OnInit {
       reportsToId: e.reportsToId,
       approverId: e.approverId,
       autoApproveReports: !!e.autoApproveReports,
+      documentUploadLimit: e.documentUploadLimit ?? null,
       name: e.name,
       empNumber: e.empNumber,
       phone: e.phone ?? '',

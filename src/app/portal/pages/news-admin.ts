@@ -2,6 +2,7 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
+import { UploadLimits } from '../upload-limits.service';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -212,6 +213,7 @@ export class NewsAdmin implements OnInit {
   private readonly newsService = inject(NewsService);
   private readonly staff = inject(StaffService);
   private readonly toast = inject(MessageService);
+  private readonly limits = inject(UploadLimits);
   private readonly confirm = inject(ConfirmationService);
 
   protected readonly categories = NEWS_CATEGORY_OPTIONS;
@@ -342,7 +344,8 @@ export class NewsAdmin implements OnInit {
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return this.formError.set('Choose a JPEG, PNG or WebP picture.');
     try {
       const small = await shrinkPicture(file);
-      if (small.size > 3 * 1024 * 1024) return this.formError.set('The picture is still larger than 3 MB; choose a smaller one.');
+      const tooBig = this.limits.problem('newsPicture', small.size, 'The picture');
+      if (tooBig) return this.formError.set(`${tooBig} Choose a smaller one.`);
       if (this.preview()) URL.revokeObjectURL(this.preview()!);
       this.picture.set(small);
       this.preview.set(URL.createObjectURL(small));

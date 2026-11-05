@@ -69,6 +69,8 @@ export interface Employee {
   mustChangePassword: boolean;
   /** Leave of the people reporting to this person is approved automatically (set by owners and admins). */
   autoApproveReports?: boolean;
+  /** Documents that may be uploaded for them in a month; null = the company default. */
+  documentUploadLimit?: number | null;
   locked: boolean;
   /** When it locked after too many wrong PINs; it stays locked until an admin sets a temporary PIN. */
   lockedAt?: string | null;
@@ -116,6 +118,8 @@ export interface EmployeeRequest {
   approverId: number | null;
   /** Owners and admins only. */
   autoApproveReports?: boolean | null;
+  /** Empty = the company default. */
+  documentUploadLimit?: number | null;
   address: string;
   phone: string;
   photoPath: string;

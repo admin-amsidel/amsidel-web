@@ -8,7 +8,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { TagModule } from 'primeng/tag';
-import { DocumentsService, DocumentType, EmployeeDocument, MAX_DOCUMENT_BYTES } from '../documents.service';
+import { DocumentsService, DocumentType, EmployeeDocument, UploadQuota } from '../documents.service';
+import { UploadLimits } from '../upload-limits.service';
 import { apiProblem } from '../portal.models';
 
 const ICONS: Record<DocumentType, string> = {
@@ -17,7 +18,7 @@ const ICONS: Record<DocumentType, string> = {
 
 /**
  * An employee's documents: PAN card, Aadhaar card, bank statement / passbook, offer letter and passport size photo,
- * each a PDF or a photo / scan up to 2 MB (the passport size photo an image). Upload, replace, open and delete.
+ * each a PDF or a photo / scan (the passport size photo an image), up to the size the server sets. Upload, replace, open and delete.
  * Without an employeeId: my own (My profile); with one: that employee's (owners and admins, on the employee page).
  */
 @Component({
@@ -26,8 +27,20 @@ const ICONS: Record<DocumentType, string> = {
   template: `
     <section class="p-card">
       <h2>{{ employeeId() ? 'Documents' : 'My documents' }}</h2>
-      <p class="p-intro">PDF, JPG or PNG, up to 2 MB each. Only {{ employeeId() ? 'the employee' : 'you' }}, and the owners and admins who manage
+      <p class="p-intro">PDF, JPG or PNG, up to {{ limits.text('document') }} each. Only {{ employeeId() ? 'the employee' : 'you' }}, and the owners and admins who manage
         {{ employeeId() ? 'them' : 'you' }}, can see these.</p>
+      @if (quota(); as q) {
+        <p class="quota" [class.full]="q.remaining === 0">
+          <i class="pi pi-upload" aria-hidden="true"></i>
+          <span><b>{{ q.used }} of {{ q.limit }}</b> uploads used this month.
+            @if (q.remaining === 0) {
+              {{ employeeId() ? 'Raise the limit on this record to upload more now, or upload' : 'You can upload again' }} from {{ q.resetsOn | date: 'd MMMM' }}.
+            } @else {
+              A replaced file counts as an upload, and deleting one does not give it back.
+            }
+          </span>
+        </p>
+      }
       <input #file type="file" class="visually-hidden" tabindex="-1" aria-hidden="true" [accept]="accept()" (change)="pick($event)" />
       @if (error()) { <p-message severity="error" styleClass="msg">{{ error() }}</p-message> }
       <ul class="docs">
@@ -39,7 +52,7 @@ const ICONS: Record<DocumentType, string> = {
               @if (d.uploaded) {
                 <small class="muted">{{ d.fileName }} · {{ kb(d.sizeBytes) }} · {{ d.uploadedAt | date: 'd MMM y' }}{{ d.uploadedByName ? ' by ' + d.uploadedByName : '' }}</small>
               } @else {
-                <small class="muted">{{ d.imageOnly ? 'JPG or PNG photo' : 'PDF, JPG or PNG' }}, up to 2 MB</small>
+                <small class="muted">{{ d.imageOnly ? 'JPG or PNG photo' : 'PDF, JPG or PNG' }}, up to {{ limits.text('document') }}</small>
               }
             </div>
             <p-tag [value]="d.uploaded ? 'Uploaded' : 'Missing'" [severity]="d.uploaded ? 'success' : 'warn'" styleClass="state" />
@@ -48,7 +61,7 @@ const ICONS: Record<DocumentType, string> = {
                 <p-button icon="pi pi-eye" [text]="true" [rounded]="true" size="small" [ariaLabel]="'Open ' + d.label" (onClick)="view(d)" />
               }
               <p-button size="small" [outlined]="true" [icon]="d.uploaded ? 'pi pi-refresh' : 'pi pi-upload'" [label]="d.uploaded ? 'Replace' : 'Upload'"
-                        [loading]="busy() === d.type" [disabled]="!!busy()" (onClick)="choose(d, file)" />
+                        [loading]="busy() === d.type" [disabled]="!!busy() || quota()?.remaining === 0" (onClick)="choose(d, file)" />
               @if (d.uploaded) {
                 <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" [ariaLabel]="'Delete ' + d.label"
                           [disabled]="!!busy()" (onClick)="remove(d)" />
@@ -60,6 +73,8 @@ const ICONS: Record<DocumentType, string> = {
     </section>
   `,
   styles: `
+    .quota { display: flex; gap: 8px; align-items: baseline; margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: var(--accent-softer); font-size: .88rem; }
+    .quota.full { background: #fff4e5; color: #92400e; }
     .docs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
     li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px;
       padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
@@ -82,6 +97,7 @@ export class EmployeeDocuments {
   private readonly documents = inject(DocumentsService);
   private readonly confirm = inject(ConfirmationService);
   private readonly toast = inject(MessageService);
+  protected readonly limits = inject(UploadLimits);
 
   /** null = my own. */
   readonly employeeId = input<number | null>(null);
@@ -89,6 +105,7 @@ export class EmployeeDocuments {
   readonly changed = output<void>();
 
   protected readonly docs = signal<EmployeeDocument[]>([]);
+  protected readonly quota = signal<UploadQuota | null>(null);
   protected readonly error = signal('');
   /** The type being uploaded. */
   protected readonly busy = signal<DocumentType | null>(null);
@@ -126,8 +143,9 @@ export class EmployeeDocuments {
     const d = this.target;
     if (!file || !d) return;
     this.error.set('');
-    if (file.size > MAX_DOCUMENT_BYTES) {
-      this.error.set(`${d.label}: the file is ${this.kb(file.size)}; it must be 2 MB or smaller.`);
+    const tooBig = this.limits.problem('document', file.size, 'It');
+    if (tooBig) {
+      this.error.set(`${d.label}: the file is ${this.kb(file.size)}. ${tooBig}`);
       return;
     }
     this.busy.set(d.type);
@@ -135,12 +153,14 @@ export class EmployeeDocuments {
       next: (saved) => {
         this.busy.set(null);
         this.docs.update((ds) => ds.map((x) => (x.type === saved.type ? saved : x)));
+        this.loadQuota(this.employeeId());
         this.toast.add({ severity: 'success', summary: d.uploaded ? 'Document replaced' : 'Document uploaded', detail: d.label });
         this.changed.emit();
       },
       error: (e) => {
         this.busy.set(null);
         this.error.set(`${d.label}: ${apiProblem(e).message}`);
+        this.loadQuota(this.employeeId());
       },
     });
   }
@@ -188,5 +208,11 @@ export class EmployeeDocuments {
   private load(id: number | null): void {
     this.error.set('');
     this.documents.list(id).subscribe({ next: (d) => this.docs.set(d), error: (e) => this.error.set(apiProblem(e).message) });
+    this.loadQuota(id);
+  }
+
+  /** Without it the server still has the last word on an upload. */
+  private loadQuota(id: number | null): void {
+    this.documents.quota(id).subscribe({ next: (q) => this.quota.set(q), error: () => this.quota.set(null) });
   }
 }

@@ -140,6 +140,13 @@
               Approve leave, attendance and tasks of this person's people automatically
             </label>
           </div>
+          <div class="pf">
+            <label for="f-doclimit">Document uploads per month</label>
+            <p-inputnumber inputId="f-doclimit" formControlName="documentUploadLimit" [min]="0" [max]="1000" [useGrouping]="false"
+                           placeholder="Company default" />
+            @if (errorFor('documentUploadLimit'); as m) { <small class="error">{{ m }}</small> }
+            @else { <small class="muted">Leave empty for the company default. 0 stops uploads.</small> }
+          </div>
         }
         <div class="pf">
           <label for="f-empno">Employee number</label>
