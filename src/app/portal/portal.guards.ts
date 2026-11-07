@@ -11,7 +11,10 @@ import { AuthService } from './auth.service';
 export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return auth.isLoggedIn() || router.createUrlTree(['/login'], { queryParams: { next: state.url } });
+  if (auth.isLoggedIn()) return true;
+  const queryParams: Record<string, string> = { next: state.url };
+  if (auth.consumeLapsed()) queryParams['reason'] = 'expired';
+  return router.createUrlTree(['/login'], { queryParams });
 };
 
 /** Someone with a temporary PIN can only open the Change PIN page. */

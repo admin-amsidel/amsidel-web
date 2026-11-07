@@ -38,7 +38,7 @@ import { CREDITS } from '../../shared/credits';
           <p class="sub">Use the user ID and PIN given to you by your admin.</p>
 
           @if (reason() === 'expired') {
-            <p-message severity="info">Your session has ended. Please sign in again.</p-message>
+            <p-message severity="warn">Session expired. Please log in again.</p-message>
           } @else if (reason() === 'pin-changed') {
             <p-message severity="success">Your PIN was changed. Sign in with your new PIN.</p-message>
           }

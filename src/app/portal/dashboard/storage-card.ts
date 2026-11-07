@@ -5,6 +5,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SkeletonModule } from 'primeng/skeleton';
+import { AuthService } from '../auth.service';
 import { bytesText, StorageService, StorageSummary } from '../pages/storage.service';
 
 /** The Overview's view of storage, loading on its own: how full the database is and what takes the space. */
@@ -15,7 +16,7 @@ import { bytesText, StorageService, StorageSummary } from '../pages/storage.serv
     <section class="p-card card">
       <div class="head">
         <h2><i class="pi pi-database" aria-hidden="true"></i> Storage</h2>
-        <a routerLink="/portal/admin/storage">Manage files <i class="pi pi-arrow-right" aria-hidden="true"></i></a>
+        @if (auth.can('STORAGE_USAGE')) { <a routerLink="/portal/admin/storage">Manage files <i class="pi pi-arrow-right" aria-hidden="true"></i></a> }
       </div>
       @if (s(); as v) {
         @if (v.database?.available) {
@@ -53,6 +54,7 @@ import { bytesText, StorageService, StorageSummary } from '../pages/storage.serv
 })
 export class StorageCard implements OnInit {
   private readonly api = inject(StorageService);
+  protected readonly auth = inject(AuthService);
   protected readonly size = bytesText;
   protected readonly s = signal<StorageSummary | null>(null);
   protected readonly failed = signal(false);

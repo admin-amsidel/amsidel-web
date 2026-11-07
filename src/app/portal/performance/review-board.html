@@ -64,6 +64,7 @@
         @let sales = g.type === 'SALES';
         @let orders = g.type === 'SALES_ORDER';
         @let worklog = g.type === 'TASK_WORKLOG';
+        @let manual = g.type === 'MANUAL_SALES';
         <article class="goal" [class.goal--sales]="sales" [class.goal--orders]="orders" [class.goal--worklog]="worklog" [class.goal--min]="!open">
           <header class="goal__head">
             <button type="button" class="fold" [attr.aria-expanded]="open" [attr.aria-label]="(open ? 'Minimise ' : 'Expand ') + g.title" (click)="toggleGoal(g)">
@@ -72,13 +73,14 @@
             <div class="goal__titles" (click)="toggleGoal(g)">
               <h3>{{ g.title }}</h3>
               <span class="muted">{{ date(g.startDate) }} – {{ date(g.endDate) }}
-                @if (sales || orders) { · target {{ money(g.targetAmount) }} }
+                @if (sales || orders || manual) { · target {{ money(g.targetAmount) }} }
                 @if (worklog) { · {{ doneCount(g) }} of {{ g.tasks.length }} tasks complete · {{ hours(worklogHours(g)) }} logged }
-                @else if (!open) { · {{ sales || orders ? money(g.achievedAmount) + ' achieved, ' + g.achievedPercent + '%' : g.progress + '% done' }} }</span>
+                @else if (!open) { · {{ sales || orders || manual ? money(g.achievedAmount) + ' achieved, ' + g.achievedPercent + '%' : g.progress + '% done' }} }</span>
             </div>
             <div class="goal__right">
               @if (sales) { <p-tag value="Sales & marketing" icon="pi pi-chart-line" severity="info" /> }
               @if (orders) { <p-tag value="Sales orders" icon="pi pi-check-square" severity="success" /> }
+              @if (manual) { <p-tag value="Manual Sales worklog" icon="pi pi-receipt" severity="info" /> }
               @if (worklog) { <p-tag value="Task worklog" icon="pi pi-clock" severity="warn" /> }
               <p-tag [value]="g.weightage + '%'" severity="secondary" />
               @if (g.canEdit) {
@@ -99,6 +101,35 @@
               <p-progressbar [value]="g.progress" [showValue]="false" styleClass="bar" />
               <b>{{ g.progress }}%</b>
             </div>
+            @if (manual) {
+              <!-- target and approved sales orders; quotations and invoices show beside them but do not reach the target -->
+              <div class="hl">
+                <div class="hl__box"><span>Target</span><b>{{ money(g.targetAmount) }}</b></div>
+                <div class="hl__box hl__box--ok"><span>Approved sales orders</span><b>{{ money(g.achievedAmount) }}</b><small>{{ g.achievedPercent }}% of target</small></div>
+                @if (canSee('SALES_COL_INVOICES')) { <div class="hl__box"><span>Invoices</span><b>{{ money(manualTotal(g, 'INVOICE')) }}</b><small>{{ manualCount(g, 'INVOICE') }} approved</small></div> }
+                @if (canSee('SALES_COL_QUOTATIONS')) { <div class="hl__box"><span>Quotations</span><b>{{ money(manualTotal(g, 'QUOTATION')) }}</b><small>{{ manualCount(g, 'QUOTATION') }} approved</small></div> }
+              </div>
+              @if (g.manualLines.length) {
+                <div class="ms-lines">
+                  <table>
+                    <thead><tr><th scope="col">Work log day</th><th scope="col">Paper</th><th scope="col">Customer and project</th><th scope="col">Task</th><th scope="col" class="num">Amount</th></tr></thead>
+                    <tbody>
+                      @for (l of g.manualLines; track l.id) {
+                        <tr>
+                          <td>{{ date(l.workDate) }}</td>
+                          <td>{{ l.kindLabel }} <b>{{ l.documentNumber }}</b></td>
+                          <td>{{ l.customerName || '—' }}{{ l.projectName ? ' · ' + l.projectName : '' }}</td>
+                          <td>{{ l.taskCode }}</td>
+                          <td class="num">{{ money(l.amount) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <p class="muted small no-orders">Nothing approved yet: each quotation, sales order and invoice {{ r.employee.name }} logs on a Manual Sales task in the goal's dates is added here once approved.</p>
+              }
+            }
             @if (orders) {
               <!-- target and achieved, then the month-wise report and the orders behind it -->
               <div class="hl">
@@ -331,7 +362,7 @@
                   }
                 </ul>
               }
-            } @else if (!sales && !orders && !worklog && canMove(g)) {
+            } @else if (!sales && !orders && !manual && !worklog && canMove(g)) {
               <div class="tasks one">
                 <span class="muted">No sub-tasks: move the goal's own progress.</span>
                 <p-slider [ngModel]="g.progress" [step]="5" [min]="0" [max]="100" styleClass="slider"
@@ -347,12 +378,12 @@
                     <span class="given"><app-stars [value]="g.selfRating" [decimals]="1" /></span>
                     <small class="muted">The average of the completed tasks.</small>
                   } @else { <span class="muted">Shows once a task is completed.</span> }
-                } @else if (sales || orders) {
+                } @else if (sales || orders || manual) {
                   @if (g.selfRating) {
                     <span class="given"><app-stars [value]="g.selfRating" [decimals]="1" /></span>
-                    <small class="muted">From the {{ orders ? 'confirmed orders' : 'amounts' }}: {{ g.achievedPercent }}% of the target (5 stars = target met).</small>
+                    <small class="muted">From the {{ orders ? 'confirmed orders' : manual ? 'approved sales orders' : 'amounts' }}: {{ g.achievedPercent }}% of the target (5 stars = target met).</small>
                   } @else {
-                    <span class="muted">{{ orders ? 'Shows once an order is confirmed.' : 'Shows once achievements are recorded.' }}</span>
+                    <span class="muted">{{ orders ? 'Shows once an order is confirmed.' : manual ? 'Shows once a sales order is approved.' : 'Shows once achievements are recorded.' }}</span>
                   }
                 } @else if (editingRating(g, 'self')) {
                   @let d = draft(g, 'self');
@@ -391,7 +422,7 @@
                   @if (g.managerComment) { <p class="cmt">“{{ g.managerComment }}”</p> }
                   <small class="muted">by {{ g.managerRatedBy }}</small>
                 } @else {
-                  <span class="muted">{{ (sales || orders) && g.selfRating ? 'Not rated yet' : sales ? 'Once achievements are recorded, or from ' + date(g.endDate) : orders ? 'Once an order is confirmed, or from ' + date(g.endDate) : 'After the self-rating' }}</span>
+                  <span class="muted">{{ (sales || orders || manual) && g.selfRating ? 'Not rated yet' : sales ? 'Once achievements are recorded, or from ' + date(g.endDate) : orders ? 'Once an order is confirmed, or from ' + date(g.endDate) : manual ? 'Once a sales order is approved, or from ' + date(g.endDate) : 'After the self-rating' }}</span>
                 }
               </div>
             </div>
@@ -526,6 +557,7 @@
       <small class="hint">
         @if (gType() === 'SALES') { A target amount; {{ r.employee.name }} records what they achieved (amount, dates, invoice numbers) and the progress and self rating follow on their own. }
         @else if (gType() === 'TASK_WORKLOG') { One per person: every work log task assigned to {{ r.employee.name }} is a sub-task, added on its own as tasks are assigned, with the hours they log. They mark each complete with their stars and a description; then you review it. }
+        @else if (gType() === 'MANUAL_SALES') { A target amount, for a brand without the product portal. Each sales order {{ r.employee.name }} logs on a Manual Sales task between the dates counts towards it once approved; their quotations and invoices show beside it. }
         @else if (gType() === 'SALES_ORDER') { A target amount (e.g. for the year). Every confirmed sales order whose order date is between the dates, on a project {{ r.employee.name }} is an allocated employee of, is added on its own by month, whoever made it; progress and stars follow the total (before GST). }
         @else { Progress moved by hand; {{ r.employee.name }} rates it in stars after the end date. }
         @if (gLocked()) { {{ gType() === 'TASK_WORKLOG' ? 'It stays a Task worklog goal.' : 'Achievements are recorded, so it stays a sales goal.' }} }
@@ -540,7 +572,7 @@
       <label for="g-desc">Description</label>
       <textarea pTextarea id="g-desc" rows="2" [autoResize]="true" maxlength="2000" [ngModel]="gDescription()" (ngModelChange)="gDescription.set($event)"></textarea>
     </div>
-    @if (gType() === 'SALES' || gType() === 'SALES_ORDER') {
+    @if (gType() === 'SALES' || gType() === 'SALES_ORDER' || gType() === 'MANUAL_SALES') {
       <div class="pf span">
         <label for="g-target">Target amount *</label>
         <p-inputnumber inputId="g-target" [min]="0" [maxFractionDigits]="2" [prefix]="r.currencySymbol + ' '" locale="en-IN"
@@ -564,7 +596,9 @@
     </div>
   </div>
 
-  @if (gType() === 'SALES_ORDER') {
+  @if (gType() === 'MANUAL_SALES') {
+    <p class="muted small orders-note"><i class="pi pi-info-circle" aria-hidden="true"></i> No sub-tasks: each approved Manual Sales worklog entry is a line of this goal.</p>
+  } @else if (gType() === 'SALES_ORDER') {
     <p class="muted small orders-note"><i class="pi pi-info-circle" aria-hidden="true"></i> No sub-tasks: each confirmed sales order is a line of this goal.</p>
   } @else if (gType() === 'TASK_WORKLOG') {
     <p class="muted small orders-note"><i class="pi pi-info-circle" aria-hidden="true"></i> The sub-tasks are {{ r.employee.name }}'s work log tasks, added on their own.</p>

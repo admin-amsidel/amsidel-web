@@ -5,6 +5,7 @@
 import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -133,10 +134,20 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
         } @empty { <p class="p-empty">{{ loading() ? 'Loading…' : 'No employees match.' }}</p> }
       </div>
       <!-- no paging: a collapsed brand's rows are hidden, not removed, so pages would look half empty -->
+      @if (canDelete() && picked().length) {
+        <div class="picked only-desk">
+          <span><b>{{ picked().length }}</b> selected</span>
+          <p-button label="Delete selected" icon="pi pi-trash" severity="danger" size="small" (onClick)="deletePicked()" />
+          <p-button label="Clear" [text]="true" size="small" (onClick)="selected.set(emptySet)" />
+        </div>
+      }
       <p-table [value]="shown()" [loading]="loading()" dataKey="id"
                rowGroupMode="subheader" groupRowsBy="groupKey" [rowHover]="true" [tableStyle]="{ 'min-width': '780px' }" styleClass="p-stack only-desk">
         <ng-template #header>
           <tr>
+            @if (canDelete()) {
+              <th class="pick"><input type="checkbox" aria-label="Select all shown who can be deleted" [checked]="allPicked()" (change)="pickAll($any($event.target).checked)" /></th>
+            }
             <th>Emp no.</th>
             <th>Name</th>
             <th>Designation</th>
@@ -147,7 +158,7 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
         </ng-template>
         <ng-template #groupheader let-e>
           <tr class="grp" [class.closed]="isCollapsed(e.groupKey)">
-            <td colspan="6">
+            <td [attr.colspan]="canDelete() ? 7 : 6">
               <button type="button" class="grp-toggle" [attr.aria-expanded]="!isCollapsed(e.groupKey)" (click)="toggle(e.groupKey)">
                 <i class="pi pi-chevron-down chev" aria-hidden="true"></i>
                 <i [class]="e.brandId ? 'pi pi-building' : 'pi pi-sitemap'" aria-hidden="true"></i>
@@ -160,6 +171,13 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
         <ng-template #body let-e>
           @if (!isCollapsed(e.groupKey)) {
           <tr class="row-link" (click)="open(e)">
+            @if (canDelete()) {
+              <td class="pick" data-label="Select" (click)="$event.stopPropagation()">
+                @if (deletable(e)) {
+                  <input type="checkbox" [attr.aria-label]="'Select ' + e.name" [checked]="selected().has(e.id)" (change)="pick(e.id, $any($event.target).checked)" />
+                }
+              </td>
+            }
             <td data-label="Emp no." class="nowrap"><b>{{ e.empNumber }}</b></td>
             <td class="stack-full">
               <a class="who" [routerLink]="['/portal/employees', e.id]" (click)="$event.stopPropagation()">
@@ -180,7 +198,7 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
           }
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td colspan="6" class="p-empty">No employees match.</td></tr>
+          <tr><td [attr.colspan]="canDelete() ? 7 : 6" class="p-empty">No employees match.</td></tr>
         </ng-template>
       </p-table>
     </section>
@@ -193,6 +211,8 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
     .who span { display: grid; line-height: 1.25; }
     .who small { color: var(--muted); font-size: .8rem; }
     .lvl { margin-right: 4px; }
+    .pick { width: 40px; }
+    .picked { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; font-size: .9rem; }
     .boss { display: block; color: var(--muted); font-size: .78rem; margin-top: 2px; }
     /* one heading row per brand */
     :host ::ng-deep tr.grp > td { background: var(--accent-soft); padding: 0; border-top: 2px solid #cfe0f3; }
@@ -229,7 +249,16 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
 export class EmployeeList implements OnInit {
   private readonly staff = inject(StaffService);
   private readonly router = inject(Router);
+  private readonly confirm = inject(ConfirmationService);
+  private readonly toast = inject(MessageService);
   protected readonly auth = inject(AuthService);
+  protected readonly emptySet: ReadonlySet<number> = new Set<number>();
+  protected readonly selected = signal<ReadonlySet<number>>(this.emptySet);
+  protected readonly canDelete = computed(() => this.auth.can('EMP_DELETE'));
+  /** Those chosen who still show: a filter changed since never deletes someone out of sight. */
+  protected readonly picked = computed(() => this.shown().filter((e) => this.selected().has(e.id)));
+  private readonly pickable = computed(() => this.shown().filter((e) => this.deletable(e)));
+  protected readonly allPicked = computed(() => this.pickable().length > 0 && this.pickable().every((e) => this.selected().has(e.id)));
 
   protected readonly statusOf = accountStatus;
   protected readonly statusOptions: { label: string; value: StatusFilter }[] = [
@@ -337,6 +366,44 @@ export class EmployeeList implements OnInit {
     effect(() => {
       const searching = !!this.query().trim();
       untracked(() => this.expanded.set(searching ? new Set(this.groupKeys()) : new Set()));
+    });
+  }
+
+  /** Never myself or an owner; the server checks the rest, and says why. */
+  protected deletable(e: Employee): boolean {
+    return e.role !== 'OWNER' && e.id !== this.auth.user()?.id;
+  }
+
+  protected pick(id: number, on: boolean): void {
+    this.selected.update((s) => {
+      const next = new Set(s);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  protected pickAll(on: boolean): void {
+    this.selected.set(on ? new Set(this.pickable().map((e) => e.id)) : this.emptySet);
+  }
+
+  protected deletePicked(): void {
+    const chosen = this.picked();
+    this.confirm.confirm({
+      header: `Delete ${chosen.length} ${chosen.length === 1 ? 'employee' : 'employees'}?`,
+      message: 'They are deleted for good, which cannot be undone. Only those with no records go: anyone with attendance, work logs, leave, pay or tasks stays, and is listed afterwards.',
+      icon: 'pi pi-trash', acceptLabel: 'Delete', rejectLabel: 'Keep', acceptButtonProps: { severity: 'danger' }, rejectButtonProps: { outlined: true },
+      accept: () => this.staff.removeEmployees(chosen.map((e) => e.id)).subscribe({
+        next: (r) => {
+          if (r.deleted) this.toast.add({ severity: 'success', summary: `${r.deleted} ${r.deleted === 1 ? 'employee' : 'employees'} deleted` });
+          if (r.notDeleted.length) {
+            this.toast.add({ severity: 'warn', summary: `${r.notDeleted.length} not deleted`, detail: r.notDeleted.slice(0, 3).map((n) => n.reason).join(' '), life: 12000 });
+          }
+          this.selected.set(this.emptySet);
+          this.staff.employees().subscribe({ next: (list) => this.employees.set(list), error: (e) => this.error.set(apiProblem(e).message) });
+        },
+        error: (e) => this.toast.add({ severity: 'error', summary: 'Not deleted', detail: apiProblem(e).message, life: 8000 }),
+      }),
     });
   }
 

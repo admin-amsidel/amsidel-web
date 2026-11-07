@@ -2,7 +2,7 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
-import { DatePipe } from '@angular/common';
+import { zoneDateTime } from '../portal-time';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -33,7 +33,7 @@ import { apiProblem, BLOOD_GROUPS, designationLabel, fromIsoDate, ROLE_LABELS, t
 @Component({
   selector: 'app-profile',
   imports: [
-    PhotoEditor, DatePipe, FormsModule, PhoneInput, TouchDatePicker, ButtonModule, DatePickerModule, InputTextModule, MessageModule, SelectModule,
+    PhotoEditor, FormsModule, PhoneInput, TouchDatePicker, ButtonModule, DatePickerModule, InputTextModule, MessageModule, SelectModule,
     TagModule, TextareaModule, ReportingLine, BankDetailsCard, EmployeeDocuments,
   ],
   template: `
@@ -137,7 +137,7 @@ import { apiProblem, BLOOD_GROUPS, designationLabel, fromIsoDate, ROLE_LABELS, t
             For anything else, ask your admin.</p>
         }
         @if (me.lastLoginAt) {
-          <p class="hint">Last sign-in: {{ me.lastLoginAt | date: 'd MMM y, h:mm a' }}</p>
+          <p class="hint">Last sign-in: {{ signedIn(me.lastLoginAt, me.timeZone) }}</p>
         }
       </section>
 
@@ -219,6 +219,7 @@ import { apiProblem, BLOOD_GROUPS, designationLabel, fromIsoDate, ROLE_LABELS, t
 })
 export class Profile implements OnInit {
   protected readonly auth = inject(AuthService);
+  protected readonly signedIn = zoneDateTime;
   private readonly documents = inject(DocumentsService);
   private readonly toast = inject(MessageService);
   protected readonly roleLabels = ROLE_LABELS;

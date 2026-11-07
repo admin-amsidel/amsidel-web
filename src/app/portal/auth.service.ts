@@ -5,7 +5,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
+import { Observable, catchError, map, of, shareReplay, tap, timeout } from 'rxjs';
 import { silent } from './busy';
 import { API_BASE } from './portal.config';
 import { Employee, LoginResponse, MyAccess, MyDetails } from './portal.models';
@@ -18,8 +18,9 @@ interface Session {
 }
 
 const STORAGE_KEY = 'amsidel.portal.session';
+const SIGN_OUT_WAIT_MS = 1500;
 /** My menus as last loaded, for the next page load (with whose they are). */
-const ACCESS_KEY = 'amsidel.portal.access';
+const ACCESS_KEY = 'amsidel.portal.access.v2';
 
 /** The signed-in staff member and their access token (kept in localStorage until it expires or they sign out). */
 @Injectable({ providedIn: 'root' })
@@ -27,6 +28,10 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly session = signal<Session | null>(restore());
+  /** A session was stored in this browser and has run out: the guard says so at the login page. */
+  private lapsed = hasLapsedSession();
+  private leaving = false;
+  private expiryTimer?: ReturnType<typeof setTimeout>;
 
   readonly user = computed(() => this.session()?.user ?? null);
   readonly isAdmin = computed(() => {
@@ -49,6 +54,10 @@ export class AuthService {
   private access$: Observable<MyAccess | null> | null = null;
   /** The load from the server behind last time's menus, while they are in use. */
   private fresh$: Observable<MyAccess | null> | null = null;
+
+  constructor() {
+    this.armExpiry(this.session());
+  }
 
   /** May I open this menu (a code such as TASKS)? */
   can(code: string): boolean {
@@ -153,11 +162,45 @@ export class AuthService {
    * (reason pin-changed, with the user ID to fill in): the new PIN is used to sign in again.
    */
   logout(reason?: 'expired' | 'pin-changed', userId?: string): void {
-    this.save(null);
+    // several calls can fail together; the first one takes the person out
+    if (this.leaving) return;
+    this.leaving = true;
     const queryParams: Record<string, string> = {};
     if (reason) queryParams['reason'] = reason;
     if (userId) queryParams['user'] = userId;
-    this.router.navigate(['/login'], { queryParams });
+    const url = this.router.serializeUrl(this.router.createUrlTree(['/login'], { queryParams }));
+    const leave = () => {
+      this.save(null);
+      clearBrowserStore();
+      // a full load, so that nothing held in memory by the pages is left behind either
+      window.location.assign(url);
+    };
+    // signing out by choice ends the session on the server too, which a full load could cut off; a slow answer does not hold them up
+    if (!reason && this.token()) {
+      this.http.post(`${API_BASE}/api/auth/logout`, null, { context: silent() }).pipe(timeout(SIGN_OUT_WAIT_MS)).subscribe({ complete: leave, error: leave });
+    } else {
+      leave();
+    }
+  }
+
+  /** The token has run out here, with no call made yet: out to the login page, saying why. */
+  expireNow(): void {
+    this.logout('expired');
+  }
+
+  /** Reads once: was there a session in this browser that has run out? */
+  consumeLapsed(): boolean {
+    const was = this.lapsed;
+    this.lapsed = false;
+    if (was) clearBrowserStore();
+    return was;
+  }
+
+  /** Out at the moment the token ends, even if the page makes no calls. */
+  private armExpiry(s: Session | null): void {
+    clearTimeout(this.expiryTimer);
+    if (!s) return;
+    this.expiryTimer = setTimeout(() => this.expireNow(), Math.max(0, Date.parse(s.expiresAt) - Date.now()) + 1000);
   }
 
   private store(r: LoginResponse): void {
@@ -173,12 +216,32 @@ export class AuthService {
       saveAccess(undefined, null);
     }
     this.session.set(s);
+    this.armExpiry(s);
     try {
       if (s) localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       else localStorage.removeItem(STORAGE_KEY);
     } catch {
       // private mode or blocked storage: the session still lasts until the tab closes
     }
+  }
+}
+
+/** Everything this site keeps in the browser: when a session ends, nothing of it stays. */
+function clearBrowserStore(): void {
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch {
+    // blocked storage: nothing was kept there anyway
+  }
+}
+
+function hasLapsedSession(): boolean {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as Session | null;
+    return !!s && Date.parse(s.expiresAt) <= Date.now();
+  } catch {
+    return false;
   }
 }
 

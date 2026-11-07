@@ -259,3 +259,10 @@ textarea[rows="4"] { min-height: 6.7rem; }
   .wl__logs td:nth-child(3) { grid-column: 1 / -1; }
   .wl__logs tfoot tr { border: 0; }
 }
+
+/* ---- Manual Sales worklog goals: the approved entries ---- */
+.ms-lines { overflow-x: auto; margin-bottom: 10px; }
+.ms-lines table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.ms-lines th, .ms-lines td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.ms-lines th { font-weight: 600; color: var(--muted); font-size: .76rem; }
+.ms-lines .num { text-align: right; font-variant-numeric: tabular-nums; }

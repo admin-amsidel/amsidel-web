@@ -24,6 +24,8 @@ import {
 import { zoneClock } from '../portal-time';
 import { MeetingCalendar } from './meeting-calendar';
 import { Part, PartLoader, PartState } from './part';
+import { ManualSalesCard } from '../manual-sales/manual-sales-card';
+import { ActiveUsersCard } from './active-users-card';
 import { StorageCard } from './storage-card';
 
 type Mode = 'me' | 'team';
@@ -54,7 +56,7 @@ type Ticked = keyof typeof TICKS.me;
   selector: 'app-dashboard',
   imports: [
     DatePipe, FormsModule, RouterLink, InputTextModule, MessageModule, SelectModule, SelectButtonModule, SkeletonModule, TableModule,
-    Avatar, Columns, Gauge, SplitBar, LeavePlanAlerts, MeetingCalendar, PartLoader, StorageCard,
+    Avatar, Columns, Gauge, SplitBar, LeavePlanAlerts, MeetingCalendar, PartLoader, StorageCard, ManualSalesCard, ActiveUsersCard,
   ],
   template: `
     <div class="p-head">
@@ -74,7 +76,11 @@ type Ticked = keyof typeof TICKS.me;
       }
     </div>
     <app-leave-plan-alerts />
-    @if (mode() === 'me' && auth.can('STORAGE_USAGE')) { <app-storage-card /> }
+    @if (mode() === 'me' && auth.can('OVERVIEW_ACTIVE_USERS')) { <app-active-users-card /> }
+    @if (mode() === 'me' && auth.can('OVERVIEW_STORAGE')) { <app-storage-card /> }
+    @if (auth.can('OVERVIEW_SALES') && (mode() !== 'team' || auth.can('MANUAL_SALES_DETAILS'))) {
+      <app-manual-sales-card [team]="mode() === 'team'" [brandId]="mode() === 'team' ? brandId() : null" />
+    }
 
     @if (mode() === 'me' && me.summary.failed()) {
       <p-message severity="error" styleClass="page-message">Today's details could not be loaded. The sections below load on their own.</p-message>

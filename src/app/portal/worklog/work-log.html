@@ -183,7 +183,11 @@
             @if (e.approval === 'REJECTED') { <p-tag value="Rejected" severity="danger" /> }
             @if (e.decisionNote) { <small class="ttl">{{ e.decisionNote }}</small> }
           </td>
-          <td data-label="What was done" class="desc stack-full">{{ e.description }}</td>
+          <td data-label="What was done" class="desc stack-full">{{ e.description }}
+            @if (e.manualSales; as m) {
+              <small class="ttl sale"><b>{{ m.stageName }}</b>@if (m.kind) { · {{ m.kindLabel }} {{ m.documentNumber }} · {{ money(m.currencySymbol, m.amount) }} }</small>
+            }
+          </td>
           @if (data()?.editable) {
             <td class="act stack-end">
               <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Edit" (onClick)="edit(e)" />
@@ -227,6 +231,31 @@
               <textarea pTextarea id="e-desc" name="desc" rows="2" maxlength="1000" [autoResize]="true"
                         [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
             </div>
+            @if (salesTask(); as t) {
+              <div class="pf span">
+                <small class="sale-for">Manual Sales worklog@if (t.customerName) { · {{ t.customerName }} }@if (t.projectName) { · {{ t.projectName }} }@if (t.agentName) { · Agent {{ t.agentName }} }</small>
+              </div>
+              <div class="pf span">
+                <label for="e-stage">Status of the task *</label>
+                <p-select inputId="e-stage" name="stage" [options]="stageOptions()" optionLabel="name" optionValue="code" placeholder="Choose the status" appendTo="body"
+                          [ngModel]="stageCode()" (ngModelChange)="stageCode.set($event)" />
+              </div>
+              @if (stageKind()) {
+                <div class="pf">
+                  <label for="e-doc">{{ stageKindLabel() }} number *</label>
+                  <input pInputText id="e-doc" name="docNumber" maxlength="60" [ngModel]="docNumber()" (ngModelChange)="docNumber.set($event)" />
+                </div>
+                <div class="pf">
+                  <label for="e-docdate">{{ stageKindLabel() }} date *</label>
+                  <p-datepicker inputId="e-docdate" name="docDate" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" [ngModel]="docDate()" (ngModelChange)="docDate.set($event)" />
+                </div>
+                <div class="pf span">
+                  <label for="e-amount">{{ stageKindLabel() }} amount *</label>
+                  <p-inputnumber inputId="e-amount" name="docAmount" [min]="0" [maxFractionDigits]="2" [prefix]="t.currencySymbol + ' '" locale="en-IN"
+                                 [ngModel]="docAmount()" (ngModelChange)="docAmount.set($event)" />
+                </div>
+              }
+            }
           </div>
           @if (formError()) { <p-message severity="error" styleClass="dlg-msg">{{ formError() }}</p-message> }
           <div class="p-actions">

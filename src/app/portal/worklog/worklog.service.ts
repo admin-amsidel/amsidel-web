@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { TeamMember } from '../leave/leave.models';
+import type { ManualEntryBody } from '../manual-sales/manual-sales.service';
 import { API_BASE } from '../portal.config';
 import { BrandWorkRule, WorkRuleBody, WorkLogEntry, WorkLogMonth, WorkTarget } from './worklog.models';
 
@@ -34,11 +35,11 @@ export class WorkLogService {
     return this.http.get<TeamMember[]>(`${WORKLOG}/team`);
   }
 
-  add(body: WorkLogBody): Observable<WorkLogEntry> {
+  add(body: WorkLogBody & { manualSales?: ManualEntryBody | null }): Observable<WorkLogEntry> {
     return this.http.post<WorkLogEntry>(`${WORKLOG}/entries`, body);
   }
 
-  update(id: number, body: WorkLogBody): Observable<WorkLogEntry> {
+  update(id: number, body: WorkLogBody & { manualSales?: ManualEntryBody | null }): Observable<WorkLogEntry> {
     return this.http.put<WorkLogEntry>(`${WORKLOG}/entries/${id}`, body);
   }
 

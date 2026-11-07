@@ -19,6 +19,7 @@ import { AttendancePhoto } from '../attendance/attendance-photo';
 import { IST, MODE_LABELS, worked } from '../attendance/attendance.models';
 import { Avatar } from '../avatar';
 import { API_BASE } from '../portal.config';
+import { ManualEntryView, moneyText } from '../manual-sales/manual-sales.service';
 import { apiProblem } from '../portal.models';
 import { hrs } from './worklog.models';
 
@@ -56,6 +57,8 @@ interface WorkLogItem {
   taskTitle: string | null;
   hours: number;
   description: string;
+  /** On a Manual Sales worklog task: what counts once this is approved. */
+  manualSales: ManualEntryView | null;
 }
 
 interface Queue {
@@ -130,7 +133,8 @@ type Tab = 'attendance' | 'worklog';
               <td data-label="Day" class="nowrap">{{ w.date | date: 'EEE d MMM' }}</td>
               <td data-label="Task"><b>{{ w.taskId }}</b>@if (w.taskTitle) { <small class="note clamp">{{ w.taskTitle }}</small> }</td>
               <td data-label="Hours" class="nowrap">{{ hrs(w.hours) }}</td>
-              <td data-label="What was done" class="stack-full"><span class="clamp desc">{{ w.description }}</span></td>
+              <td data-label="What was done" class="stack-full"><span class="clamp desc">{{ w.description }}</span>
+                @if (w.manualSales; as m) { <small class="note"><b>{{ m.stageName }}</b>@if (m.kind) { · {{ m.kindLabel }} {{ m.documentNumber }} · {{ money(m.currencySymbol, m.amount) }} }</small> }</td>
               <td class="act stack-end">
                 <p-button label="Review" icon="pi pi-eye" size="small" [text]="true" [ariaLabel]="'Review the work log of ' + w.person.name" (onClick)="reviewing.set({ kind: 'worklog', item: w })" />
                 <p-button label="Approve" icon="pi pi-check" size="small" severity="success" [loading]="busy()" (onClick)="decide({ workLogIds: [w.id] }, true)" />
@@ -156,6 +160,16 @@ type Tab = 'attendance' | 'worklog';
             <div><dt>Hours</dt><dd><b>{{ hrs(rv.item.hours) }}</b></dd></div>
             <div class="wide"><dt>Task</dt><dd><b>{{ rv.item.taskId }}</b>{{ rv.item.taskTitle ? ' · ' + rv.item.taskTitle : '' }}</dd></div>
             <div class="wide"><dt>What was done</dt><dd class="full">{{ rv.item.description }}</dd></div>
+            @if (rv.item.manualSales; as m) {
+              <div><dt>Status</dt><dd><b>{{ m.stageName }}</b></dd></div>
+              @if (m.kind) {
+                <div><dt>{{ m.kindLabel }}</dt><dd><b>{{ m.documentNumber }}</b> · {{ m.documentDate | date: 'd MMM y' }}</dd></div>
+                <div><dt>Amount</dt><dd><b>{{ money(m.currencySymbol, m.amount) }}</b></dd></div>
+              }
+              @if (m.customerName || m.projectName || m.agentName) {
+                <div class="wide"><dt>For</dt><dd>{{ m.customerName || '—' }}{{ m.projectName ? ' · ' + m.projectName : '' }}{{ m.agentName ? ' · Agent ' + m.agentName : '' }}</dd></div>
+              }
+            }
           </dl>
         } @else {
           <dl class="rv">
@@ -228,6 +242,7 @@ export class WorkApprovals implements OnInit {
   protected readonly worked = worked;
   protected readonly hrs = hrs;
 
+  protected readonly money = moneyText;
   private readonly queue = signal<Queue>({ attendance: [], workLogs: [] });
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);

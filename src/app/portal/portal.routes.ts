@@ -28,10 +28,11 @@ export const PORTAL_ROUTES: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'home' },
       {
-        // for everyone, like My profile; each part follows its own menu, and adding meetings its tick
+        // each part follows its own menu, and adding meetings its tick
         path: 'dashboard',
         title: 'Overview · Amsidel Company Portal',
-        canActivate: [homeGuard],
+        canActivate: [menuGuard],
+        data: { menu: 'OVERVIEW' },
         loadComponent: () => import('./dashboard/dashboard').then((m) => m.Dashboard),
       },
       {
@@ -226,6 +227,34 @@ export const PORTAL_ROUTES: Routes = [
         canActivate: [menuGuard],
         data: { menu: 'BRANDS' },
         loadComponent: () => import('./pages/brands').then((m) => m.Brands),
+      },
+      {
+        path: 'manual-sales/tasks',
+        title: 'Manual Sales Tasks · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'MANUAL_SALES_TASKS' },
+        loadComponent: () => import('./manual-sales/manual-sales-tasks').then((m) => m.ManualSalesTasks),
+      },
+      {
+        path: 'manual-sales/details',
+        title: 'Sales, Invoice & Quotation Details · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'MANUAL_SALES_DETAILS' },
+        loadComponent: () => import('./manual-sales/manual-sales-details').then((m) => m.ManualSalesDetails),
+      },
+      {
+        path: 'admin/configurations',
+        title: 'Configuration · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'CONFIGURATIONS' },
+        loadComponent: () => import('./pages/configurations').then((m) => m.Configurations),
+      },
+      {
+        path: 'admin/employee-generator',
+        title: 'Employee Generator · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'EMP_GENERATOR' },
+        loadComponent: () => import('./pages/employee-generator').then((m) => m.EmployeeGenerator),
       },
       {
         path: 'admin/storage',

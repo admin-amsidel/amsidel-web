@@ -78,6 +78,11 @@ export class StaffService {
     return this.http.put<Brand>(`${API_BASE}/api/brands/${id}/razorpay`, { keyId, keySecret });
   }
 
+  /** Only those with no records go; the rest come back with why. */
+  removeEmployees(ids: number[]): Observable<{ deleted: number; notDeleted: { id: number; name: string | null; reason: string }[] }> {
+    return this.http.post<{ deleted: number; notDeleted: { id: number; name: string | null; reason: string }[] }>(`${API_BASE}/api/employee-removal`, { ids });
+  }
+
   deleteBrandLogo(id: number): Observable<Brand> {
     return this.http.delete<Brand>(`${API_BASE}/api/brands/${id}/logo`);
   }

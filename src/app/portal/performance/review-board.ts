@@ -27,6 +27,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import {
   ACHIEVEMENT_KINDS, Achievement, GOAL_TYPES, Goal, GoalBody, GoalTask, GoalType, ReviewView, SKILL_CATEGORIES, SalesEntry, Skill,
   SkillCategory,
+  ManualLine,
 } from './perf.models';
 import { PerfService } from './perf.service';
 import { AuthService } from '../auth.service';
@@ -171,6 +172,14 @@ export class ReviewBoard {
   }
 
   /** "₹1,25,000" in the person's brand currency. */
+  protected manualTotal(g: Goal, kind: ManualLine['kind']): number {
+    return g.manualLines.filter((l) => l.kind === kind).reduce((t, l) => t + l.amount, 0);
+  }
+
+  protected manualCount(g: Goal, kind: ManualLine['kind']): number {
+    return g.manualLines.filter((l) => l.kind === kind).length;
+  }
+
   protected money(v: number | null | undefined): string {
     const n = v ?? 0;
     return this.review().currencySymbol + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
@@ -554,7 +563,8 @@ export class ReviewBoard {
   protected saveGoal(): void {
     this.gError.set('');
     const sales = this.gType() === 'SALES';
-    const orders = this.gType() === 'SALES_ORDER';
+    // set the same way: a target and no sub-tasks, its lines come on their own
+    const orders = this.gType() === 'SALES_ORDER' || this.gType() === 'MANUAL_SALES';
     const worklog = this.gType() === 'TASK_WORKLOG';
     // a sales-order goal has no sub-tasks: its lines are the confirmed orders; a task worklog goal's are the work log tasks
     const tasks = orders || worklog ? [] : this.gTasks();

@@ -2,6 +2,7 @@
  * Copyright (c) 2026 AMSIDEL Technologies. All rights reserved.
  * Designed and developed by AMSIDEL Technologies.
  */
+import type { ManualEntryBody, ManualEntryView } from '../manual-sales/manual-sales.service';
 import { toIsoDate } from '../portal.models';
 
 /** One task worked on one day (matches WorkLogEntry in amsidel-backend). */
@@ -20,6 +21,8 @@ export interface WorkLogEntry {
   /** With the approver; only approved hours count. */
   approval: 'PENDING' | 'APPROVED' | 'REJECTED';
   decisionNote: string | null;
+  /** On a Manual Sales worklog task; null on any other. */
+  manualSales: ManualEntryView | null;
 }
 
 /** Checked-in time on a day: approved, and waiting for approval; open: still checked in today; waiting: an entry is with the approver. */
@@ -257,6 +260,12 @@ export interface MyTask {
   code: string;
   title: string;
   description: string | null;
+  /** A Manual Sales worklog task: an entry asks for the status and the sales details. */
+  manualSales: boolean;
+  currencySymbol: string | null;
+  customerName: string | null;
+  projectName: string | null;
+  agentName: string | null;
 }
 
 /** A task as owners and admins manage it. */

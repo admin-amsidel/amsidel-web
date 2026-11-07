@@ -49,7 +49,7 @@ export interface Skill {
  * GENERAL: progress moved by hand and rated in stars; SALES: a target amount, progress and stars follow what is achieved;
  * SALES_ORDER: a target reached by confirmed orders; TASK_WORKLOG: the person's work log tasks as sub-tasks.
  */
-export type GoalType = 'GENERAL' | 'SALES' | 'SALES_ORDER' | 'TASK_WORKLOG';
+export type GoalType = 'GENERAL' | 'SALES' | 'SALES_ORDER' | 'TASK_WORKLOG' | 'MANUAL_SALES';
 
 /** menu: the Goal type tick under Performance that lets a manager choose it. */
 export const GOAL_TYPES: { value: GoalType; label: string; icon: string; menu: string }[] = [
@@ -57,6 +57,7 @@ export const GOAL_TYPES: { value: GoalType; label: string; icon: string; menu: s
   { value: 'SALES', label: 'Sales & marketing', icon: 'pi pi-chart-line', menu: 'PERF_TYPE_SALES' },
   { value: 'SALES_ORDER', label: 'Sales orders', icon: 'pi pi-check-square', menu: 'PERF_TYPE_ORDERS' },
   { value: 'TASK_WORKLOG', label: 'Task worklog', icon: 'pi pi-clock', menu: 'PERF_TYPE_WORKLOG' },
+  { value: 'MANUAL_SALES', label: 'Manual Sales worklog', icon: 'pi pi-receipt', menu: 'PERF_TYPE_MANUAL_SALES' },
 ];
 
 /** One day the person logged against a work log task. */
@@ -171,6 +172,24 @@ export interface Goal {
   canRecord: boolean;
   /** Sales-order goals: the person's confirmed orders in the goal's dates. */
   orders: OrderLine[];
+  /** Manual Sales worklog goals: the person's approved entries in the goal's dates. */
+  manualLines: ManualLine[];
+}
+
+/** A Manual Sales worklog entry on a goal; only sales orders reach the target. */
+export interface ManualLine {
+  id: number;
+  workDate: string;
+  month: string;
+  kind: 'QUOTATION' | 'SALES_ORDER' | 'INVOICE';
+  kindLabel: string;
+  documentNumber: string;
+  documentDate: string;
+  amount: number;
+  taskCode: string;
+  customerName: string | null;
+  projectName: string | null;
+  agentName: string | null;
 }
 
 export interface Achievement {

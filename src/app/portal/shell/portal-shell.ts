@@ -86,7 +86,7 @@ function sectionOf(path: string): Section {
       </a>
       @if (hasSections()) {
         <nav class="p-switch" aria-label="Portal section">
-          <a routerLink="/portal/dashboard" [class.on]="section() === 'EMPLOYEE'" [attr.aria-current]="section() === 'EMPLOYEE' ? 'page' : null">
+          <a [routerLink]="employeeStart()" [class.on]="section() === 'EMPLOYEE'" [attr.aria-current]="section() === 'EMPLOYEE' ? 'page' : null">
             <i class="pi pi-users" aria-hidden="true"></i><span>Employee portal</span></a>
           @if (productStart(); as start) {
             <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" [attr.aria-current]="section() === 'PRODUCT' ? 'page' : null">
@@ -166,7 +166,7 @@ function sectionOf(path: string): Section {
     <ng-template #tree let-mini="mini" let-drawer="drawer">
       @if (drawer && hasSections()) {
         <div class="dr-switch" role="group" aria-label="Portal section">
-          <a routerLink="/portal/dashboard" [class.on]="section() === 'EMPLOYEE'" (click)="drawerOpen.set(false)">
+          <a [routerLink]="employeeStart()" [class.on]="section() === 'EMPLOYEE'" (click)="drawerOpen.set(false)">
             <i class="pi pi-users" aria-hidden="true"></i> Employee</a>
           @if (productStart(); as start) {
             <a [routerLink]="start" [class.on]="section() === 'PRODUCT'" (click)="drawerOpen.set(false)">
@@ -398,6 +398,8 @@ export class PortalShell {
   }
 
   protected readonly sectionLabels = SECTION_LABELS;
+  /** Where the employee portal opens: My profile is everyone's, the Overview has its tick. */
+  protected readonly employeeStart = computed(() => (this.auth.can('OVERVIEW') ? '/portal/dashboard' : '/portal/profile'));
   /** The product portal is everything under /portal/products, the customer portal /portal/customers; the rest is the employee portal. */
   protected readonly section = computed(() => sectionOf(this.url()));
   private readonly menuPaths = computed(() =>
@@ -427,7 +429,10 @@ export class PortalShell {
     // a link is "exact" when another page lives below its address (My leave /portal/leave vs /portal/leave/approvals)
     const paths = menus.flatMap((m) => [m.path, ...m.children.map((c) => c.path)]).filter((x): x is string => !!x);
     const exact = (path: string) => paths.some((other) => other.startsWith(path + '/'));
-    const entries: NavEntry[] = section !== 'EMPLOYEE' ? [] : [link('Overview', 'pi-th-large', '/portal/dashboard'), link('My profile', 'pi-user', '/portal/profile')];
+    const entries: NavEntry[] = section !== 'EMPLOYEE' ? [] : [
+      ...(this.auth.can('OVERVIEW') ? [link('Overview', 'pi-th-large', '/portal/dashboard')] : []),
+      link('My profile', 'pi-user', '/portal/profile'),
+    ];
     for (const m of menus) {
       // sub-menus without a page (ticks such as Customers > New invoice button) leave the menu a plain link
       const pages = m.children.filter((c) => c.path);

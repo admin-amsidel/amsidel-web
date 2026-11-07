@@ -8,7 +8,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { zoneDateTime } from '../portal-time';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -72,6 +73,7 @@ export class EmployeeForm implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(MessageService);
+  private readonly confirm = inject(ConfirmationService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
   /** Route parameter; absent on /portal/employees/new. */
@@ -129,6 +131,34 @@ export class EmployeeForm implements OnInit {
   private readonly nameValue = toSignal(this.form.controls.name.valueChanges, { initialValue: '' });
 
   protected readonly isNew = computed(() => !this.id());
+  /** In their brand's time zone, whoever looks and wherever. */
+  protected readonly lastSignIn = computed(() => zoneDateTime(this.employee()?.lastLoginAt, this.employee()?.timeZone));
+  /** Never myself or an owner; the server checks the rest, and says why. */
+  protected readonly canDeleteThis = computed(() => {
+    const e = this.employee();
+    return !!e && this.auth.can('EMP_DELETE') && e.role !== 'OWNER' && e.id !== this.auth.user()?.id;
+  });
+
+  protected deleteThis(): void {
+    const e = this.employee();
+    if (!e) return;
+    this.confirm.confirm({
+      header: `Delete ${e.name}?`,
+      message: 'They are deleted for good, which cannot be undone. If they have attendance, work logs, leave, pay or tasks they stay as they are, and can be disabled instead.',
+      icon: 'pi pi-trash', acceptLabel: 'Delete', rejectLabel: 'Keep', acceptButtonProps: { severity: 'danger' }, rejectButtonProps: { outlined: true },
+      accept: () => this.staff.removeEmployees([e.id]).subscribe({
+        next: (r) => {
+          if (r.deleted) {
+            this.toast.add({ severity: 'success', summary: 'Employee deleted', detail: e.name });
+            this.router.navigate(['/portal/employees']);
+          } else {
+            this.toast.add({ severity: 'warn', summary: 'Not deleted', detail: r.notDeleted[0]?.reason, life: 12000 });
+          }
+        },
+        error: (err) => this.toast.add({ severity: 'error', summary: 'Not deleted', detail: apiProblem(err).message, life: 8000 }),
+      }),
+    });
+  }
   protected readonly me = this.auth.user;
   protected readonly isSelf = computed(() => this.employee()?.id === this.me()?.id);
   protected readonly pinChecks = computed(() => pinChecks(this.pin()));

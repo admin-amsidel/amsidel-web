@@ -143,3 +143,8 @@
   :host ::ng-deep .p-stack td.stack-end { justify-content: flex-end; margin-top: -4px; }
   :host ::ng-deep .p-stack .p-datatable-tfoot > tr { grid-template-columns: 1fr auto; }
 }
+
+/* a Manual Sales worklog entry */
+.sale-for { color: var(--muted); font-size: .8rem; }
+:host ::ng-deep .p-datatable .desc .sale { display: block; margin-top: 3px; font-size: .78rem; color: var(--muted); }
+:host ::ng-deep .entry__grid .p-inputnumber, :host ::ng-deep .entry__grid .p-datepicker { width: 100%; }

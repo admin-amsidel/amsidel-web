@@ -8,7 +8,10 @@ import { catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 import { API_BASE } from './portal.config';
 
-/** Adds "Authorization: asd <token>" to backend calls, and signs out when the backend rejects the token. */
+/**
+ * Adds "Authorization: asd <token>" to backend calls, and takes the person to the login page when the backend rejects the
+ * token: the session expired, the PIN was changed elsewhere or the account was disabled.
+ */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith(API_BASE)) return next(req);
 
@@ -18,8 +21,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(request).pipe(
     catchError((err: unknown) => {
-      // 401 with a token = expired, PIN changed elsewhere or account disabled
-      if (token && err instanceof HttpErrorResponse && err.status === 401) auth.logout('expired');
+      if (token && err instanceof HttpErrorResponse && err.status === 401) auth.expireNow();
       return throwError(() => err);
     }),
   );

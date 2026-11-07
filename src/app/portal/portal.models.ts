@@ -75,6 +75,10 @@ export interface Employee {
   /** When it locked after too many wrong PINs; it stays locked until an admin sets a temporary PIN. */
   lockedAt?: string | null;
   lastLoginAt: string | null;
+  /** The last sign-in ran out or was ended. */
+  sessionExpired: boolean;
+  /** Their brand's time zone, which their times are shown in; null = the default (India). */
+  timeZone: string | null;
   /** The user type (portal access) given; null = the built-in one of role. */
   userTypeId: number | null;
   userTypeName: string | null;

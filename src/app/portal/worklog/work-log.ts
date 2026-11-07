@@ -8,6 +8,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -20,7 +21,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ExportExcel } from '../export-excel';
 import { AuthService } from '../auth.service';
 import { TeamMember } from '../leave/leave.models';
-import { apiProblem } from '../portal.models';
+import { ManualEntryView, ManualSalesKind, ManualSalesService, moneyText, StageOption } from '../manual-sales/manual-sales.service';
+import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { buildMonth, DayCell, hrs, MyTask, WorkLogEntry, WorkLogMonth } from './worklog.models';
 import { TaskService } from './task.service';
 import { WorkLogService } from './worklog.service';
@@ -39,7 +41,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 @Component({
   selector: 'app-work-log',
   imports: [
-    ExportExcel, FormsModule, RouterLink, SlicePipe, ButtonModule, DialogModule, InputNumberModule, InputTextModule, MessageModule,
+    ExportExcel, FormsModule, RouterLink, SlicePipe, ButtonModule, DatePickerModule, DialogModule, InputNumberModule, InputTextModule, MessageModule,
     SelectModule, TableModule, TagModule, TextareaModule, TooltipModule,
   ],
   templateUrl: './work-log.html',
@@ -48,6 +50,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 export class WorkLog implements OnInit {
   private readonly worklog = inject(WorkLogService);
   private readonly taskService = inject(TaskService);
+  private readonly manualSales = inject(ManualSalesService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
@@ -102,6 +105,31 @@ export class WorkLog implements OnInit {
   protected readonly taskId = signal<string | null>(null);
   /** Open tasks assigned to me: the only Task IDs I can log against. */
   protected readonly myTasks = signal<MyTask[]>([]);
+  // on a Manual Sales worklog task: the status, and the paper's details when the status has one
+  protected readonly stages = signal<StageOption[]>([]);
+  protected readonly stageCode = signal<string | null>(null);
+  protected readonly docNumber = signal('');
+  protected readonly docDate = signal<Date | null>(null);
+  protected readonly docAmount = signal<number | null>(null);
+  /** What the entry being edited said, for a task closed or unassigned since. */
+  private readonly editingSales = signal<{ taskId: string; sales: ManualEntryView } | null>(null);
+  /** The Manual Sales details of the task chosen; null for any other task. */
+  protected readonly salesTask = computed(() => {
+    const code = this.taskId();
+    const t = this.myTasks().find((x) => x.code === code);
+    if (t?.manualSales) return { currencySymbol: t.currencySymbol ?? '₹', customerName: t.customerName, projectName: t.projectName, agentName: t.agentName };
+    const e = this.editingSales();
+    return e && e.taskId === code ? e.sales : null;
+  });
+  /** The statuses offered, with the one the entry already has even if it was switched off since. */
+  protected readonly stageOptions = computed(() => {
+    const e = this.editingSales()?.sales;
+    return e && !this.stages().some((s) => s.code === e.stageCode)
+      ? [...this.stages(), { code: e.stageCode, name: e.stageName, kind: e.kind }] : this.stages();
+  });
+  protected readonly stageKind = computed<ManualSalesKind | null>(() => this.stageOptions().find((s) => s.code === this.stageCode())?.kind ?? null);
+  protected readonly stageKindLabel = computed(() => ({ QUOTATION: 'Quotation', SALES_ORDER: 'Sales order', INVOICE: 'Invoice' })[this.stageKind() ?? 'INVOICE']);
+  protected readonly money = moneyText;
   protected readonly taskOptions = computed(() => {
     const options = this.myTasks().map((t) => ({ value: t.code, label: `${t.code} · ${t.title}` }));
     // an entry being edited keeps its task even if it was closed or unassigned since
@@ -124,6 +152,9 @@ export class WorkLog implements OnInit {
   ngOnInit(): void {
     this.worklog.team().subscribe({ next: (t) => this.team.set(t), error: () => undefined });
     this.taskService.mine().subscribe({ next: (t) => this.myTasks.set(t), error: () => undefined });
+    if (this.auth.can('MANUAL_SALES_LOG')) {
+      this.manualSales.stages().subscribe({ next: (s) => this.stages.set(s), error: () => undefined });
+    }
     this.load();
   }
 
@@ -160,6 +191,11 @@ export class WorkLog implements OnInit {
     this.taskId.set(e.taskId);
     this.hours.set(Number(e.hours));
     this.description.set(e.description);
+    this.editingSales.set(e.manualSales ? { taskId: e.taskId, sales: e.manualSales } : null);
+    this.stageCode.set(e.manualSales?.stageCode ?? null);
+    this.docNumber.set(e.manualSales?.documentNumber ?? '');
+    this.docDate.set(fromIsoDate(e.manualSales?.documentDate));
+    this.docAmount.set(e.manualSales?.amount ?? null);
     this.formError.set('');
   }
 
@@ -168,6 +204,11 @@ export class WorkLog implements OnInit {
     this.taskId.set(null);
     this.hours.set(null);
     this.description.set('');
+    this.editingSales.set(null);
+    this.stageCode.set(null);
+    this.docNumber.set('');
+    this.docDate.set(null);
+    this.docAmount.set(null);
     this.formError.set('');
   }
 
@@ -178,8 +219,17 @@ export class WorkLog implements OnInit {
     if (!this.taskId()) return this.formError.set('Choose the task you worked on.');
     if (!this.hours()) return this.formError.set('Enter the hours worked (e.g. 2 or 1.5).');
     if (!this.description().trim()) return this.formError.set('Describe what you did.');
+    const sales = !!this.salesTask();
+    const kind = this.stageKind();
+    if (sales && !this.stageCode()) return this.formError.set('Choose the status of the task.');
+    if (sales && kind && (!this.docNumber().trim() || !this.docDate() || !(this.docAmount()! > 0))) {
+      return this.formError.set(`Give the ${this.stageKindLabel().toLowerCase()} number, date and amount.`);
+    }
 
-    const body = { workDate: day.iso, taskId: this.taskId()!, hours: this.hours()!, description: this.description().trim() };
+    const body = {
+      workDate: day.iso, taskId: this.taskId()!, hours: this.hours()!, description: this.description().trim(),
+      manualSales: sales ? { stageCode: this.stageCode()!, documentNumber: kind ? this.docNumber().trim() : null, documentDate: kind ? toIsoDate(this.docDate()) : null, amount: kind ? this.docAmount() : null } : null,
+    };
     const id = this.editingId();
     this.busy.set(true);
     (id ? this.worklog.update(id, body) : this.worklog.add(body)).subscribe({

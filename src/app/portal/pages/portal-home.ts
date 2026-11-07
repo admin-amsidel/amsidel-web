@@ -153,9 +153,9 @@ export class PortalHome implements OnInit {
         .map((c) => ({ part: partOf(c.path!), s: { label: c.name, icon: c.icon ?? 'pi-circle', link: c.path! } })),
     ),
   );
-  /** Overview and My profile are everyone's; the rest follows menu access. */
+  /** My profile is everyone's; the rest follows menu access. */
   protected readonly allLinks = computed<{ part: Part; s: Shortcut }[]>(() => [
-    { part: 'EMPLOYEE', s: { label: 'Overview', icon: 'pi-th-large', link: '/portal/dashboard' } },
+    ...(this.auth.can('OVERVIEW') ? [{ part: 'EMPLOYEE' as Part, s: { label: 'Overview', icon: 'pi-th-large', link: '/portal/dashboard' } }] : []),
     { part: 'EMPLOYEE', s: { label: 'My profile', icon: 'pi-user', link: '/portal/profile' } },
     ...this.pages(),
   ]);
