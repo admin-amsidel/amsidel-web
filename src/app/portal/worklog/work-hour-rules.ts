@@ -14,6 +14,7 @@ import { TableModule } from 'primeng/table';
 import { apiProblem } from '../portal.models';
 import { BrandWorkRule } from './worklog.models';
 import { WorkLogService } from './worklog.service';
+import { ExcelTable } from '../excel-export';
 
 /** One row of the table, with the numbers being typed. */
 interface RuleRow extends BrandWorkRule {
@@ -34,7 +35,7 @@ const NO_BRAND = 'none';
  */
 @Component({
   selector: 'app-work-hour-rules',
-  imports: [FormsModule, RouterLink, ButtonModule, InputNumberModule, MessageModule, SelectModule, TableModule],
+  imports: [ExcelTable, FormsModule, RouterLink, ButtonModule, InputNumberModule, MessageModule, SelectModule, TableModule],
   template: `
     <div class="p-head">
       <div>
@@ -59,7 +60,7 @@ const NO_BRAND = 'none';
                     placeholder="All designations" appendTo="body" [ngModel]="designation()" (ngModelChange)="designation.set($event ?? null)" /></div>
       </div>
 
-      <p-table [value]="shown()" [loading]="loading()" dataKey="key" [tableStyle]="{ 'min-width': '980px' }" styleClass="rules p-stack">
+      <p-table appExcel="Work hour rules" [value]="shown()" [loading]="loading()" dataKey="key" [tableStyle]="{ 'min-width': '980px' }" styleClass="rules p-stack">
         <ng-template #header>
           <tr>
             <th>Brand</th><th>Applies to</th><th>Hours a day</th><th>Hours a week</th>

@@ -20,6 +20,7 @@ import { Avatar } from '../avatar';
 import { accountStatus, apiProblem, Brand, Designation, designationOption, designationsFor, Employee, ROLE_LABELS } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { phoneMatches } from '../phone-input';
+import { ExcelButton, ExcelColumn } from '../excel-export';
 
 type StatusFilter = 'active' | 'inactive' | 'all';
 
@@ -37,6 +38,7 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
 @Component({
   selector: 'app-employee-list',
   imports: [
+    ExcelButton,
     Avatar, FormsModule, RouterLink, TableModule, ButtonModule, InputTextModule, IconFieldModule, InputIconModule,
     SelectModule, TagModule, MessageModule,
   ],
@@ -47,6 +49,7 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
         <p>{{ employees().length }} {{ employees().length === 1 ? 'person' : 'people' }}{{ scope() }}</p>
       </div>
       <div class="head-actions">
+        <app-excel-button title="Employees" [columns]="excelColumns" [rows]="shown()" />
         @if (auth.can('ORG_CHART')) {
           <p-button label="Org chart" icon="pi pi-sitemap" [outlined]="true" size="small" routerLink="/portal/org-chart" />
         }
@@ -313,6 +316,20 @@ export class EmployeeList implements OnInit {
     const me = this.auth.user();
     return this.canSeeAllBrands() ? ' across the group' : me?.brandName ? ` in ${me.brandName}` : '';
   });
+
+  /** Everyone the filters leave, in a collapsed brand too, with what the table shows under each name. */
+  protected readonly excelColumns: ExcelColumn[] = [
+    { header: 'Emp no.', value: (e) => e.empNumber },
+    { header: 'Name', value: (e) => e.name },
+    { header: 'User ID', value: (e) => e.userId },
+    { header: 'Brand', value: (e) => e.groupLabel },
+    { header: 'Level', value: (e) => (e.levelCode ? 'L' + e.levelCode : null) },
+    { header: 'Designation', value: (e) => e.designationName },
+    { header: 'Reports to', value: (e) => e.reportsToName },
+    { header: 'Role', value: (e) => this.roleOf(e) },
+    { header: 'Phone', value: (e) => e.phone },
+    { header: 'Status', value: (e) => this.statusOf(e).label },
+  ];
 
   protected readonly shown = computed(() => {
     const q = this.query().trim().toLowerCase();

@@ -347,7 +347,7 @@
                       [ngModel]="show()" (ngModelChange)="show.set($event)" />
     }
 
-    <p-table [value]="shownRows()" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '720px' }"
+    <p-table appExcel="Email delivery" [value]="shownRows()" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '720px' }"
              [paginator]="shownRows().length > 25" [rows]="25">
       <ng-template #header>
         <tr>

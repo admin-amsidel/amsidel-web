@@ -23,6 +23,7 @@ import { PhoneInput, phoneMatches, phoneProblem } from '../phone-input';
 import { prepareProfilePhoto } from '../photo.service';
 import { apiProblem } from '../portal.models';
 import { Agent, AgentBrand, AgentsService, moneyIn } from './agents.service';
+import { ExcelTable } from '../excel-export';
 
 /** An agent's photo, or their initials. */
 @Component({
@@ -73,6 +74,7 @@ export class AgentPhoto implements OnDestroy {
 @Component({
   selector: 'app-agents',
   imports: [
+    ExcelTable,
     AgentPhoto, FormsModule, PhoneInput, RouterLink, ButtonModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
     SelectModule, TableModule, TagModule, TextareaModule, ToggleSwitchModule,
   ],
@@ -99,7 +101,7 @@ export class AgentPhoto implements OnDestroy {
         <p-select [options]="statusOptions" optionLabel="label" optionValue="value" ariaLabel="Filter by status" [ngModel]="status()" (ngModelChange)="status.set($event)" styleClass="f-sel" />
         <span class="muted count">{{ shown().length }} agent{{ shown().length === 1 ? '' : 's' }}</span>
       </div>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [paginator]="shown().length > 25" [rows]="25" sortField="name" [sortOrder]="1">
+      <p-table appExcel="Agents" [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [paginator]="shown().length > 25" [rows]="25" sortField="name" [sortOrder]="1">
         <ng-template #header>
           <tr>
             <th pSortableColumn="name">Agent <p-sortIcon field="name" /></th>

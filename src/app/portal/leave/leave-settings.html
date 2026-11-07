@@ -10,7 +10,7 @@
 <section class="p-card">
   <h2>Types of leave</h2>
   @if (typesError()) { <p-message severity="error" styleClass="page-message">{{ typesError() }}</p-message> }
-  <p-table [value]="drafts()" [tableStyle]="{ 'min-width': '920px' }" styleClass="types p-stack">
+  <p-table appExcel="Types of leave" [value]="drafts()" [tableStyle]="{ 'min-width': '920px' }" styleClass="types p-stack">
     <ng-template #header>
       <tr>
         <th>Code</th><th>Name</th><th>Allowance</th><th>Default days</th>

@@ -16,6 +16,7 @@ import { AccessSubject, MenuAccessEntry, MenuAccessService } from '../menu-acces
 import { apiProblem, Employee, MenuNode, ROLE_LABELS, UserType } from '../portal.models';
 import { UserTypesDialog } from './user-types-dialog';
 import { StaffService } from '../staff.service';
+import { ExcelButton, ExcelColumn } from '../excel-export';
 
 const HINTS: Record<string, string> = {
   OWNER: 'Always every menu', ADMIN: 'Runs a brand or the group', MANAGER: 'Leads a team', EMPLOYEE: 'Everyone else',
@@ -52,7 +53,7 @@ const ALL = '*';
  */
 @Component({
   selector: 'app-menu-access',
-  imports: [FormsModule, ButtonModule, CheckboxModule, MessageModule, SelectModule, ToggleSwitchModule, UserTypesDialog],
+  imports: [ExcelButton, FormsModule, ButtonModule, CheckboxModule, MessageModule, SelectModule, ToggleSwitchModule, UserTypesDialog],
   template: `
     <div class="p-head">
       <div>
@@ -60,6 +61,7 @@ const ALL = '*';
         <p>Choose a user type, a designation or a person, then tick the menus they may open. A person set up here gets
           only their own menus; everyone else gets the menus of their user type plus those of their designation.</p>
       </div>
+      <div class="head-actions"><app-excel-button title="Menu access" [columns]="excelColumns" [rows]="excelRows()" /></div>
     </div>
 
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
@@ -220,6 +222,15 @@ export class MenuAccessPage implements OnInit {
   protected readonly menus = signal<MenuNode[]>([]);
   private readonly entries = signal<Map<string, string[]>>(new Map());
   protected readonly designationSubjects = signal<Subject[]>([]);
+  /** Who has what as saved, not the ticks being changed. */
+  protected readonly excelColumns: ExcelColumn<Subject>[] = [
+    { header: 'Kind', value: (s) => (s.type === 'ROLE' ? 'User type' : s.type === 'DESIGNATION' ? 'Designation' : 'Person') },
+    { header: 'Name', value: (s) => s.label },
+    { header: 'Note', value: (s) => s.hint },
+    { header: 'Access', value: (s) => this.summary(s) },
+    { header: 'Menus', value: (s) => this.menuNames(s) },
+  ];
+  protected readonly excelRows = computed(() => [...this.roleSubjects(), ...this.designationSubjects(), ...this.userSubjects()]);
   protected readonly userSubjects = signal<Subject[]>([]);
   private readonly people = signal<Employee[]>([]);
   /** People not in the list yet (owners always have every menu). */
@@ -317,6 +328,13 @@ export class MenuAccessPage implements OnInit {
   }
 
   /** "All menus", "5 menus", "Nothing extra" (designations add to the user type) or "Not set" (a person). */
+  private menuNames(s: Subject): string {
+    const list = this.saved(s);
+    if (list.includes(ALL)) return 'All menus';
+    const names = (nodes: MenuNode[]): string[] => nodes.flatMap((m) => [...(list.includes(String(m.checkpoint)) ? [m.name] : []), ...names(m.children ?? [])]);
+    return names(this.menus()).join(', ');
+  }
+
   protected summary(s: Subject): string {
     const list = this.saved(s);
     if (list.includes(ALL)) return 'All menus';

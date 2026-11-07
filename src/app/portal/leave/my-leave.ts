@@ -32,11 +32,13 @@ import {
   workingDays,
 } from './leave.models';
 import { LeaveService } from './leave.service';
+import { ExcelTable } from '../excel-export';
 
 /** Everyone's own leave: balances, applying, and the list of their requests. */
 @Component({
   selector: 'app-my-leave',
   imports: [
+    ExcelTable,
     FormsModule, ButtonModule, CheckboxModule, DatePickerModule, TouchDatePicker, MessageModule, SelectModule, TableModule, TagModule,
     TextareaModule,
   ],

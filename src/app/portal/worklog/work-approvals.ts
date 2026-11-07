@@ -22,6 +22,7 @@ import { API_BASE } from '../portal.config';
 import { ManualEntryView, moneyText } from '../manual-sales/manual-sales.service';
 import { apiProblem } from '../portal.models';
 import { hrs } from './worklog.models';
+import { ExcelTable } from '../excel-export';
 
 const API = `${API_BASE}/api/work-approvals`;
 
@@ -75,7 +76,7 @@ type Tab = 'attendance' | 'worklog';
  */
 @Component({
   selector: 'app-work-approvals',
-  imports: [DatePipe, FormsModule, ButtonModule, DialogModule, InputTextModule, MessageModule, SelectButtonModule, TableModule, TagModule, TextareaModule, AttendancePhoto, Avatar],
+  imports: [ExcelTable, DatePipe, FormsModule, ButtonModule, DialogModule, InputTextModule, MessageModule, SelectButtonModule, TableModule, TagModule, TextareaModule, AttendancePhoto, Avatar],
   template: `
     <div class="p-head">
       <div>
@@ -95,7 +96,7 @@ type Tab = 'attendance' | 'worklog';
       </div>
 
       @if (tab() === 'attendance') {
-        <p-table [value]="attendance()" dataKey="id" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '880px' }" [paginator]="attendance().length > 25" [rows]="25">
+        <p-table appExcel="Attendance approvals" [value]="attendance()" dataKey="id" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '880px' }" [paginator]="attendance().length > 25" [rows]="25">
           <ng-template #header><tr><th>Person</th><th>Day</th><th>Where</th><th>In – out</th><th>Worked</th><th>Photo</th><th></th></tr></ng-template>
           <ng-template #body let-a>
             <tr>
@@ -122,7 +123,7 @@ type Tab = 'attendance' | 'worklog';
           <ng-template #emptymessage><tr><td colspan="7" class="p-empty">{{ query() ? 'Nobody matches.' : 'No attendance waiting for you.' }}</td></tr></ng-template>
         </p-table>
       } @else {
-        <p-table [value]="logs()" dataKey="id" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '880px' }" [paginator]="logs().length > 25" [rows]="25">
+        <p-table appExcel="Work log approvals" [value]="logs()" dataKey="id" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '880px' }" [paginator]="logs().length > 25" [rows]="25">
           <ng-template #header><tr><th>Person</th><th>Day</th><th>Task</th><th>Hours</th><th>What was done</th><th></th></tr></ng-template>
           <ng-template #body let-w>
             <tr>

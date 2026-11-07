@@ -25,6 +25,7 @@ import { CategoryDialog } from './category-dialog';
 import { EntryDialog } from './entry-dialog';
 import { BrandPick, TradeBrand } from './trade-brand';
 import { fyRange, monthRange, PAY_MODES } from './trade.models';
+import { ExcelTable } from '../excel-export';
 
 type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
 type Side = 'ALL' | 'IN' | 'OUT';
@@ -37,6 +38,7 @@ type Side = 'ALL' | 'IN' | 'OUT';
 @Component({
   selector: 'app-ledger',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, IconFieldModule, InputIconModule, InputTextModule,
     MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule, EntryDialog, CategoryDialog,
   ],
@@ -82,7 +84,7 @@ type Side = 'ALL' | 'IN' | 'OUT';
                  [ngModel]="query()" (ngModelChange)="query.set($event)" />
         </p-iconfield>
       </div>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack only-desk" [loading]="loading()" [tableStyle]="{ 'min-width': '960px' }"
+      <p-table appExcel="Income and expenses" [value]="shown()" dataKey="id" styleClass="p-stack only-desk" [loading]="loading()" [tableStyle]="{ 'min-width': '960px' }"
                [paginator]="shown().length > 25" [rows]="25">
         <ng-template #header>
           <tr><th>Date</th><th>For</th><th>Description</th><th>Bill / project</th><th>Paid by</th><th class="num">In</th><th class="num">Out</th></tr>

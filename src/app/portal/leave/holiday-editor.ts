@@ -15,6 +15,7 @@ import { apiProblem, Brand, toIsoDate } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { HolidayKind, RestrictedHoliday, shortDate } from './leave.models';
 import { LeaveService } from './leave.service';
+import { ExcelButton, ExcelColumn } from '../excel-export';
 
 /**
  * A year's holiday list with add and remove, for Leave settings: office holidays (closed for everyone) or
@@ -22,12 +23,13 @@ import { LeaveService } from './leave.service';
  */
 @Component({
   selector: 'app-holiday-editor',
-  imports: [FormsModule, ButtonModule, DatePickerModule, TouchDatePicker, InputTextModule, MessageModule, SelectModule],
+  imports: [ExcelButton, FormsModule, ButtonModule, DatePickerModule, TouchDatePicker, InputTextModule, MessageModule, SelectModule],
   template: `
     <section class="p-card">
       <div class="head-row">
         <h2>{{ title() }}</h2>
         <span class="head-filters">
+          <app-excel-button [title]="title() + ' ' + year()" [columns]="excelColumns" [rows]="holidays()" />
           @if (brandOptions().length > 1) {
             <p-select [options]="brandOptions()" optionLabel="label" optionValue="value" [showClear]="true" placeholder="All brands"
                       [ngModel]="filterBrand()" (ngModelChange)="changeFilter($event)" [ariaLabel]="title() + ' brand'" />
@@ -92,6 +94,11 @@ export class HolidayEditor implements OnInit {
   protected readonly years = [this.thisYear, this.thisYear + 1].map((y) => ({ label: String(y), value: y }));
   protected readonly year = signal(this.thisYear);
   protected readonly holidays = signal<RestrictedHoliday[]>([]);
+  protected readonly excelColumns: ExcelColumn<RestrictedHoliday>[] = [
+    { header: 'Date', value: (h) => h.date },
+    { header: 'Holiday', value: (h) => h.name },
+    { header: 'Brand', value: (h) => (h.brandCode ? h.brandCode + ' · ' + h.brandName : 'All brands') },
+  ];
   private readonly brands = signal<Brand[]>([]);
   protected readonly brandOptions = computed(() => this.brands().map((b) => ({ value: b.id, label: `${b.code} · ${b.name}` })));
   protected readonly filterBrand = signal<number | null>(null);

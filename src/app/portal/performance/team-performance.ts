@@ -18,6 +18,7 @@ import { Cycle, ReviewView, TeamRow } from './perf.models';
 import { PerfService } from './perf.service';
 import { ReviewBoard } from './review-board';
 import { Stars } from './stars';
+import { ExcelTable } from '../excel-export';
 
 /**
  * Team performance for managers: everyone below them in a cycle with progress, goal weights and ratings; open a
@@ -25,7 +26,7 @@ import { Stars } from './stars';
  */
 @Component({
   selector: 'app-team-performance',
-  imports: [FormsModule, Avatar, Stars, ButtonModule, MessageModule, ProgressBarModule, ProgressTone, SelectModule, TableModule, TagModule, ReviewBoard],
+  imports: [ExcelTable, FormsModule, Avatar, Stars, ButtonModule, MessageModule, ProgressBarModule, ProgressTone, SelectModule, TableModule, TagModule, ReviewBoard],
   template: `
     <div class="p-head">
       <div>
@@ -50,7 +51,7 @@ import { Stars } from './stars';
       <section class="p-card"><p class="p-empty">No review cycle yet. Open one under Performance → Review cycles.</p></section>
     } @else {
       <section class="p-card">
-        <p-table [value]="rows()" dataKey="employee.id" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '900px' }"
+        <p-table appExcel="Team performance" [value]="rows()" dataKey="employee.id" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '900px' }"
                  sortField="employee.name" [sortOrder]="1">
           <ng-template #header>
             <tr>

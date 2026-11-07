@@ -20,6 +20,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { AuthService } from '../auth.service';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { Agent, AgentBrand, AgentsService, Commission, CommissionStatus, moneyIn } from './agents.service';
+import { ExcelTable } from '../excel-export';
 
 type View = 'LINES' | 'DATE' | 'PROJECT' | 'MONTH' | 'YEAR' | 'AGENT';
 
@@ -67,6 +68,7 @@ function groupOf(view: View, c: Commission): { key: string; label: string; sub: 
 @Component({
   selector: 'app-agent-commissions',
   imports: [
+    ExcelTable,
     DatePipe, FormsModule, RouterLink, ButtonModule, DatePickerModule, DialogModule, InputTextModule, MessageModule, SelectModule, SelectButtonModule,
     TableModule, TagModule, TextareaModule,
   ],
@@ -109,7 +111,7 @@ function groupOf(view: View, c: Commission): { key: string; label: string; sub: 
           <p class="drill"><b>{{ d.label }}</b> · {{ lines().length }} line{{ lines().length === 1 ? '' : 's' }}
             <p-button label="Show all lines" icon="pi pi-times" [text]="true" size="small" (onClick)="drill.set(null)" /></p>
         }
-        <p-table [value]="lines()" dataKey="id" styleClass="p-stack" [loading]="loading()" [paginator]="lines().length > 25" [rows]="25">
+        <p-table appExcel="Agent commissions" [value]="lines()" dataKey="id" styleClass="p-stack" [loading]="loading()" [paginator]="lines().length > 25" [rows]="25">
           <ng-template #header>
             <tr>
               <th pSortableColumn="completedOn">Completed <p-sortIcon field="completedOn" /></th>
@@ -153,7 +155,7 @@ function groupOf(view: View, c: Commission): { key: string; label: string; sub: 
           <ng-template #emptymessage><tr><td colspan="8" class="p-empty">No commissions match. A line appears here when a project with an agent is settled.</td></tr></ng-template>
         </p-table>
       } @else {
-        <p-table [value]="groups()" dataKey="key" styleClass="p-stack" [loading]="loading()" [paginator]="groups().length > 25" [rows]="25">
+        <p-table appExcel="Agent commissions by agent" [value]="groups()" dataKey="key" styleClass="p-stack" [loading]="loading()" [paginator]="groups().length > 25" [rows]="25">
           <ng-template #header>
             <tr>
               <th>{{ viewLabel() }}</th>

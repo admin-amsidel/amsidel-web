@@ -14,6 +14,7 @@ import { TagModule } from 'primeng/tag';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { apiProblem, Role, ROLE_LABELS, UserType } from '../portal.models';
 import { StaffService } from '../staff.service';
+import { ExcelButton, ExcelColumn } from '../excel-export';
 
 /**
  * Owners and admins: the user types (portal access). Add one on an access level (Admin, Manager or Employee), rename
@@ -22,7 +23,7 @@ import { StaffService } from '../staff.service';
  */
 @Component({
   selector: 'app-user-types-dialog',
-  imports: [FormsModule, ButtonModule, DialogModule, InputTextModule, MessageModule, SelectButtonModule, TagModule, ToggleSwitchModule],
+  imports: [ExcelButton, FormsModule, ButtonModule, DialogModule, InputTextModule, MessageModule, SelectButtonModule, TagModule, ToggleSwitchModule],
   template: `
     <p-dialog header="User types (portal access)" [modal]="true" [visible]="open()" (visibleChange)="open.set($event)" [draggable]="false"
               appendTo="body" [style]="{ width: '680px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }">
@@ -43,6 +44,7 @@ import { StaffService } from '../staff.service';
         </div>
       </section>
 
+      <div class="xl-row"><app-excel-button title="User types" [columns]="excelColumns" [rows]="types()" /></div>
       <ul class="list">
         @for (t of types(); track t.id) {
           <li [class.off]="!t.active">
@@ -70,6 +72,7 @@ import { StaffService } from '../staff.service';
     </p-dialog>
   `,
   styles: `
+    .xl-row { display: flex; justify-content: flex-end; margin: 12px 0 8px; }
     h3 { margin: 0 0 4px; font-size: 1rem; }
     .form { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fafafa; margin-bottom: 16px; }
     .form--edit { border-color: #9ca3af; background: #fff; }
@@ -98,6 +101,14 @@ export class UserTypesDialog {
 
   protected readonly open = signal(false);
   protected readonly types = signal<UserType[]>([]);
+  protected readonly excelColumns: ExcelColumn<UserType>[] = [
+    { header: 'User type', value: (t) => t.name },
+    { header: 'Access level', value: (t) => this.levelLabel(t.baseRole) },
+    { header: 'Built in', value: (t) => !!t.builtIn },
+    { header: 'In use', value: (t) => !!t.active },
+    { header: 'Employees', value: (t) => t.employees },
+    { header: 'Note', value: (t) => t.description },
+  ];
   protected readonly editing = signal<UserType | null>(null);
   protected readonly name = signal('');
   protected readonly level = signal<Role>('EMPLOYEE');

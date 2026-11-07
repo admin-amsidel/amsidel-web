@@ -14,6 +14,7 @@ import { MessageModule } from 'primeng/message';
 import { TableModule } from 'primeng/table';
 import { apiProblem } from '../portal.models';
 import { BrandMailLimits, MailService, STAFF_MAIL_API, TRADE_MAIL_API } from './mail.service';
+import { ExcelTable } from '../excel-export';
 
 /** A brand's row, with the numbers being typed. */
 interface Row extends BrandMailLimits {
@@ -33,7 +34,7 @@ interface Row extends BrandMailLimits {
  */
 @Component({
   selector: 'app-staff-mail-config',
-  imports: [FormsModule, ButtonModule, DialogModule, InputNumberModule, InputTextModule, MessageModule, TableModule],
+  imports: [ExcelTable, FormsModule, ButtonModule, DialogModule, InputNumberModule, InputTextModule, MessageModule, TableModule],
   template: `
     <div class="p-head">
       <div>
@@ -46,7 +47,7 @@ interface Row extends BrandMailLimits {
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
 
     <section class="p-card">
-      <p-table [value]="rows()" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '1100px' }">
+      <p-table [appExcel]="trade ? 'Customer and supplier email limits' : 'Staff email limits'" [value]="rows()" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '1100px' }">
         <ng-template #header>
           <tr><th>Brand</th><th>People in one send</th><th>Emails a day</th><th>Office copy (CC)</th><th class="num">Sent today</th><th class="num">Left today</th><th></th></tr>
         </ng-template>
@@ -91,7 +92,7 @@ interface Row extends BrandMailLimits {
       <h2>Mail header and footer</h2>
       <p class="intro">The line at the top and the line at the bottom of every {{ trade ? 'customer and supplier' : 'staff' }} mail, for each brand. Leave
         one empty to use the default shown in it.</p>
-      <p-table [value]="rows()" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '860px' }">
+      <p-table appExcel="Mail header and footer" [value]="rows()" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '860px' }">
         <ng-template #header>
           <tr><th>Brand</th><th>Header</th><th>Footer</th><th></th></tr>
         </ng-template>
@@ -124,7 +125,7 @@ interface Row extends BrandMailLimits {
       <h2>Brevo account</h2>
       <p class="intro">Each brand can send through its own Brevo account, for both staff email and customer &amp; supplier email.
         A brand without one uses the default account{{ defaultFrom() ? ' (' + defaultFrom() + ')' : '' }}.</p>
-      <p-table [value]="rows()" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '760px' }">
+      <p-table appExcel="Brevo accounts" [value]="rows()" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '760px' }">
         <ng-template #header>
           <tr><th>Brand</th><th>Sends from</th><th>Brevo login</th><th></th></tr>
         </ng-template>

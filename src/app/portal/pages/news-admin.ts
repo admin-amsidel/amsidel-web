@@ -24,6 +24,7 @@ import {
 } from '../news.service';
 import { apiProblem, Brand, toIsoDate } from '../portal.models';
 import { StaffService } from '../staff.service';
+import { ExcelTable } from '../excel-export';
 
 type Show = 'NOW' | NewsStatus | 'ALL';
 
@@ -42,6 +43,7 @@ const STATUS: Record<NewsStatus, { label: string; severity: 'success' | 'info' |
 @Component({
   selector: 'app-news-admin',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, ButtonModule, CheckboxModule, DatePickerModule, DialogModule, InputTextModule, MessageModule, SelectModule,
     SelectButtonModule, TableModule, TagModule, TextareaModule, NewsPicture,
   ],
@@ -61,7 +63,7 @@ const STATUS: Record<NewsStatus, { label: string; severity: 'success' | 'info' |
         <p-selectbutton [options]="shows()" optionLabel="label" optionValue="value" [allowEmpty]="false" ariaLabel="Show"
                         [ngModel]="show()" (ngModelChange)="show.set($event)" />
       </div>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack only-desk" [loading]="loading()" [tableStyle]="{ 'min-width': '900px' }"
+      <p-table appExcel="News and announcements" [value]="shown()" dataKey="id" styleClass="p-stack only-desk" [loading]="loading()" [tableStyle]="{ 'min-width': '900px' }"
                [paginator]="shown().length > 20" [rows]="20">
         <ng-template #header>
           <tr><th style="width: 84px">Picture</th><th>News</th><th>For</th><th>Shows</th><th>Status</th><th>By</th><th class="acts-h"><span class="sr-only">Actions</span></th></tr>

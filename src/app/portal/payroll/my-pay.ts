@@ -20,6 +20,7 @@ import { PayrollService } from './payroll.service';
 import { AuthService } from '../auth.service';
 import { StaffService } from '../staff.service';
 import { PayslipSheet } from './payslip-sheet';
+import { ExcelTable } from '../excel-export';
 
 /**
  * My pay: the year at a glance (expected salary, earned so far, taxes paid, balance), month by month, my published
@@ -29,7 +30,7 @@ import { PayslipSheet } from './payslip-sheet';
  */
 @Component({
   selector: 'app-my-pay',
-  imports: [FormsModule, DatePipe, ButtonModule, DialogModule, MessageModule, ProgressBarModule, SelectModule, TableModule, TabsModule, TagModule, PayslipSheet],
+  imports: [ExcelTable, FormsModule, DatePipe, ButtonModule, DialogModule, MessageModule, ProgressBarModule, SelectModule, TableModule, TabsModule, TagModule, PayslipSheet],
   template: `
     <div class="p-head">
       <div>
@@ -131,7 +132,7 @@ import { PayslipSheet } from './payslip-sheet';
           </p-tablist>
           <p-tabpanels>
             <p-tabpanel value="payslips">
-              <p-table [value]="d.payslips" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '680px' }">
+              <p-table [appExcel]="team ? 'Team pay' : 'My pay'" [value]="d.payslips" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '680px' }">
                 <ng-template #header>
                   <tr><th>Month</th><th>Credited</th><th class="num">Paid days</th><th class="num">Gross</th>
                     <th class="num">Deductions</th><th class="num">Net pay</th><th></th></tr>

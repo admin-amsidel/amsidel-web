@@ -18,6 +18,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { API_BASE } from '../portal.config';
 import { apiProblem } from '../portal.models';
+import { ExcelTable } from '../excel-export';
 
 const API = `${API_BASE}/api/configurations`;
 
@@ -48,7 +49,7 @@ interface Configuration {
  */
 @Component({
   selector: 'app-configurations',
-  imports: [DatePipe, FormsModule, ButtonModule, DialogModule, InputTextModule, MessageModule, SelectModule, TableModule, TagModule, TextareaModule, ToggleSwitchModule],
+  imports: [ExcelTable, DatePipe, FormsModule, ButtonModule, DialogModule, InputTextModule, MessageModule, SelectModule, TableModule, TagModule, TextareaModule, ToggleSwitchModule],
   template: `
     <div class="p-head">
       <div>
@@ -60,7 +61,7 @@ interface Configuration {
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
 
     <section class="p-card">
-      <p-table [value]="rows()" dataKey="code" styleClass="p-stack" [loading]="loading()">
+      <p-table appExcel="Configuration" [value]="rows()" dataKey="code" styleClass="p-stack" [loading]="loading()">
         <ng-template #header>
           <tr><th>Code</th><th>Description</th><th>Value</th><th>Status</th><th>In effect now</th><th>Last changed</th><th></th></tr>
         </ng-template>

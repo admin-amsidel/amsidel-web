@@ -15,6 +15,7 @@ import { TagModule } from 'primeng/tag';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { BrandPlans, LeavePlan, LeaveType, shortDate } from './leave.models';
 import { LeaveService } from './leave.service';
+import { ExcelButton, ExcelColumn } from '../excel-export';
 
 /** One type of leave in the plan being edited. */
 interface LineDraft {
@@ -31,10 +32,10 @@ interface LineDraft {
  */
 @Component({
   selector: 'app-leave-plans',
-  imports: [FormsModule, ButtonModule, CheckboxModule, DatePickerModule, DialogModule, InputNumberModule, MessageModule, TagModule],
+  imports: [ExcelButton, FormsModule, ButtonModule, CheckboxModule, DatePickerModule, DialogModule, InputNumberModule, MessageModule, TagModule],
   template: `
     <section class="p-card">
-      <h2>Leave plans</h2>
+      <div class="xl-head"><h2>Leave plans</h2><app-excel-button title="Leave plans" [columns]="excelColumns" [rows]="excelRows()" /></div>
       <p class="p-intro">Each brand's leave for a period. People see and apply against the plan in force today, and only that one. The next
         plan can be added in the last {{ notice }} days of the current one.</p>
       @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
@@ -132,6 +133,7 @@ interface LineDraft {
     </p-dialog>
   `,
   styles: `
+    .xl-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
     :host { display: block; margin-top: 20px; }
     .brand { border-top: 1px solid var(--line); padding: 14px 0; }
     .brand__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
@@ -166,6 +168,20 @@ interface LineDraft {
   `,
 })
 export class LeavePlans implements OnInit {
+  /** Every plan, ended ones too, one row for each type of leave in it. */
+  protected readonly excelColumns: ExcelColumn[] = [
+    { header: 'Brand', value: (r) => r.b.brandName },
+    { header: 'Valid from', value: (r) => r.p.validFrom },
+    { header: 'Valid until', value: (r) => r.p.validUntil },
+    { header: 'State', value: (r) => this.stateLabel(r.p.state) },
+    { header: 'Leave code', value: (r) => r.l.code },
+    { header: 'Leave type', value: (r) => r.l.name },
+    { header: 'Days', value: (r) => (r.l.allocation === 'ANNUAL' ? r.l.days : r.l.allocation === 'GRANTED' ? 'Granted per person' : 'No limit') },
+    { header: 'Carries forward', value: (r) => !!r.l.carryForward },
+    { header: 'At most', value: (r) => r.l.maxCarryDays },
+  ];
+  protected readonly excelRows = computed(() => this.brands().flatMap((b) => b.plans.flatMap((p) => p.lines.map((l) => ({ b, p, l })))));
+
   private readonly leave = inject(LeaveService);
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);

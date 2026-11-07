@@ -16,6 +16,8 @@ import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { apiProblem } from '../portal.models';
 import { bytesText, FileFilter, StorageService, StorageSummary, StoredFileRow } from './storage.service';
+import { EMPTY, expand, Observable, reduce } from 'rxjs';
+import { ExcelButton, ExcelColumn } from '../excel-export';
 
 /** What goes wrong for people when a file of this kind is deleted; said before it is. */
 const EFFECTS: Record<string, string> = {
@@ -36,7 +38,7 @@ const EFFECTS: Record<string, string> = {
  */
 @Component({
   selector: 'app-storage',
-  imports: [DatePipe, FormsModule, ButtonModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule, SelectModule, TableModule, TagModule],
+  imports: [ExcelButton, DatePipe, FormsModule, ButtonModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule, SelectModule, TableModule, TagModule],
   template: `
     <div class="p-head">
       <div>
@@ -110,6 +112,7 @@ const EFFECTS: Record<string, string> = {
           <p-select [options]="brandOptions()" optionLabel="label" optionValue="value" ariaLabel="Brand" [ngModel]="brandId()" (ngModelChange)="setBrand($event)" styleClass="f" />
         }
       </div>
+      <div class="xl-row"><app-excel-button title="Stored files" [columns]="excelColumns" [load]="excelLoad" [empty]="!total()" /></div>
       <div class="summary">
         <span class="count"><span class="muted">{{ total() }} file{{ total() === 1 ? '' : 's' }}, {{ size(totalBytes()) }}{{ filtered() ? ' matching' : '' }}</span>
           @if (filtered()) { <p-button label="Clear filters" icon="pi pi-filter-slash" [text]="true" size="small" (onClick)="clearFilters()" /> }</span>
@@ -182,6 +185,7 @@ const EFFECTS: Record<string, string> = {
     :host ::ng-deep .search { flex: 1 1 240px; max-width: 380px; }
     :host ::ng-deep .search input { width: 100%; }
     :host ::ng-deep .f { width: 190px; }
+    .xl-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
     .summary { display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: .88rem; min-height: 34px; }
     .sel, .count { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -232,6 +236,26 @@ export class Storage implements OnInit {
     ...(this.s()?.brands ?? []).map((b) => ({ label: b.name, value: b.id as number | null }))]);
 
   private paging = { page: 0, size: this.pageSize, sort: 'uploadedAt', descending: true };
+  protected readonly excelColumns: ExcelColumn<StoredFileRow>[] = [
+    { header: 'File', value: (f) => f.name },
+    { header: 'Category', value: (f) => f.categoryLabel },
+    { header: 'Kept', value: (f) => (f.location === 'DISK' ? 'On the disk' : 'In the database') },
+    { header: 'Belongs to', value: (f) => f.owner },
+    { header: 'Brand', value: (f) => f.brandCode },
+    { header: 'Type', value: (f) => f.fileType },
+    { header: 'Size (KB)', value: (f) => Math.round(f.sizeBytes / 1024) },
+    { header: 'Uploaded', value: (f) => f.uploadedAt?.slice(0, 10) },
+    { header: 'Uploaded by', value: (f) => f.uploadedByName },
+  ];
+  /** Every file the filters leave, in the order shown, page after page from the server. */
+  protected readonly excelLoad = (): Observable<StoredFileRow[]> => {
+    const size = 200;
+    const filter = { category: this.category(), fileType: this.fileType(), brandId: this.brandId(), q: this.query(), sort: this.paging.sort, descending: this.paging.descending, size };
+    return this.api.files({ ...filter, page: 0 }).pipe(
+      expand((p, i) => ((i + 1) * size < p.total ? this.api.files({ ...filter, page: i + 1 }) : EMPTY)),
+      reduce((all, p) => all.concat(p.rows), [] as StoredFileRow[]),
+    );
+  };
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {

@@ -29,7 +29,7 @@
     }
   </div>
 
-  <p-table [value]="requests()" [loading]="loading()" dataKey="id" [tableStyle]="{ 'min-width': '920px' }" styleClass="p-stack"
+  <p-table appExcel="Leave approvals" [value]="requests()" [loading]="loading()" dataKey="id" [tableStyle]="{ 'min-width': '920px' }" styleClass="p-stack"
            [paginator]="requests().length > 20" [rows]="20">
     <ng-template #header>
       <tr>

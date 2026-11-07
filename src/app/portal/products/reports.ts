@@ -25,6 +25,7 @@ import {
   Customer, fyRange, Group, HistoryEntry, Item, monthRange, OwedReport, PaymentReport, ProductType, PurchaseReport, qty, SalesReport, StockReport, Supplier,
 } from './trade.models';
 import { ReportFilter, saveFile, TradeService } from './trade.service';
+import { AuthService } from '../auth.service';
 
 type Tab = 'sales' | 'purchases' | 'spend' | 'stock' | 'payments' | 'owed' | 'activity';
 type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
@@ -51,7 +52,7 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
       <div class="head-actions">
         <app-brand-pick (changed)="reload()" />
         @if (tab() !== 'activity') {
-          <p-button label="Excel" icon="pi pi-file-excel" [outlined]="true" [loading]="excelBusy()" (onClick)="excel()" />
+          @if (auth.can('EXPORT_EXCEL')) { <p-button label="Excel" icon="pi pi-file-excel" [outlined]="true" [loading]="excelBusy()" (onClick)="excel()" /> }
         }
       </div>
     </div>
@@ -339,6 +340,7 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
   `,
 })
 export class Reports implements OnInit {
+  protected readonly auth = inject(AuthService);
   private readonly trade = inject(TradeService);
   private readonly toast = inject(MessageService);
   private readonly route = inject(ActivatedRoute);

@@ -226,6 +226,9 @@ export function brandLogoUrl(brandId: number, version: string | null, apiBase: s
 export interface Designation {
   id: number;
   name: string;
+  /** The short form, e.g. TL; null on those saved before it existed. */
+  shortCode: string | null;
+  description: string | null;
   levelNumber: number;
   levelCode: string;
   active: boolean;
@@ -235,9 +238,9 @@ export interface Designation {
   brandName: string | null;
 }
 
-/** "L3.7 · Sales Executive · DW" (the brand code only for a brand's own designation). */
+/** "L3.7 · Sales Executive (SE) · DW" (the brand code only for a brand's own designation). */
 export function designationOption(d: Designation): string {
-  return designationLabel(d) + (d.brandCode ? ' · ' + d.brandCode : '');
+  return designationLabel(d) + (d.shortCode ? ` (${d.shortCode})` : '') + (d.brandCode ? ' · ' + d.brandCode : '');
 }
 
 /** The designations a person of this brand may have: the group-wide ones and their brand's own. */

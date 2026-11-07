@@ -27,6 +27,8 @@ import { EntryDialog } from './entry-dialog';
 import { BrandPick, TradeBrand } from './trade-brand';
 import { fyRange, monthRange } from './trade.models';
 import { saveFile } from './trade.service';
+import { ExcelTable } from '../excel-export';
+import { AuthService } from '../auth.service';
 
 type Period = 'MONTH' | 'LAST' | 'FY' | 'LAST_FY' | 'CUSTOM';
 type Tab = 'pnl' | 'tally' | 'lines' | 'bills';
@@ -41,6 +43,7 @@ type LineShow = 'OPEN' | 'MATCHED' | 'ALL';
 @Component({
   selector: 'app-reconciler',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, DialogModule, InputNumberModule, InputTextModule,
     MessageModule, SelectButtonModule, TableModule, TabsModule, TagModule, TextareaModule, Bars, EntryDialog,
   ],
@@ -52,7 +55,7 @@ type LineShow = 'OPEN' | 'MATCHED' | 'ALL';
       </div>
       <div class="head-actions">
         <app-brand-pick (changed)="load()" />
-        <p-button label="Excel" icon="pi pi-file-excel" [outlined]="true" [loading]="exporting()" [disabled]="!report()" (onClick)="excel()" />
+        @if (auth.can('EXPORT_EXCEL')) { <p-button label="Excel" icon="pi pi-file-excel" [outlined]="true" [loading]="exporting()" [disabled]="!report()" (onClick)="excel()" /> }
       </div>
     </div>
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
@@ -276,7 +279,7 @@ type LineShow = 'OPEN' | 'MATCHED' | 'ALL';
                 <p-message severity="warn" styleClass="note">{{ monthLabel(x.month) }} already has {{ money(x.balance) }}
                   (typed by {{ x.enteredByName ?? '—' }}{{ x.updatedByName ? ', last updated by ' + x.updatedByName : '' }}). Saving replaces it.</p-message>
               }
-              <p-table [value]="r.balances" dataKey="id" styleClass="p-stack only-desk" [tableStyle]="{ 'min-width': '860px' }" [paginator]="r.balances.length > 12" [rows]="12">
+              <p-table appExcel="Monthly bank balances" [value]="r.balances" dataKey="id" styleClass="p-stack only-desk" [tableStyle]="{ 'min-width': '860px' }" [paginator]="r.balances.length > 12" [rows]="12">
                 <ng-template #header>
                   <tr><th>Month</th><th class="num">Balance</th><th>As of</th><th>Note</th><th>Entered by</th><th>Last updated</th><th></th></tr>
                 </ng-template>
@@ -566,6 +569,7 @@ type LineShow = 'OPEN' | 'MATCHED' | 'ALL';
   `,
 })
 export class Reconciler implements OnInit {
+  protected readonly auth = inject(AuthService);
   private readonly accounts = inject(AccountsService);
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);

@@ -16,6 +16,7 @@ import { API_BASE } from '../portal.config';
 import { AuthService } from '../auth.service';
 import { apiProblem } from '../portal.models';
 import { zoneDateTime } from '../portal-time';
+import { ExcelTable } from '../excel-export';
 
 interface ActiveUser {
   id: number;
@@ -41,7 +42,7 @@ interface ActiveUsers {
  */
 @Component({
   selector: 'app-active-users-card',
-  imports: [FormsModule, ButtonModule, DialogModule, InputTextModule, MessageModule, SkeletonModule, TableModule],
+  imports: [ExcelTable, FormsModule, ButtonModule, DialogModule, InputTextModule, MessageModule, SkeletonModule, TableModule],
   template: `
     <section class="p-card card" aria-label="Active users">
       <span class="title"><i class="pi pi-users" aria-hidden="true"></i> Active users</span>
@@ -62,7 +63,7 @@ interface ActiveUsers {
       @if (listError()) { <p-message severity="error">{{ listError() }}</p-message> }
       @if (list(); as a) {
         <input pInputText type="search" class="find" placeholder="Search name, employee number or brand" aria-label="Search active users" [ngModel]="query()" (ngModelChange)="query.set($event)" />
-        <p-table [value]="shown()" dataKey="id" styleClass="p-stack" [paginator]="shown().length > 10" [rows]="10">
+        <p-table appExcel="Active users" [value]="shown()" dataKey="id" styleClass="p-stack" [paginator]="shown().length > 10" [rows]="10">
           <ng-template #header><tr><th>Employee</th><th>Brand</th><th>Signed in</th><th>Session ends</th></tr></ng-template>
           <ng-template #body let-p>
             <tr>

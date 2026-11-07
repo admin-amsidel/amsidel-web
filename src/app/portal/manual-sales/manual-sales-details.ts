@@ -15,6 +15,7 @@ import { AuthService } from '../auth.service';
 import { apiProblem, fromIsoDate, toIsoDate } from '../portal.models';
 import { Approval, DetailOptions, Details, ManualSalesKind, ManualSalesService, moneyText, SalesSummary } from './manual-sales.service';
 import { SalesFigures } from './sales-figures';
+import { ExcelTable } from '../excel-export';
 
 const DEFAULT_APPROVAL: Approval | null = 'APPROVED';
 
@@ -24,7 +25,7 @@ const DEFAULT_APPROVAL: Approval | null = 'APPROVED';
  */
 @Component({
   selector: 'app-manual-sales-details',
-  imports: [DatePipe, FormsModule, ButtonModule, DatePickerModule, MessageModule, SelectModule, TableModule, TagModule, SalesFigures],
+  imports: [ExcelTable, DatePipe, FormsModule, ButtonModule, DatePickerModule, MessageModule, SelectModule, TableModule, TagModule, SalesFigures],
   template: `
     <div class="p-head">
       <div>
@@ -76,7 +77,7 @@ const DEFAULT_APPROVAL: Approval | null = 'APPROVED';
           @if (t.invoices; as f) { <div class="tile"><span>Invoices</span><b>{{ money(t.symbol, f.amount) }}</b><small class="muted">{{ f.count }} approved</small></div> }
         </div>
       }
-      <p-table [value]="d()?.rows ?? []" dataKey="id" styleClass="p-stack" [loading]="loading()" [paginator]="(d()?.rows?.length ?? 0) > 25" [rows]="25" [rowsPerPageOptions]="[25, 50, 100]">
+      <p-table appExcel="Sales, invoice and quotation details" [value]="d()?.rows ?? []" dataKey="id" styleClass="p-stack" [loading]="loading()" [paginator]="(d()?.rows?.length ?? 0) > 25" [rows]="25" [rowsPerPageOptions]="[25, 50, 100]">
         <ng-template #header>
           <tr><th pSortableColumn="workDate">Work log day <p-sortIcon field="workDate" /></th><th pSortableColumn="employeeName">Employee <p-sortIcon field="employeeName" /></th><th>Task</th><th>Customer and project</th><th>Agent</th><th>Status</th><th>Paper</th><th class="num" pSortableColumn="amount">Amount <p-sortIcon field="amount" /></th><th>Approval</th></tr>
         </ng-template>

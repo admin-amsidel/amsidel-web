@@ -17,6 +17,7 @@ import { HistoryList } from '../products/history-list';
 import { Customer, DOC_KINDS, DOC_STATUS, docLink, HistoryEntry, payLabel, SalesRow } from '../products/trade.models';
 import { TradeService } from '../products/trade.service';
 import { CustomerForm } from './customer-form';
+import { ExcelTable } from '../excel-export';
 
 /**
  * One customer (/portal/customers/:id): what they were billed, paid and still owe; contact, tax, bank and UPI
@@ -25,7 +26,7 @@ import { CustomerForm } from './customer-form';
  */
 @Component({
   selector: 'app-customer-detail',
-  imports: [DatePipe, RouterLink, CustomerForm, HistoryList, ButtonModule, MessageModule, TableModule, TagModule],
+  imports: [ExcelTable, DatePipe, RouterLink, CustomerForm, HistoryList, ButtonModule, MessageModule, TableModule, TagModule],
   template: `
     <div class="p-head">
       <div>
@@ -107,7 +108,7 @@ import { CustomerForm } from './customer-form';
 
       <section class="p-card">
         <h2>Quotations, orders and invoices</h2>
-        <p-table [value]="docs()" dataKey="id" styleClass="p-stack" [loading]="docsLoading()" [tableStyle]="{ 'min-width': '640px' }"
+        <p-table appExcel="Customer documents" [value]="docs()" dataKey="id" styleClass="p-stack" [loading]="docsLoading()" [tableStyle]="{ 'min-width': '640px' }"
                  [paginator]="docs().length > 15" [rows]="15">
           <ng-template #header>
             <tr><th>Document</th><th>Date</th><th>Status</th><th class="num">Total</th><th class="num">Due</th></tr>

@@ -24,6 +24,7 @@ import { Avatar } from '../avatar';
 import { apiProblem, Employee } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { BrandMailLimits, MailBody, MailRecipient, MailService, MailSetup, PictureAlign, PictureSize, STAFF_MAIL_API, TRADE_MAIL_API } from './mail.service';
+import { ExcelTable } from '../excel-export';
 
 /** Email delivery; 'off' when this send is WhatsApp only. */
 type Delivery = 'queued' | 'sending' | 'sent' | 'failed' | 'off';
@@ -126,6 +127,7 @@ const PARALLEL = 3;
 @Component({
   selector: 'app-staff-mail',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, Avatar, ButtonModule, InputTextModule, MessageModule, MultiSelectModule, ProgressBarModule, ProgressTone,
     SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
   ],

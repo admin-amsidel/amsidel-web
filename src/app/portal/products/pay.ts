@@ -26,6 +26,7 @@ import {
 } from './pay.service';
 import { BrandPick, TradeBrand } from './trade-brand';
 import { fyRange, monthRange } from './trade.models';
+import { ExcelTable } from '../excel-export';
 
 type Tab = 'pay' | 'history' | 'sources';
 type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
@@ -46,6 +47,7 @@ const STATUS: Record<OnlinePayStatus, { label: string; severity: 'success' | 'wa
 @Component({
   selector: 'app-pay-bill',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, DialogModule, InputNumberModule, MessageModule,
     SelectModule, SelectButtonModule, TableModule, TabsModule, TagModule, TextareaModule, InputTextModule,
   ],
@@ -216,7 +218,7 @@ const STATUS: Record<OnlinePayStatus, { label: string; severity: 'success' | 'wa
             <span><b class="neg">{{ round(sums().refunded) }}</b> refunded</span>
             <span><b>{{ sums().failed }}</b> failed or closed</span>
           </div>
-          <p-table [value]="history()" dataKey="id" styleClass="p-stack only-desk" [loading]="loadingLists()" [tableStyle]="{ 'min-width': '1000px' }"
+          <p-table appExcel="Payment history" [value]="history()" dataKey="id" styleClass="p-stack only-desk" [loading]="loadingLists()" [tableStyle]="{ 'min-width': '1000px' }"
                    [paginator]="history().length > 25" [rows]="25">
             <ng-template #header>
               <tr><th>When</th><th>Bill</th><th>Paid with</th><th class="num">Bill amount</th><th class="num">Fee</th><th class="num">Charged</th><th>Status</th><th>Transaction</th><th></th></tr>
@@ -282,7 +284,7 @@ const STATUS: Record<OnlinePayStatus, { label: string; severity: 'success' | 'wa
               <p-datepicker dateFormat="dd/mm/yy" [showIcon]="true" ariaLabel="To" [ngModel]="to()" (ngModelChange)="to.set($event); loadLists()" />
             }
           </div>
-          <p-table [value]="sources()" dataKey="id" styleClass="p-stack only-desk" [loading]="loadingLists()" [tableStyle]="{ 'min-width': '900px' }"
+          <p-table appExcel="Cards and UPI IDs" [value]="sources()" dataKey="id" styleClass="p-stack only-desk" [loading]="loadingLists()" [tableStyle]="{ 'min-width': '900px' }"
                    [paginator]="sources().length > 25" [rows]="25">
             <ng-template #header>
               <tr><th>Paid on</th><th>Transaction ID</th><th>Customer</th><th>Bill no</th><th>Card / UPI ID</th><th>Payer</th><th class="num">Amount</th></tr>

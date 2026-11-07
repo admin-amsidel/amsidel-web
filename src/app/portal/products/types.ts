@@ -18,11 +18,13 @@ import { apiProblem } from '../portal.models';
 import { BrandPick, TradeBrand } from './trade-brand';
 import { ProductType } from './trade.models';
 import { TradeService } from './trade.service';
+import { ExcelTable } from '../excel-export';
 
 /** Products & stock > Product types: the kinds of product each brand sells (uPVC Doors & Windows, Safety Doors…). */
 @Component({
   selector: 'app-product-types',
   imports: [
+    ExcelTable,
     FormsModule, BrandPick, ButtonModule, DialogModule, InputNumberModule, InputTextModule, MessageModule, SelectModule,
     TableModule, TagModule, ToggleSwitchModule,
   ],
@@ -39,7 +41,7 @@ import { TradeService } from './trade.service';
     </div>
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
     <section class="p-card">
-      <p-table [value]="rows()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '640px' }">
+      <p-table appExcel="Product types" [value]="rows()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '640px' }">
         <ng-template #header>
           <tr><th>Code</th><th>Name</th><th>Brand</th><th class="num">Items</th><th>Status</th><th></th></tr>
         </ng-template>

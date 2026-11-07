@@ -18,11 +18,13 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { apiProblem } from '../portal.models';
 import { KINDS, PayComponent, PayKind } from './payroll.models';
 import { PayrollService } from './payroll.service';
+import { ExcelTable } from '../excel-export';
 
 /** Payroll > Pay components: the earnings, deductions and reimbursements every salary is made of. */
 @Component({
   selector: 'app-pay-components',
   imports: [
+    ExcelTable,
     FormsModule, RouterLink, ButtonModule, DialogModule, InputNumberModule, InputTextModule, MessageModule, SelectModule,
     TableModule, TagModule, ToggleSwitchModule,
   ],
@@ -40,7 +42,7 @@ import { PayrollService } from './payroll.service';
     @for (k of kinds; track k.value) {
       <section class="p-card">
         <h2>{{ k.plural }}</h2>
-        <p-table [value]="of(k.value)" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '560px' }">
+        <p-table [appExcel]="k.plural" [value]="of(k.value)" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '560px' }">
           <ng-template #header>
             <tr><th>Name</th><th>Code</th><th>Order</th><th>Status</th><th></th></tr>
           </ng-template>

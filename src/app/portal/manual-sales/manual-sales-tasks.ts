@@ -37,7 +37,7 @@ type Period = 'ALL' | 'MONTH' | 'DATES';
         <p>Create tasks for the Manual Sales worklog. Each gets its own MS- Task ID, and those assigned log it in their work log.</p>
       </div>
       <div class="head-actions">
-        <p-button label="Export to Excel" icon="pi pi-file-excel" [outlined]="true" [loading]="exporting()" (onClick)="exportExcel()" />
+        @if (auth.can('EXPORT_EXCEL')) { <p-button label="Export to Excel" icon="pi pi-file-excel" [outlined]="true" [loading]="exporting()" (onClick)="exportExcel()" /> }
         <p-button label="New task" icon="pi pi-plus" (onClick)="edit(null)" />
       </div>
     </div>
@@ -163,7 +163,7 @@ type Period = 'ALL' | 'MONTH' | 'DATES';
 })
 export class ManualSalesTasks implements OnInit {
   private readonly api = inject(ManualSalesService);
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly toast = inject(MessageService);
 
   protected readonly statusOptions = [{ label: 'All tasks', value: null as string | null }, { label: 'Open', value: 'OPEN' as string | null }, { label: 'Closed', value: 'CLOSED' as string | null }];

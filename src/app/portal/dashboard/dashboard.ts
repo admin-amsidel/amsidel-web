@@ -27,6 +27,7 @@ import { Part, PartLoader, PartState } from './part';
 import { ManualSalesCard } from '../manual-sales/manual-sales-card';
 import { ActiveUsersCard } from './active-users-card';
 import { StorageCard } from './storage-card';
+import { ExcelTable } from '../excel-export';
 
 type Mode = 'me' | 'team';
 
@@ -55,6 +56,7 @@ type Ticked = keyof typeof TICKS.me;
 @Component({
   selector: 'app-dashboard',
   imports: [
+    ExcelTable,
     DatePipe, FormsModule, RouterLink, InputTextModule, MessageModule, SelectModule, SelectButtonModule, SkeletonModule, TableModule,
     Avatar, Columns, Gauge, SplitBar, LeavePlanAlerts, MeetingCalendar, PartLoader, StorageCard, ManualSalesCard, ActiveUsersCard,
   ],
@@ -137,7 +139,7 @@ type Ticked = keyof typeof TICKS.me;
           <section class="p-card" [class.refreshing]="tm.people.loading() && tm.people.has()">
             <div class="c-head"><h2>By brand</h2><span class="sum">Choose a brand to see only its figures</span></div>
             @if (tm.people.value(); as t) {
-              <p-table [value]="t.byBrand" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '640px' }">
+              <p-table appExcel="By brand" [value]="t.byBrand" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '640px' }">
                 <ng-template #header>
                   <tr>
                     <th>Brand</th><th class="n">People</th>
@@ -316,7 +318,7 @@ type Ticked = keyof typeof TICKS.me;
             <input pInputText type="search" class="find" placeholder="Find by name, designation or brand" aria-label="Find a team member"
                    [ngModel]="query()" (ngModelChange)="query.set($event)" />
           }
-          <p-table [value]="members()" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '640px' }" [paginator]="members().length > 25" [rows]="25">
+          <p-table appExcel="Team members" [value]="members()" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '640px' }" [paginator]="members().length > 25" [rows]="25">
             <ng-template #header>
               <tr>
                 <th>Person</th>

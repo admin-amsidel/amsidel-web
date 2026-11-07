@@ -32,6 +32,7 @@ import {
 } from './payroll.models';
 import { PayrollService } from './payroll.service';
 import { PayslipSheet } from './payslip-sheet';
+import { ExcelTable } from '../excel-export';
 
 type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
 
@@ -43,6 +44,7 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
 @Component({
   selector: 'app-payslips',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, RouterLink, Avatar, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, IconFieldModule,
     InputIconModule, InputNumberModule, InputTextModule, MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
     TooltipModule, PayslipSheet,
@@ -125,7 +127,7 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
           </p-iconfield>
         </div>
 
-        <p-table [value]="rows()" dataKey="employee.id" styleClass="p-stack" [tableStyle]="{ 'min-width': '860px' }"
+        <p-table appExcel="Monthly payslips" [value]="rows()" dataKey="employee.id" styleClass="p-stack" [tableStyle]="{ 'min-width': '860px' }"
                  [selection]="picked()" (selectionChange)="picked.set($event)" [paginator]="rows().length > 25" [rows]="25">
           <ng-template #header>
             <tr>

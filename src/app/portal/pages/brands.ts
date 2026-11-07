@@ -25,6 +25,7 @@ import { API_BASE } from '../portal.config';
 import { StaffService } from '../staff.service';
 import { TouchDatePicker } from '../touch-datepicker';
 import { PhoneInput, phoneProblem } from '../phone-input';
+import { ExcelButton, ExcelColumn } from '../excel-export';
 
 /**
  * Administration > Brands: the group's brands with their details (address, launched date, owners, GST number,
@@ -34,6 +35,7 @@ import { PhoneInput, phoneProblem } from '../phone-input';
 @Component({
   selector: 'app-brands',
   imports: [
+    ExcelButton,
     PhoneInput, FormsModule, DatePipe, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputTextModule, MessageModule,
     SelectModule, TagModule, TextareaModule, ToggleSwitchModule,
   ],
@@ -43,9 +45,10 @@ import { PhoneInput, phoneProblem } from '../phone-input';
         <h1>Brands</h1>
         <p>The group's business lines. Payslips show the brand's name, address, GST number and logo.</p>
       </div>
-      @if (owner()) {
-        <div class="head-actions"><p-button label="New brand" icon="pi pi-plus" size="small" (onClick)="edit(null)" /></div>
-      }
+      <div class="head-actions">
+        <app-excel-button title="Brands" [columns]="excelColumns" [rows]="brands()" />
+        @if (owner()) { <p-button label="New brand" icon="pi pi-plus" size="small" (onClick)="edit(null)" /> }
+      </div>
     </div>
     @if (!owner()) { <p-message severity="info" styleClass="page-message">Only owners can add or change brands.</p-message> }
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
@@ -292,6 +295,26 @@ export class Brands implements OnInit {
   protected readonly today = new Date(new Date().setHours(23, 59, 59, 999));
   protected readonly owner = computed(() => this.auth.user()?.role === 'OWNER');
   protected readonly brands = signal<Brand[]>([]);
+  /** The details on each brand's card; the online payment keys stay out. */
+  protected readonly excelColumns: ExcelColumn<Brand>[] = [
+    { header: 'Code', value: (b) => b.code },
+    { header: 'Name', value: (b) => b.name },
+    { header: 'Category', value: (b) => b.category },
+    { header: 'Status', value: (b) => (b.active ? 'Active' : 'Inactive') },
+    { header: 'Launched', value: (b) => b.launchedDate },
+    { header: 'GSTIN', value: (b) => b.gstNumber },
+    { header: 'Contact', value: (b) => b.contactNumber },
+    { header: 'Email', value: (b) => b.email },
+    { header: 'Owners', value: (b) => b.owners },
+    { header: 'Address', value: (b) => b.address },
+    { header: 'Bank account', value: (b) => b.bankAccountNumber },
+    { header: 'IFSC', value: (b) => b.ifscCode },
+    { header: 'UPI ID', value: (b) => b.upiId },
+    { header: 'Currency', value: (b) => b.currency },
+    { header: 'Time zone', value: (b) => zoneLabel(b.timeZone) },
+    { header: 'Colours', value: (b) => BRAND_PALETTES.find((p) => p.code === b.colorPalette)?.name ?? 'Standard' },
+    { header: 'Online pay', value: (b) => (b.razorpayReady ? 'Set up' : 'Not set up') },
+  ];
   protected readonly error = signal('');
   protected readonly open = signal(false);
   protected readonly editing = signal<Brand | null>(null);

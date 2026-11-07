@@ -26,6 +26,7 @@ import { HistoryEntry, payLabel, PURCHASE_STATUS, PurchaseRow, Supplier } from '
 import { TradeService } from './trade.service';
 import { phoneMatches, PhoneInput, phoneProblem } from '../phone-input';
 import { HistoryList } from './history-list';
+import { ExcelTable } from '../excel-export';
 
 /**
  * Purchasing > Suppliers: who each brand buys from, with contact, GST/PAN and bank / UPI details for paying them,
@@ -34,6 +35,7 @@ import { HistoryList } from './history-list';
 @Component({
   selector: 'app-suppliers',
   imports: [
+    ExcelTable,
     HistoryList, PhoneInput, FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DialogModule, DrawerModule, IconFieldModule, InputIconModule,
     InputTextModule, MessageModule, SelectModule, TableModule, TagModule, TextareaModule, ToggleSwitchModule,
   ],
@@ -58,7 +60,7 @@ import { HistoryList } from './history-list';
         </p-iconfield>
         <span class="muted">Owed to suppliers: <b class="owed">{{ round(owedTotal()) }}</b></span>
       </div>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '900px' }"
+      <p-table appExcel="Suppliers" [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '900px' }"
                [paginator]="shown().length > 25" [rows]="25" sortField="name" [sortOrder]="1">
         <ng-template #header>
           <tr>

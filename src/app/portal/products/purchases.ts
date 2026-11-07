@@ -20,6 +20,7 @@ import { apiProblem } from '../portal.models';
 import { BrandPick, TradeBrand } from './trade-brand';
 import { fyRange, monthRange, payLabel, PURCHASE_STATUS, PurchaseRow } from './trade.models';
 import { TradeService } from './trade.service';
+import { ExcelTable } from '../excel-export';
 
 type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
 
@@ -27,6 +28,7 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
 @Component({
   selector: 'app-purchases',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, BrandPick, ButtonModule, DatePickerModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
     SelectButtonModule, TableModule, TagModule,
   ],
@@ -60,7 +62,7 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
           <input pInputText type="search" placeholder="Search number, supplier, their bill no" aria-label="Search" [ngModel]="query()" (ngModelChange)="query.set($event)" />
         </p-iconfield>
       </div>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '860px' }"
+      <p-table appExcel="Purchase bills" [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '860px' }"
                [paginator]="shown().length > 25" [rows]="25">
         <ng-template #header>
           <tr><th>Bill</th><th>Date</th><th>Supplier</th><th>Status</th><th class="num">Total</th><th class="num">Paid</th><th class="num">To pay</th></tr>

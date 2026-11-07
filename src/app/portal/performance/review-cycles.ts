@@ -20,11 +20,12 @@ import { apiProblem, Brand, fromIsoDate, toIsoDate } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { Cycle } from './perf.models';
 import { PerfService } from './perf.service';
+import { ExcelTable } from '../excel-export';
 
 /** Review cycles (date to date, one brand or all); closing one makes its reviews read-only. */
 @Component({
   selector: 'app-review-cycles',
-  imports: [FormsModule, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputTextModule, MessageModule, SelectModule, TableModule, TagModule, ToggleSwitchModule],
+  imports: [ExcelTable, FormsModule, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputTextModule, MessageModule, SelectModule, TableModule, TagModule, ToggleSwitchModule],
   template: `
     <div class="p-head">
       <div>
@@ -35,7 +36,7 @@ import { PerfService } from './perf.service';
     </div>
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
     <section class="p-card">
-      <p-table [value]="cycles()" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '640px' }">
+      <p-table appExcel="Review cycles" [value]="cycles()" dataKey="id" styleClass="p-stack" [tableStyle]="{ 'min-width': '640px' }">
         <ng-template #header>
           <tr><th>Cycle</th><th>From</th><th>To</th><th>For</th><th>Status</th><th></th></tr>
         </ng-template>

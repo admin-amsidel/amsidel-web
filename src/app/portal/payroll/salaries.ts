@@ -19,6 +19,7 @@ import { Avatar } from '../avatar';
 import { apiProblem } from '../portal.models';
 import { currentFy, fyLabel, payBrandKey, payBrandOptions, payEmployeeOptions, PayrollYear, rupeesRound, SalaryRow } from './payroll.models';
 import { PayrollService } from './payroll.service';
+import { ExcelTable } from '../excel-export';
 
 /**
  * Payroll > Salaries: everyone's salary for a financial year, monthly and yearly, and what the whole payroll comes to.
@@ -27,6 +28,7 @@ import { PayrollService } from './payroll.service';
 @Component({
   selector: 'app-salaries',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, RouterLink, Avatar, ButtonModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
     SelectModule, SelectButtonModule, TableModule, TagModule,
   ],
@@ -85,7 +87,7 @@ import { PayrollService } from './payroll.service';
                    [ngModel]="query()" (ngModelChange)="query.set($event)" />
           </p-iconfield>
         </div>
-        <p-table [value]="rows()" dataKey="employee.id" styleClass="p-stack" [tableStyle]="{ 'min-width': '900px' }"
+        <p-table appExcel="Salaries" [value]="rows()" dataKey="employee.id" styleClass="p-stack" [tableStyle]="{ 'min-width': '900px' }"
                  [paginator]="rows().length > 25" [rows]="25" sortField="employee.name" [sortOrder]="1">
           <ng-template #header>
             <tr>

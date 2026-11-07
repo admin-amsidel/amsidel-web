@@ -23,6 +23,7 @@ import { BrandPick, TradeBrand } from '../products/trade-brand';
 import { Customer } from '../products/trade.models';
 import { TradeService } from '../products/trade.service';
 import { phoneMatches } from '../phone-input';
+import { ExcelTable } from '../excel-export';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 type BalanceFilter = 'ALL' | 'DUE' | 'SETTLED' | 'ADVANCE';
@@ -39,6 +40,7 @@ const NO_LOCATION = '-';
 @Component({
   selector: 'app-customers',
   imports: [
+    ExcelTable,
     FormsModule, BrandPick, CustomerForm, ButtonModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
     MultiSelectModule, SelectModule, TableModule, TagModule,
   ],
@@ -105,7 +107,7 @@ const NO_LOCATION = '-';
           </li>
         } @empty { <li class="p-empty">{{ loading() ? 'Loading…' : rows().length ? 'Nothing matches.' : 'No customers yet.' }}</li> }
       </ul>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack only-desk" [loading]="loading()" [tableStyle]="{ 'min-width': '860px' }"
+      <p-table appExcel="Customers" [value]="shown()" dataKey="id" styleClass="p-stack only-desk" [loading]="loading()" [tableStyle]="{ 'min-width': '860px' }"
                [paginator]="shown().length > 25" [rows]="25" sortField="name" [sortOrder]="1">
         <ng-template #header>
           <tr>

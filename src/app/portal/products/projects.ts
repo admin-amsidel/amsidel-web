@@ -22,6 +22,7 @@ import { BrandPick, TradeBrand } from './trade-brand';
 import { ProjectStages } from './project-stages';
 import { ProjectRow } from './trade.models';
 import { TradeService } from './trade.service';
+import { ExcelTable } from '../excel-export';
 
 type Show = 'OPEN' | 'COMPLETED' | 'SETTLED' | 'CANCELLED' | 'ALL';
 
@@ -32,6 +33,7 @@ type Show = 'OPEN' | 'COMPLETED' | 'SETTLED' | 'CANCELLED' | 'ALL';
 @Component({
   selector: 'app-projects',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, BrandPick, ButtonModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule, SelectModule, SelectButtonModule,
     TableModule, TagModule,
   ],
@@ -66,7 +68,7 @@ type Show = 'OPEN' | 'COMPLETED' | 'SETTLED' | 'CANCELLED' | 'ALL';
                  [ngModel]="query()" (ngModelChange)="query.set($event)" />
         </p-iconfield>
       </div>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack only-desk" [loading]="loading()" [tableStyle]="{ 'min-width': '980px' }"
+      <p-table appExcel="Projects" [value]="shown()" dataKey="id" styleClass="p-stack only-desk" [loading]="loading()" [tableStyle]="{ 'min-width': '980px' }"
                [paginator]="shown().length > 25" [rows]="25">
         <ng-template #header>
           <tr><th>Project</th><th>Customer</th><th>Status</th><th>Owner</th><th>Dates</th><th class="num">Tasks</th>

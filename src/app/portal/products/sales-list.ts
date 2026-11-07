@@ -23,6 +23,7 @@ import {
 } from './trade.models';
 import { TradeService } from './trade.service';
 import { phoneMatches } from '../phone-input';
+import { ExcelTable } from '../excel-export';
 
 type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
 
@@ -33,6 +34,7 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
 @Component({
   selector: 'app-sales-list',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, BrandPick, ButtonModule, DatePickerModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
     SelectButtonModule, TableModule, TagModule,
   ],
@@ -76,7 +78,7 @@ type Period = 'MONTH' | 'LAST' | 'FY' | 'CUSTOM';
           <input pInputText type="search" placeholder="Search number, customer, phone" aria-label="Search" [ngModel]="query()" (ngModelChange)="query.set($event)" />
         </p-iconfield>
       </div>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '860px' }"
+      <p-table [appExcel]="names().many" [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '860px' }"
                [paginator]="shown().length > 25" [rows]="25">
         <ng-template #header>
           <tr>

@@ -31,6 +31,7 @@ import {
   TeamMember,
 } from './leave.models';
 import { LeaveService } from './leave.service';
+import { ExcelTable } from '../excel-export';
 
 /**
  * Managers, admins and owners: decide on their team's leave, and grant comp-off or extra days.
@@ -39,6 +40,7 @@ import { LeaveService } from './leave.service';
 @Component({
   selector: 'app-leave-approvals',
   imports: [
+    ExcelTable,
     FormsModule, ButtonModule, DatePickerModule, TouchDatePicker, DialogModule, InputNumberModule, InputTextModule, MessageModule,
     SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
   ],

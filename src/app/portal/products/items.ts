@@ -30,6 +30,7 @@ import { Item, ItemDetail, ProductType, qty, STOCK_KIND_LABELS, StockKind, Suppl
 import { TradeService } from './trade.service';
 import { HistoryList } from './history-list';
 import { QrLabelsDialog } from './qr-labels-dialog';
+import { ExcelTable } from '../excel-export';
 
 type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
 
@@ -41,6 +42,7 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
 @Component({
   selector: 'app-items',
   imports: [
+    ExcelTable,
     HistoryList, FormsModule, DatePipe, RouterLink, BrandPick, ButtonModule, DatePickerModule, DialogModule, DrawerModule, IconFieldModule,
     InputIconModule, InputNumberModule, InputTextModule, MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule,
     TextareaModule, ToggleSwitchModule, TooltipModule, QrLabelsDialog,
@@ -79,7 +81,7 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
         <p-selectbutton [options]="showOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"
                         [ngModel]="show()" (ngModelChange)="show.set($event)" />
       </div>
-      <p-table [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '1040px' }"
+      <p-table appExcel="Items and stock" [value]="shown()" dataKey="id" styleClass="p-stack" [loading]="loading()" [tableStyle]="{ 'min-width': '1040px' }"
                [paginator]="shown().length > 25" [rows]="25" sortField="name" [sortOrder]="1">
         <ng-template #header>
           <tr>

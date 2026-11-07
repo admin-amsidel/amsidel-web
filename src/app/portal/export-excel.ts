@@ -15,6 +15,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { silent } from './busy';
 import { API_BASE } from './portal.config';
 import { apiProblem, toIsoDate } from './portal.models';
+import { AuthService } from './auth.service';
 
 type Who = 'ME' | 'ONE' | 'ALL';
 type Period = 'THIS_MONTH' | 'LAST_MONTH' | 'FY' | 'CUSTOM';
@@ -31,7 +32,7 @@ const MAX_DAYS = 366;
   selector: 'app-export-excel',
   imports: [FormsModule, ButtonModule, DatePickerModule, DialogModule, MessageModule, SelectModule, SelectButtonModule],
   template: `
-    <p-button label="Export to Excel" icon="pi pi-file-excel" [outlined]="true" size="small" (onClick)="openDialog()" />
+    @if (auth.can('EXPORT_EXCEL')) { <p-button label="Export to Excel" icon="pi pi-file-excel" [outlined]="true" size="small" (onClick)="openDialog()" /> }
     <p-dialog [header]="title()" [modal]="true" [visible]="open()" (visibleChange)="open.set($event)" [draggable]="false"
               [style]="{ width: '480px' }" [breakpoints]="{ '760px': 'calc(100vw - 16px)' }">
       <div class="form">
@@ -85,6 +86,7 @@ const MAX_DAYS = 366;
   `,
 })
 export class ExportExcel {
+  protected readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
   private readonly toast = inject(MessageService);
 

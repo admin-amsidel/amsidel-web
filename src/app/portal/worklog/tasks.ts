@@ -27,6 +27,7 @@ import { apiProblem, Brand, Employee } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { TaskService } from './task.service';
 import { hrs, TaskCustomer, TaskStatus, WorkTask } from './worklog.models';
+import { ExcelTable } from '../excel-export';
 
 /**
  * Owners and admins: create tasks, assign them to employees, and see the hours logged against each. A task may be
@@ -36,6 +37,7 @@ import { hrs, TaskCustomer, TaskStatus, WorkTask } from './worklog.models';
 @Component({
   selector: 'app-tasks',
   imports: [
+    ExcelTable,
     FormsModule, RouterLink, Avatar, ButtonModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule,
     MultiSelectModule, SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule, TooltipModule, TapTooltip,
   ],
@@ -85,7 +87,7 @@ import { hrs, TaskCustomer, TaskStatus, WorkTask } from './worklog.models';
           </li>
         } @empty { <li class="p-empty">{{ loading() ? 'Loading…' : 'No tasks ' + (status() === 'OPEN' ? 'open ' : '') + 'yet. Create one with "New task".' }}</li> }
       </ul>
-      <p-table [value]="shown()" [loading]="loading()" dataKey="id" [paginator]="shown().length > 20" [rows]="20"
+      <p-table appExcel="Tasks" [value]="shown()" [loading]="loading()" dataKey="id" [paginator]="shown().length > 20" [rows]="20"
                [tableStyle]="{ 'min-width': '820px' }" styleClass="p-stack only-desk" sortField="code" [sortOrder]="1">
         <ng-template #header>
           <tr>

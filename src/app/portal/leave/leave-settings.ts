@@ -18,6 +18,7 @@ import { LeavePlanAlerts } from './leave-plan-alerts';
 import { LeavePlans } from './leave-plans';
 import { ALLOCATION_LABELS, LeaveAllocation, LeaveType } from './leave.models';
 import { LeaveService, LeaveTypeBody } from './leave.service';
+import { ExcelTable } from '../excel-export';
 
 /** One editable row of the leave types table; id is missing for a new type. */
 interface TypeDraft extends LeaveTypeBody {
@@ -31,6 +32,7 @@ interface TypeDraft extends LeaveTypeBody {
 @Component({
   selector: 'app-leave-settings',
   imports: [
+    ExcelTable,
     FormsModule, ButtonModule, CheckboxModule, HolidayEditor, LeavePlanAlerts, LeavePlans, InputNumberModule, InputTextModule, MessageModule,
     SelectModule, TableModule,
   ],

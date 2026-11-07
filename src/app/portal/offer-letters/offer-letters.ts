@@ -23,6 +23,7 @@ import { AuthService } from '../auth.service';
 import { apiProblem, Brand, Designation, designationsFor, fromIsoDate, toIsoDate } from '../portal.models';
 import { StaffService } from '../staff.service';
 import { OfferBody, OfferLetterService, OfferRow, OfferStatus, OfferView } from './offer-letters.service';
+import { ExcelTable } from '../excel-export';
 
 /** One row of the package split being typed. */
 interface SplitRow {
@@ -39,6 +40,7 @@ interface SplitRow {
 @Component({
   selector: 'app-offer-letters',
   imports: [
+    ExcelTable,
     FormsModule, DatePipe, ButtonModule, DatePickerModule, DialogModule, IconFieldModule, InputIconModule, InputNumberModule, InputTextModule,
     MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
   ],
@@ -70,7 +72,7 @@ interface SplitRow {
         </p-iconfield>
       </div>
 
-      <p-table [value]="rows()" dataKey="id" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '980px' }"
+      <p-table appExcel="Offer letters" [value]="rows()" dataKey="id" [loading]="loading()" styleClass="p-stack" [tableStyle]="{ 'min-width': '980px' }"
                [paginator]="rows().length > 25" [rows]="25">
         <ng-template #header>
           <tr>
