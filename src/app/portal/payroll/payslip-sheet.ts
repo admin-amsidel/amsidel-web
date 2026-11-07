@@ -99,23 +99,23 @@ import { currencyLocale, employedFor, formatMoney, moneyInWords, paymentLabel, P
     :host { display: block; }
     .slip { background: #fff; color: #1f2630; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: .88rem; }
     .band { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 18px;
-      background: linear-gradient(135deg, #1d5fa3, #2f80d6); color: #fff; }
+      background: linear-gradient(135deg, var(--brand-deep), var(--brass)); color: #fff; }
     .logo { width: 78px; height: 60px; border-radius: 10px; background: #fff; display: grid; place-items: center; overflow: hidden; }
     .logo img { max-width: 100%; max-height: 100%; object-fit: contain; padding: 5px; }
     .who h2 { margin: 0 0 3px; font-size: 1.15rem; font-weight: 700; color: #fff; }
-    .who p { margin: 0; font-size: .76rem; color: #d6e8fb; }
+    .who p { margin: 0; font-size: .76rem; color: var(--accent-soft); }
     .period { text-align: right; display: grid; gap: 2px; }
-    .period span { font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: #d6e8fb; font-weight: 700; }
+    .period span { font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-soft); font-weight: 700; }
     .period b { font-size: 1.15rem; }
     .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 14px 18px 4px; }
-    .facts div { display: grid; gap: 2px; padding: 8px 10px; background: #eef5fd; border-radius: 6px; }
+    .facts div { display: grid; gap: 2px; padding: 8px 10px; background: var(--accent-softer); border-radius: 6px; }
     .facts span { font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: #5b6878; }
     .facts b { font-size: .88rem; overflow-wrap: anywhere; }
     .facts small { font-size: .74rem; color: #5b6878; }
     .lines { width: calc(100% - 36px); margin: 14px 18px 0; border-collapse: collapse; }
-    .lines th { text-align: left; color: #1d5fa3; font-weight: 700; padding: 6px 6px 7px; border-bottom: 2px solid #2f80d6; font-size: .82rem; }
-    .lines td { padding: 6px; border-bottom: 1px solid #dce7f2; }
-    .lines tfoot td { border-bottom: 0; color: #1d5fa3; font-weight: 700; padding-top: 8px; }
+    .lines th { text-align: left; color: var(--brand-deep); font-weight: 700; padding: 6px 6px 7px; border-bottom: 2px solid var(--brass); font-size: .82rem; }
+    .lines td { padding: 6px; border-bottom: 1px solid var(--accent-soft); }
+    .lines tfoot td { border-bottom: 0; color: var(--brand-deep); font-weight: 700; padding-top: 8px; }
     .lines th.num { text-align: right; }
     .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .muted { color: #5b6878; }
@@ -126,10 +126,10 @@ import { currencyLocale, employedFor, formatMoney, moneyInWords, paymentLabel, P
     .words { display: grid; gap: 4px; }
     .words span { font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: #5b6878; }
     .words b { font-size: .86rem; }
-    .sum { border: 1px solid #dce7f2; border-radius: 8px; overflow: hidden; }
+    .sum { border: 1px solid var(--accent-soft); border-radius: 8px; overflow: hidden; }
     .sum div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 12px; font-variant-numeric: tabular-nums; }
     .sum div span:first-child { color: #5b6878; }
-    .sum .net { background: #1d5fa3; color: #fff; padding: 10px 12px; align-items: baseline; }
+    .sum .net { background: var(--brand-deep); color: #fff; padding: 10px 12px; align-items: baseline; }
     .sum .net span { color: #fff !important; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .8rem; }
     .sum .net b { font-size: 1.3rem; }
     .foot { margin: 14px 18px 16px; font-size: .72rem; color: #5b6878; }

@@ -352,7 +352,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
   `,
   styles: `
     .copy-from { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin: 0 0 12px; padding: 10px 12px;
-      background: #f6f9fd; border: 1px dashed #c9d8ea; border-radius: 10px; }
+      background: var(--accent-softer); border: 1px dashed var(--accent-line); border-radius: 10px; }
     .copy-from__lbl { font-weight: 600; font-size: .88rem; display: inline-flex; gap: 6px; align-items: center; }
     :host ::ng-deep .copy-from__kind { min-width: 200px; }
     :host ::ng-deep .copy-from__bill { flex: 1 1 320px; min-width: 0; }
@@ -401,7 +401,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
     dt { color: var(--muted); }
     dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
     .total { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 10px;
-      background: #1d5fa3; color: #fff; }
+      background: var(--brand-deep); color: #fff; }
     .total b { font-size: 1.3rem; }
     .margin { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
     .neg { color: #b3261e; font-weight: 600; }

@@ -65,14 +65,14 @@ th.exp, td.exp { width: 44px; }
   position: absolute; left: 0; right: 0; bottom: 0; padding: 14px; display: flex; justify-content: center; gap: 12px;
   background: linear-gradient(transparent, rgba(0,0,0,.55));
 }
-.cam__off { position: relative; display: grid; justify-items: center; gap: 12px; padding: 24px; text-align: center; color: #c4d6ea; }
+.cam__off { position: relative; display: grid; justify-items: center; gap: 12px; padding: 24px; text-align: center; color: var(--accent-line); }
 .cam__off > i { font-size: 2.2rem; color: var(--gold-hi); }
 .cam__off p { margin: 0; font-size: .88rem; max-width: 300px; }
 .cam__err { color: #fca5a5 !important; }
 
 /* Check in without photo: in place of the camera */
 .gps-only {
-  aspect-ratio: 4 / 3; border-radius: 12px; border: 1px dashed #b9d3ef; background: var(--accent-softer);
+  aspect-ratio: 4 / 3; border-radius: 12px; border: 1px dashed var(--accent-line); background: var(--accent-softer);
   display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center;
 }
 .gps-only > i { font-size: 2.2rem; color: var(--brass-dark); }

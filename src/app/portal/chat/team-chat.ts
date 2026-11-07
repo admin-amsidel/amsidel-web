@@ -16,7 +16,7 @@ type View = 'list' | 'thread' | 'new';
 type Pick = 'PERSON' | 'GROUP' | 'ADD';
 
 const MODE_KEY = 'amsidel.chat.mode';
-const PALETTE = ['#2563eb', '#0d9488', '#9333ea', '#ea580c', '#db2777', '#0891b2', '#65a30d', '#4f46e5'];
+const PALETTE = ['var(--brass)', '#0d9488', '#9333ea', '#ea580c', '#db2777', '#0891b2', '#65a30d', '#4f46e5'];
 
 interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; showName: boolean; showAvatar: boolean }
 
@@ -219,8 +219,8 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
   `,
   styles: `
     :host {
-      --c-bg: #f4f6fa; --c-surface: #fff; --c-surface-2: #f8fafc; --c-border: #e3e8ef; --c-text: #0f1b2d; --c-muted: #64748b;
-      --c-brand: #1d4ed8; --c-brand-soft: #e8efff; --c-online: #16a34a;
+      --c-bg: var(--accent-softer); --c-surface: #fff; --c-surface-2: var(--accent-softer); --c-border: #e3e8ef; --c-text: var(--dark); --c-muted: #64748b;
+      --c-brand: var(--brass); --c-brand-soft: var(--accent-soft); --c-online: #16a34a;
       font-size: 14px; color: var(--c-text);
     }
     button { font: inherit; cursor: pointer; }
@@ -242,7 +242,7 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
       background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden;
       box-shadow: 0 24px 60px rgba(15, 27, 45, .22), 0 4px 16px rgba(15, 27, 45, .08); }
     .chat.max { width: min(1040px, calc(100vw - 44px)); height: min(720px, calc(100dvh - 44px)); }
-    .bar { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; height: 44px; background: #0f1b2d; color: #fff; flex: none; }
+    .bar { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; height: 44px; background: var(--dark); color: #fff; flex: none; }
     .bar .pi-comments { font-size: 1rem; opacity: .85; }
     .bar b { font-size: .92rem; }
     .bar-badge { background: #dc2626; border-radius: 999px; min-width: 20px; height: 20px; padding: 0 6px; font-size: .7rem; font-weight: 700; display: grid; place-items: center; }
@@ -317,7 +317,7 @@ interface Row { msg: ChatMessage; mine: boolean; day?: string; first: boolean; s
     .stamp { float: right; display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; margin: 6px 0 -2px 10px; color: var(--c-muted); }
     .mine .stamp { color: rgba(255, 255, 255, .78); }
     .stamp .pi { font-size: 10px; }
-    .ticks.read { color: #bfdbfe; }
+    .ticks.read { color: var(--accent-line); }
     .no-msgs { text-align: center; color: var(--c-muted); margin: 40px 0; }
     .typing { display: flex; gap: 4px; padding: 11px 13px; }
     .typing span { width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation: blink 1.2s infinite; }

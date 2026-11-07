@@ -40,15 +40,15 @@ import { bytesText, StorageService, StorageSummary } from '../pages/storage.serv
     .card { margin-bottom: 16px; }
     .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
     .head h2 { margin: 0 0 6px; font-size: 1.05rem; }
-    .head a { font-size: .86rem; font-weight: 600; color: #1d5fa3; text-decoration: none; white-space: nowrap; }
+    .head a { font-size: .86rem; font-weight: 600; color: var(--brand-deep); text-decoration: none; white-space: nowrap; }
     .line { font-size: .9rem; }
     .meter { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; margin: 6px 0 10px; }
-    .meter span { display: block; height: 100%; background: #2f6fe0; }
+    .meter span { display: block; height: 100%; background: var(--brass); }
     .meter.warn span { background: #d98a1e; }
     .meter.bad span { background: #c93c3c; }
     .facts { display: flex; gap: 6px 22px; flex-wrap: wrap; font-size: .86rem; color: var(--muted); }
     .facts b { color: var(--pine); }
-    .retry { background: none; border: 0; padding: 0; color: #1d5fa3; cursor: pointer; font: inherit; }
+    .retry { background: none; border: 0; padding: 0; color: var(--brand-deep); cursor: pointer; font: inherit; }
     :host ::ng-deep .sk { margin-bottom: 8px; }
   `,
 })

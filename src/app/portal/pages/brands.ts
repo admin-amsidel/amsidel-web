@@ -15,6 +15,7 @@ import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { BRAND_PALETTES, BrandPalette, STANDARD_LOOK } from '../brand-palette';
 import { DEFAULT_ZONE, TIME_ZONES, zoneLabel } from '../portal-time';
 import { AuthService } from '../auth.service';
 import { UploadLimits } from '../upload-limits.service';
@@ -92,6 +93,7 @@ import { PhoneInput, phoneProblem } from '../phone-input';
             </dd>
             <dt>Currency</dt><dd>{{ currencyLabel(b.currency) }}</dd>
             <dt>Time zone</dt><dd>{{ zoneLabel(b.timeZone) }}</dd>
+            <dt>Colours</dt><dd>@if (paletteOf(b.colorPalette); as p) { <span class="strip" [attr.aria-label]="p.name + ' colours'">@for (c of p.colors; track c) { <i [style.background]="c"></i> }</span> {{ p.name }} } @else { Standard }</dd>
             <dt>Online pay</dt>
             <dd>{{ b.razorpayReady ? 'Razorpay ' + (b.razorpayKeyId?.startsWith('rzp_live_') ? 'live' : 'test') + ' · ' + b.razorpayKeyId : 'Not set up' }}</dd>
           </dl>
@@ -152,6 +154,13 @@ import { PhoneInput, phoneProblem } from '../phone-input';
           <p-select inputId="b-zone" [options]="zones()" optionLabel="label" optionValue="value" appendTo="body" [filter]="true" filterPlaceholder="Search"
                     [ngModel]="timeZone()" (ngModelChange)="timeZone.set($event)" />
           <small class="hint">Sets the top bar clock, meeting calendar and meeting reminders for this brand's people. Other dates and times are not affected yet.</small></div>
+        <div class="pf"><label for="b-pal">Colour palette</label>
+          <p-select inputId="b-pal" [options]="palettes" optionLabel="name" optionValue="code" appendTo="body"
+                    [ngModel]="palette()" (ngModelChange)="palette.set($event)">
+            <ng-template #selectedItem let-p><span class="pal-row"><span class="strip">@for (c of p.colors; track c) { <i [style.background]="c"></i> }</span> {{ p.name }}</span></ng-template>
+            <ng-template #item let-p><span class="pal-row"><span class="strip">@for (c of p.colors; track c) { <i [style.background]="c"></i> }</span> {{ p.name }}</span></ng-template>
+          </p-select>
+          <small class="hint">The brand's people see the portal in these colours once they sign in. Group-level people, the sign-in page and the public website stay as they are.</small></div>
         <fieldset class="bank span">
           <legend>Bank details for invoices</legend>
           <div class="pf"><label for="b-acc">Bank account no</label>
@@ -227,6 +236,9 @@ import { PhoneInput, phoneProblem } from '../phone-input';
     </p-dialog>
   `,
   styles: `
+    .strip { display: inline-flex; height: 16px; border-radius: 4px; overflow: hidden; vertical-align: middle; border: 1px solid var(--line); flex: none; }
+    .strip i { display: block; width: 10px; }
+    .pal-row { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
     .brand { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: var(--shadow);
       border-top: 3px solid var(--brass); }
@@ -305,6 +317,8 @@ export class Brands implements OnInit {
   protected readonly qrBusy = signal(false);
   protected readonly currency = signal('INR');
   protected readonly currencies = CURRENCIES;
+  protected readonly palettes: BrandPalette[] = [STANDARD_LOOK, ...BRAND_PALETTES];
+  protected readonly palette = signal(STANDARD_LOOK.code);
   protected readonly timeZone = signal(DEFAULT_ZONE);
   protected readonly zoneLabel = zoneLabel;
   /** The usual choices, and this brand's own if it has another. */
@@ -323,6 +337,10 @@ export class Brands implements OnInit {
 
   protected logo(b: Brand): string | null {
     return brandLogoUrl(b.id, b.logoUpdatedAt, API_BASE);
+  }
+
+  protected paletteOf(code: string | null | undefined): BrandPalette | undefined {
+    return BRAND_PALETTES.find((p) => p.code === code);
   }
 
   protected currencyLabel(code: string | null | undefined): string {
@@ -354,6 +372,7 @@ export class Brands implements OnInit {
     this.rzKey.set(b?.razorpayKeyId ?? '');
     this.currency.set(b?.currency ?? 'INR');
     this.timeZone.set(b?.timeZone ?? DEFAULT_ZONE);
+    this.palette.set(b?.colorPalette ?? STANDARD_LOOK.code);
     this.rzSecret.set('');
     this.open.set(true);
   }
@@ -481,13 +500,14 @@ export class Brands implements OnInit {
     const body = {
       name: this.name().trim(), code: this.code().trim(), active: this.active(), address: this.address().trim(),
       launchedDate: toIsoDate(this.launched()), owners: this.owners(), gstNumber: gst, category: (this.category() ?? '').trim(),
-      contactNumber: phone, email, bankAccount, ifsc, upi, currency: this.currency(), timeZone: this.timeZone(),
+      contactNumber: phone, email, bankAccount, ifsc, upi, currency: this.currency(), timeZone: this.timeZone(), colorPalette: this.palette() === STANDARD_LOOK.code ? '' : this.palette(),
     };
     const zoneBefore = this.editing()?.timeZone ?? DEFAULT_ZONE;
+    const paletteBefore = this.editing()?.colorPalette ?? STANDARD_LOOK.code;
     this.staff.saveBrand(body, this.editing()?.id).subscribe({
       next: (b) => {
         // my own clock and calendar may follow this brand; everyone else's follow when they next open the portal
-        if (zoneBefore !== this.timeZone()) this.auth.reloadAccess().subscribe();
+        if (zoneBefore !== this.timeZone() || paletteBefore !== this.palette()) this.auth.reloadAccess().subscribe();
         const f = this.file();
         if (!f) return this.done(b);
         this.staff.uploadBrandLogo(b.id, f).subscribe({

@@ -215,7 +215,7 @@ type ListedEmployee = Employee & { groupKey: string; groupLabel: string };
     .picked { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; font-size: .9rem; }
     .boss { display: block; color: var(--muted); font-size: .78rem; margin-top: 2px; }
     /* one heading row per brand */
-    :host ::ng-deep tr.grp > td { background: var(--accent-soft); padding: 0; border-top: 2px solid #cfe0f3; }
+    :host ::ng-deep tr.grp > td { background: var(--accent-soft); padding: 0; border-top: 2px solid var(--accent-line); }
     .grp-toggle { display: flex; align-items: center; width: 100%; padding: 10px 14px; border: 0; background: none; cursor: pointer;
       font: inherit; color: inherit; text-align: left; }
     .grp-toggle:hover { background: rgba(23, 59, 99, .05); }

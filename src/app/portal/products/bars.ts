@@ -36,7 +36,7 @@ export interface Bar {
     .top { display: flex; justify-content: space-between; gap: 12px; font-size: .88rem; }
     .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .top b { font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .track { height: 8px; border-radius: 6px; background: #e8f0f9; margin: 5px 0 3px; overflow: hidden; }
+    .track { height: 8px; border-radius: 6px; background: var(--accent-soft); margin: 5px 0 3px; overflow: hidden; }
     .fill { display: block; height: 100%; border-radius: 6px; min-width: 3px; transition: width .4s ease; }
     small { font-size: .74rem; }
     .more { margin: 10px 0 0; font-size: .8rem; }
@@ -45,7 +45,7 @@ export interface Bar {
 export class Bars {
   readonly data = input<Bar[]>([]);
   readonly label = input('Chart');
-  readonly color = input('#2f80d6');
+  readonly color = input('var(--brass)');
   readonly limit = input(10);
   readonly empty = input('Nothing in this period.');
   protected readonly money = rupeesRound;

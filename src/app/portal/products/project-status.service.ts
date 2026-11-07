@@ -145,7 +145,7 @@ export class ProjectStatusService {
     :host { display: block; }
     :host ::ng-deep .ph, .ph { display: block; width: 100%; height: 100%; }
     :host ::ng-deep .ph-img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: block; }
-    .ph--empty { display: grid; place-items: center; background: #f1f5f9; border-radius: 10px; color: #94a3b8; }
+    .ph--empty { display: grid; place-items: center; background: var(--accent-softer); border-radius: 10px; color: #94a3b8; }
   `,
 })
 export class ProjectPhoto {

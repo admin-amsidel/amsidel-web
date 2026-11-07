@@ -148,12 +148,12 @@ import { PayrollService } from './payroll.service';
       display: grid; gap: 4px; padding: 16px 18px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line);
       box-shadow: var(--shadow);
     }
-    .tile--accent { background: linear-gradient(135deg, #2f80d6, #1d5fa3); border-color: transparent; color: #fff; }
-    .tile--accent .lbl, .tile--accent .meta { color: #d6e8fb; }
+    .tile--accent { background: linear-gradient(135deg, var(--brass), var(--brand-deep)); border-color: transparent; color: #fff; }
+    .tile--accent .lbl, .tile--accent .meta { color: var(--accent-soft); }
     .lbl { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
     .big { font-size: 1.45rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
     .big small { font-size: .85rem; font-weight: 500; color: var(--muted); }
-    .tile--accent .big small { color: #d6e8fb; }
+    .tile--accent .big small { color: var(--accent-soft); }
     .meta { font-size: .8rem; color: var(--muted); }
     .filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
     .pick { flex: 0 1 240px; min-width: 0; }

@@ -5,7 +5,7 @@
 import { Component, computed, input } from '@angular/core';
 
 /** The dashboard's chart colours: done or received, waiting, and what is still to come. */
-export const CHART = { done: '#2f80d6', waiting: '#e39a2d', rest: '#e3effc', soft: '#a9cdf0' };
+export const CHART = { done: 'var(--brass)', waiting: 'var(--accent2)', rest: 'var(--accent-soft)', soft: 'var(--accent-line)' };
 
 /** A ring showing how far along something is; the number in the middle. */
 @Component({

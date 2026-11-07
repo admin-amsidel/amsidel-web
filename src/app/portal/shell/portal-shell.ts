@@ -3,7 +3,7 @@
  * Designed and developed by AMSIDEL Technologies.
  */
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, effect, inject, signal, untracked, ViewEncapsulation } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, signal, untracked, ViewEncapsulation } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -15,6 +15,7 @@ import { Menu, MenuModule } from 'primeng/menu';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../auth.service';
+import { applyBrandPalette } from '../brand-palette';
 import { BusyService } from '../busy';
 import { Avatar } from '../avatar';
 import { TeamChat } from '../chat/team-chat';
@@ -233,11 +234,11 @@ function sectionOf(path: string): Section {
     app-portal-shell::before {
       content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
       background:
-        radial-gradient(60% 55% at 0% 0%, #d6e9fb 0 38%, transparent 38.5%),
-        radial-gradient(85% 75% at 0% 0%, #e7f2fd 0 48%, transparent 48.5%),
-        radial-gradient(55% 60% at 100% 0%, #d9eafc 0 34%, transparent 34.5%),
-        radial-gradient(80% 85% at 100% 0%, #eaf4fe 0 46%, transparent 46.5%),
-        linear-gradient(180deg, #f7fbff 0%, var(--soft) 100%);
+        radial-gradient(60% 55% at 0% 0%, var(--accent-soft) 0 38%, transparent 38.5%),
+        radial-gradient(85% 75% at 0% 0%, var(--accent-soft) 0 48%, transparent 48.5%),
+        radial-gradient(55% 60% at 100% 0%, var(--accent-soft) 0 34%, transparent 34.5%),
+        radial-gradient(80% 85% at 100% 0%, var(--accent-softer) 0 46%, transparent 46.5%),
+        linear-gradient(180deg, var(--accent-softer) 0%, var(--soft) 100%);
     }
 
     /* top bar: white, blue underline */
@@ -249,7 +250,7 @@ function sectionOf(path: string): Section {
     }
     .p-top::after {
       content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
-      background: linear-gradient(90deg, var(--brass), #7db8f0 60%, transparent);
+      background: var(--top-strip, linear-gradient(90deg, var(--brass), var(--gold-hi) 60%, transparent));
     }
     .p-top .p-burger, .p-top .p-collapse { color: var(--pine); }
     .p-top .p-burger:hover, .p-top .p-collapse:hover { background: var(--accent-soft); color: var(--brass-dark); }
@@ -362,6 +363,9 @@ function sectionOf(path: string): Section {
 })
 export class PortalShell {
   protected readonly auth = inject(AuthService);
+  /** The portal in my brand's colours; group-level people and those whose brand chose none keep the standard look. */
+  private readonly brandColours = effect(() => applyBrandPalette(this.auth.access()?.palette));
+  private readonly leaving = inject(DestroyRef).onDestroy(() => applyBrandPalette(null));
   protected readonly credits = CREDITS;
   protected readonly busy = inject(BusyService);
   private readonly router = inject(Router);

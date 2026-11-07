@@ -215,8 +215,8 @@ type Show = 'ALL' | 'OPEN' | 'SHARED';
     .plist { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 4px; align-content: start; }
     .prow { width: 100%; display: flex; gap: 10px; justify-content: space-between; align-items: flex-start; text-align: left; padding: 10px; border: 1px solid transparent;
       border-radius: 10px; background: transparent; cursor: pointer; font: inherit; color: inherit; }
-    .prow:hover { background: #f8fafc; }
-    .prow.on { background: #eef4fc; border-color: #c7dbf3; }
+    .prow:hover { background: var(--accent-softer); }
+    .prow.on { background: var(--accent-softer); border-color: var(--accent-line); }
     .prow__main { display: grid; gap: 2px; min-width: 0; }
     .prow__main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .prow__end { display: grid; justify-items: end; gap: 6px; flex: none; }
@@ -260,13 +260,13 @@ type Show = 'ALL' | 'OPEN' | 'SHARED';
     :host ::ng-deep .stages { width: 100%; }
     .st-opt { display: inline-flex; align-items: center; gap: 8px; }
     .pick-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
-    .thumb { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #f8fafc; }
+    .thumb { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--accent-softer); }
     .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .thumb.add { display: grid; place-items: center; align-content: center; gap: 4px; cursor: pointer; color: #1d5fa3; font: inherit; font-size: .78rem; border-style: dashed; }
+    .thumb.add { display: grid; place-items: center; align-content: center; gap: 4px; cursor: pointer; color: var(--brand-deep); font: inherit; font-size: .78rem; border-style: dashed; }
     .thumb.add .pi { font-size: 1.3rem; }
     .x { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(15, 23, 42, .7); color: #fff;
       display: grid; place-items: center; cursor: pointer; font-size: .7rem; }
-    .back { border: 0; background: none; color: #1d5fa3; padding: 0; font: inherit; font-weight: 600; cursor: pointer; justify-self: start; }
+    .back { border: 0; background: none; color: var(--brand-deep); padding: 0; font: inherit; font-weight: 600; cursor: pointer; justify-self: start; }
     @media (max-width: 960px) {
       .layout { grid-template-columns: minmax(0, 1fr); }
       .list-card { position: static; max-height: none; }

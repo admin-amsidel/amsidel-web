@@ -312,7 +312,7 @@ type Show = 'ALL' | 'LOW' | 'OUT' | 'INACTIVE';
     .dr-title { min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
     .span-all { flex: 1 1 100%; line-height: 1.5; }
     .mq { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
-    .mq.in { color: #1d5fa3; }
+    .mq.in { color: var(--brand-deep); }
     .mq.out { color: #b45309; }
     .mbody a { margin-left: 6px; font-size: .85rem; }
     @media (max-width: 900px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .prices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

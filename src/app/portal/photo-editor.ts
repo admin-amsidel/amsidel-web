@@ -54,7 +54,7 @@ import { apiProblem, Employee } from './portal.models';
     .msg--err { color: #b3261e; }
     .ring {
       --tone: #e8890c; position: relative; display: inline-flex; padding: 6px; border-radius: 50%;
-      background: conic-gradient(var(--tone) calc(var(--p) * 1%), #e3ebf4 0);
+      background: conic-gradient(var(--tone) calc(var(--p) * 1%), var(--accent-soft) 0);
       transition: background .4s ease;
     }
     .ring::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fff; }

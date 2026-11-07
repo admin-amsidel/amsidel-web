@@ -128,7 +128,7 @@ import { TradeService } from './trade.service';
     .sum .due b { color: #b45309; }
     .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
     .list li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
-    .list li > i { color: #1d5fa3; margin-top: 3px; }
+    .list li > i { color: var(--brand-deep); margin-top: 3px; }
     .list li.void { opacity: .65; }
     .list li.void b { text-decoration: line-through; }
     .grow { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }

@@ -525,7 +525,7 @@ type LineShow = 'OPEN' | 'MATCHED' | 'ALL';
     .in { color: #1f7a45; }
     .out { color: #b3261e; }
     .due { color: #b45309; }
-    tr.total td { border-top: 2px solid var(--line); background: #f6f9fd; }
+    tr.total td { border-top: 2px solid var(--line); background: var(--accent-softer); }
     .gst { font-size: .82rem; margin: 12px 0 0; }
     .block { display: block; }
     .desc { max-width: 360px; overflow-wrap: anywhere; }
@@ -535,7 +535,7 @@ type LineShow = 'OPEN' | 'MATCHED' | 'ALL';
     .tip { font-size: .82rem; margin: 12px 0 0; }
     .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
     .list li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
-    .list li > i { color: #1d5fa3; margin-top: 3px; }
+    .list li > i { color: var(--brand-deep); margin-top: 3px; }
     .list li > i.in { color: #1f7a45; }
     .list li > i.out { color: #b3261e; }
     .grow { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }

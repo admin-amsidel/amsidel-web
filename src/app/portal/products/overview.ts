@@ -76,14 +76,14 @@ import { TradeService } from './trade.service';
         </section>
         <section class="p-card">
           <h2>Paid for goods, by supplier <small class="muted">6 months</small></h2>
-          <app-bars [data]="suppliers()" label="Bought by supplier" color="#1d5fa3" [limit]="6" empty="No purchases in these months." />
+          <app-bars [data]="suppliers()" label="Bought by supplier" color="var(--brand-deep)" [limit]="6" empty="No purchases in these months." />
         </section>
       </div>
 
       <div class="cols">
         <section class="p-card">
           <h2>Paid for goods, by item <small class="muted">6 months</small></h2>
-          <app-bars [data]="topItems()" label="Bought by item" color="#5a9be0" [limit]="8" empty="No purchases in these months." />
+          <app-bars [data]="topItems()" label="Bought by item" color="var(--brass)" [limit]="8" empty="No purchases in these months." />
         </section>
         <section class="p-card">
           <div class="sec-head"><h2>Running low</h2><a routerLink="/portal/products/items">All items</a></div>
@@ -128,8 +128,8 @@ import { TradeService } from './trade.service';
     .tile .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
     .tile .big { font-size: 1.35rem; font-weight: 600; }
     .tile .meta { font-size: .78rem; color: var(--muted); }
-    .tile--blue { background: linear-gradient(135deg, #1d5fa3, #2f80d6); border-color: transparent; color: #fff; }
-    .tile--blue .lbl, .tile--blue .meta { color: #d6e8fb; }
+    .tile--blue { background: linear-gradient(135deg, var(--brand-deep), var(--brass)); border-color: transparent; color: #fff; }
+    .tile--blue .lbl, .tile--blue .meta { color: var(--accent-soft); }
     .tile--warn .big { color: #b45309; }
     .tile--bad .big { color: #b3261e; }
     .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 20px; }
@@ -141,8 +141,8 @@ import { TradeService } from './trade.service';
     .month { display: grid; grid-template-rows: 1fr auto; height: 100%; gap: 6px; text-align: center; }
     .pair { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 100%; border-bottom: 1px solid var(--line); }
     .b { width: 38%; max-width: 22px; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .4s ease; }
-    .sales, .dot.sales { background: #1d5fa3; }
-    .buys, .dot.buys { background: #9cc6ef; }
+    .sales, .dot.sales { background: var(--brand-deep); }
+    .buys, .dot.buys { background: var(--gold-hi); }
     .month small { font-size: .74rem; color: var(--muted); }
     .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: .8rem; color: var(--muted); }
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }

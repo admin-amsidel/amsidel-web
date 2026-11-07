@@ -37,8 +37,8 @@
 /* the day's colour: with the approver, approved, working hours reached */
 .cell.st-wait { background: #fff4cc; }
 .cell.st-wait:hover { background: #ffedb0; }
-.cell.st-done { background: #e3effc; }
-.cell.st-done:hover { background: #d5e7fb; }
+.cell.st-done { background: var(--accent-soft); }
+.cell.st-done:hover { background: var(--accent-soft); }
 .cell.st-met { background: #d6f2de; }
 .cell.st-met:hover { background: #c6ecd2; }
 .cell.full { box-shadow: inset 3px 0 0 #dc2626; }
@@ -74,7 +74,7 @@
 .key { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(23, 59, 99, .18); }
 .key:not(:first-child) { margin-left: 10px; }
 .k-wait { background: #fff4cc; }
-.k-done { background: #e3effc; }
+.k-done { background: var(--accent-soft); }
 .k-met { background: #d6f2de; }
 .line.rej b, .line.rej em { opacity: .5; text-decoration: line-through; }
 .cell.mismatch { box-shadow: inset 0 0 0 2px #dc2626; }
@@ -88,9 +88,9 @@
 .flag.full { background: #fee2e2; color: #991b1b; }
 .flag.half { background: #fef3c7; color: #92400e; }
 .flag.pend { background: transparent; color: #b45309; padding-left: 0; text-transform: none; letter-spacing: 0; font-weight: 600; }
-.flag.leave { background: #e0f2fe; color: #075985; }
+.flag.leave { background: var(--accent-soft); color: var(--brand-deep); }
 .flag.holiday { background: #dcf1e3; color: #1f6b3e; max-width: 100%; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; }
-.flag.leave.pending { background: #f1f5f9; color: #475569; }
+.flag.leave.pending { background: var(--accent-softer); color: #475569; }
 
 .wk {
   display: grid; align-content: center; justify-items: center; gap: 1px; padding: 8px 6px; text-align: center;

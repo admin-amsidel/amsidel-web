@@ -214,12 +214,12 @@ import { PayslipSheet } from './payslip-sheet';
     .big { font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1.15; color: var(--ink); }
     .meta { font-size: .8rem; color: var(--muted); }
     /* thin 3px line bars */
-    :host ::ng-deep .bar3 { height: 3px; border-radius: 3px; background: #e6eef7; }
+    :host ::ng-deep .bar3 { height: 3px; border-radius: 3px; background: var(--accent-soft); }
     :host ::ng-deep .bar3 .p-progressbar-value { border-radius: 3px; }
-    :host ::ng-deep .bar3--plan .p-progressbar-value { background: #9fc6ef; }
+    :host ::ng-deep .bar3--plan .p-progressbar-value { background: var(--gold-hi); }
     :host ::ng-deep .bar3--earned .p-progressbar-value { background: #2fa84f; }
     :host ::ng-deep .bar3--tax .p-progressbar-value { background: #e0a526; }
-    :host ::ng-deep .bar3--balance .p-progressbar-value { background: #2f80d6; }
+    :host ::ng-deep .bar3--balance .p-progressbar-value { background: var(--brass); }
     .months__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
     .months__head h2 { margin: 0; font-size: 1.15rem; }
     .legend { font-size: .78rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
@@ -243,8 +243,8 @@ import { PayslipSheet } from './payslip-sheet';
     .lines td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
     .lines tfoot td { font-weight: 700; border-bottom: 0; }
     .net-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: baseline; margin-top: 16px; padding: 12px 14px;
-      background: #eef5fd; border-left: 3px solid #1d5fa3; border-radius: 6px; }
-    .net-row b { font-size: 1.1rem; color: #1d5fa3; }
+      background: var(--accent-softer); border-left: 3px solid var(--brand-deep); border-radius: 6px; }
+    .net-row b { font-size: 1.1rem; color: var(--brand-deep); }
     @media (max-width: 1100px) { .dash { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 760px) {
       .picker { display: grid; gap: 10px; }

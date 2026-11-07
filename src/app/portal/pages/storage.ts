@@ -161,7 +161,7 @@ const EFFECTS: Record<string, string> = {
     .meter-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
     .meter-head h2 { margin: 0; }
     .meter { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin: 8px 0 6px; }
-    .meter span { display: block; height: 100%; background: #2f6fe0; }
+    .meter span { display: block; height: 100%; background: var(--brass); }
     .meter.warn span { background: #d98a1e; }
     .meter.bad span { background: #c93c3c; }
     .none { margin: 0 0 8px; }

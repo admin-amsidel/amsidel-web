@@ -241,7 +241,7 @@ const GST_RATES = [0, 5, 12, 18, 28].map((r) => ({ label: r + '%', value: r }));
     dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 4px 0 0; font-size: .9rem; }
     dt { color: var(--muted); }
     dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-    .total { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 10px; background: #1d5fa3; color: #fff; }
+    .total { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 10px; background: var(--brand-deep); color: #fff; }
     .total b { font-size: 1.3rem; }
     .check { display: flex; gap: 10px; align-items: center; }
     @media (max-width: 1180px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }

@@ -107,6 +107,8 @@ export interface MyAccess {
   menus: MenuNode[];
   /** Their brand's time zone, else the company's. */
   timeZone?: string;
+  /** Their brand's colours; null = the standard look. */
+  palette?: string | null;
 }
 
 /** Body of POST/PUT /api/employees (password only when creating). */
@@ -162,6 +164,8 @@ export interface Brand {
   upiQrPayee: string | null;
   /** The currency its invoices, quotations and payslips show (INR, USD, EUR, GBP). */
   currency: string;
+  /** The colours its people see the portal in, a code from brand-palette.ts; null = the standard look. */
+  colorPalette: string | null;
   /** The time zone its people work in; null = the default (India). */
   timeZone: string | null;
   /** The brand's Razorpay account for bills paid online (the secret is never sent back). */

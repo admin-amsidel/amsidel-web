@@ -33,8 +33,8 @@ import { SalesFigures } from './sales-figures';
     .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
     .head h2 { margin: 0; font-size: 1.05rem; }
     .head h2 small { font-size: .76rem; font-weight: 400; }
-    .head a { font-size: .86rem; font-weight: 600; color: #1d5fa3; text-decoration: none; white-space: nowrap; }
-    .retry { background: none; border: 0; padding: 0; color: #1d5fa3; cursor: pointer; font: inherit; }
+    .head a { font-size: .86rem; font-weight: 600; color: var(--brand-deep); text-decoration: none; white-space: nowrap; }
+    .retry { background: none; border: 0; padding: 0; color: var(--brand-deep); cursor: pointer; font: inherit; }
   `,
 })
 export class ManualSalesCard {

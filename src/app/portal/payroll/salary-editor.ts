@@ -254,7 +254,7 @@ import { PayrollService } from './payroll.service';
     .cmp-row + .cmp-row { border-top: 1px solid var(--line); }
     .cmp-head { background: var(--accent-softer); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--pine); }
     .cmp-row.strong { font-weight: 700; }
-    .pick { color: #1d5fa3; font-weight: 700; }
+    .pick { color: var(--brand-deep); font-weight: 700; }
     .workings summary { cursor: pointer; font-size: .88rem; color: var(--pine); font-weight: 600; }
     .workings dl { margin-top: 10px; max-width: 520px; }
     .auto-tax { text-align: right; font-weight: 600; }
@@ -281,7 +281,7 @@ import { PayrollService } from './payroll.service';
     .note { margin: 0; font-size: .8rem; color: var(--muted); }
     .summary { position: sticky; top: 80px; display: grid; gap: 14px; }
     .net { display: grid; gap: 6px; text-align: center; }
-    .net__big { font-size: 2rem; color: #1d5fa3; font-variant-numeric: tabular-nums; line-height: 1.15; }
+    .net__big { font-size: 2rem; color: var(--brand-deep); font-variant-numeric: tabular-nums; line-height: 1.15; }
     .lbl { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
     .formula { font-size: .78rem; color: var(--muted); line-height: 1.5; }
     .figures h3 { font-size: .95rem; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; }

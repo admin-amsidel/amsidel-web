@@ -166,7 +166,7 @@ interface PersonGroup {
     :host ::ng-deep .search input { width: 100%; }
     .groups { display: grid; gap: 8px; }
     .group { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
-    .group.open { border-color: #b9d3ef; }
+    .group.open { border-color: var(--accent-line); }
     .g-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: 0; background: none;
       cursor: pointer; text-align: left; font: inherit; color: inherit; }
     .g-head:hover { background: var(--accent-softer); }
@@ -175,7 +175,7 @@ interface PersonGroup {
     .group.open .chev { transform: rotate(90deg); }
     .who { display: grid; min-width: 0; flex: 1 1 auto; }
     .who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .share { flex: 0 0 140px; height: 6px; border-radius: 999px; background: #e3ebf4; overflow: hidden; }
+    .share { flex: 0 0 140px; height: 6px; border-radius: 999px; background: var(--accent-soft); overflow: hidden; }
     .share > span { display: block; height: 100%; background: var(--brass); border-radius: inherit; }
     .g-hours { display: grid; justify-items: end; min-width: 64px; }
     .g-hours b { font-size: 1.05rem; }

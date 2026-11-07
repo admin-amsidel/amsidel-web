@@ -82,7 +82,7 @@
 }
 
 /* My leave: the period in force and today's date */
-.period { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 12px 16px; margin-bottom: 16px; background: var(--accent-softer); border: 1px solid #d6e4f5; border-radius: 10px; }
+.period { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 12px 16px; margin-bottom: 16px; background: var(--accent-softer); border: 1px solid var(--accent-line); border-radius: 10px; }
 .period span { display: grid; gap: 1px; }
 .period small { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .period b { font-size: .95rem; color: var(--ink); }

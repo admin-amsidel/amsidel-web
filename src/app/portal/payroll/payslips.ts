@@ -372,17 +372,17 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
       color: #3730a3; font-size: .85rem; line-height: 1.45; }
     .tax-note i { margin-top: 3px; }
     .tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
-    .tile--ok .big { color: #1d5fa3; }
+    .tile--ok .big { color: var(--brand-deep); }
     .credit { display: inline-flex; align-items: center; gap: 8px; }
-    .credit > i { color: #1d5fa3; }
+    .credit > i { color: var(--brand-deep); }
     .credit > span { display: grid; line-height: 1.2; }
     .credit small { font-size: .74rem; }
     .pay-bar { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; padding: 12px 14px;
       background: #fff8e8; border: 1px solid #f2dfb0; border-radius: 12px; }
     .pay-bar__title { display: grid; gap: 2px; flex: 1 1 100%; }
     .pay-bar__title small, .pay-bar--done small { color: var(--muted); font-size: .8rem; display: block; }
-    .pay-bar--done { align-items: center; background: #eef5fd; border-color: #b9d8f8; }
-    .pay-bar--done > i { font-size: 1.4rem; color: #1d5fa3; }
+    .pay-bar--done { align-items: center; background: var(--accent-softer); border-color: var(--accent-line); }
+    .pay-bar--done > i { font-size: 1.4rem; color: var(--brand-deep); }
     .pay-bar .pf { min-width: 150px; }
     .pay-bar .pf--wide { flex: 1 1 260px; }
     .pay-bar .pf--ref { flex: 1 1 240px; }
@@ -394,8 +394,8 @@ type Show = 'ALL' | 'TODO' | 'DRAFT' | 'AWAITING' | 'CREDITED';
     .bulk-form { display: grid; gap: 14px; }
     .tile { display: grid; gap: 4px; padding: 16px 18px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line);
       box-shadow: var(--shadow); }
-    .tile--accent { background: linear-gradient(135deg, #2f80d6, #1d5fa3); border-color: transparent; color: #fff; }
-    .tile--accent .lbl, .tile--accent .meta, .tile--accent .big small { color: #d6e8fb; }
+    .tile--accent { background: linear-gradient(135deg, var(--brass), var(--brand-deep)); border-color: transparent; color: #fff; }
+    .tile--accent .lbl, .tile--accent .meta, .tile--accent .big small { color: var(--accent-soft); }
     .lbl { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
     .big { font-size: 1.45rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
     .big small { font-size: .85rem; font-weight: 500; color: var(--muted); }

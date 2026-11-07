@@ -131,7 +131,7 @@ interface Scanned {
     .list { display: grid; gap: 8px; }
     .row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
     .name { display: grid; min-width: 0; }
-    .new { color: #1d5fa3; font-weight: 600; }
+    .new { color: var(--brand-deep); font-weight: 600; }
     :host ::ng-deep .qty input { width: 64px; text-align: center; }
     :host ::ng-deep .take input { width: 80px; text-align: right; }
     .note { width: 100%; }

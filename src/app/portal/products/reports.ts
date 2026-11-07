@@ -190,10 +190,10 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
         </div>
       </section>
       <div class="cols">
-        <section class="p-card"><h2>By supplier</h2><app-bars [data]="bars(r.bySupplier, 'bills')" label="By supplier" color="#1d5fa3" /></section>
-        <section class="p-card"><h2>By product type</h2><app-bars [data]="bars(r.byType, 'qty')" label="By product type" color="#2f80d6" /></section>
+        <section class="p-card"><h2>By supplier</h2><app-bars [data]="bars(r.bySupplier, 'bills')" label="By supplier" color="var(--brand-deep)" /></section>
+        <section class="p-card"><h2>By product type</h2><app-bars [data]="bars(r.byType, 'qty')" label="By product type" color="var(--brass)" /></section>
       </div>
-      <section class="p-card"><h2>By item</h2><app-bars [data]="bars(r.byItem, 'qty')" label="By item" color="#5a9be0" [limit]="15" /></section>
+      <section class="p-card"><h2>By item</h2><app-bars [data]="bars(r.byItem, 'qty')" label="By item" color="var(--brass)" [limit]="15" /></section>
     }
 
     <!-- ===== stock ===== -->
@@ -309,8 +309,8 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
     .tile .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
     .tile .big { font-size: 1.4rem; font-weight: 600; }
     .tile .meta { font-size: .78rem; color: var(--muted); }
-    .tile--blue { background: linear-gradient(135deg, #1d5fa3, #2f80d6); border-color: transparent; color: #fff; }
-    .tile--blue .lbl, .tile--blue .meta { color: #d6e8fb; }
+    .tile--blue { background: linear-gradient(135deg, var(--brand-deep), var(--brass)); border-color: transparent; color: #fff; }
+    .tile--blue .lbl, .tile--blue .meta { color: var(--accent-soft); }
     .tile--warn .big { color: #b45309; }
     .tile--bad .big { color: #b3261e; }
     :host ::ng-deep .views { margin-bottom: 14px; }
@@ -321,15 +321,15 @@ type BuyBy = 'supplier' | 'type' | 'item' | 'lines';
     tr.void { opacity: .6; }
     :host ::ng-deep .tiny { font-size: .66rem; padding: 1px 6px; margin-left: 4px; }
     .share { width: 160px; }
-    .track { display: block; height: 8px; border-radius: 6px; background: #e8f0f9; overflow: hidden; }
-    .fill { display: block; height: 100%; background: #2f80d6; border-radius: 6px; min-width: 2px; }
+    .track { display: block; height: 8px; border-radius: 6px; background: var(--accent-soft); overflow: hidden; }
+    .fill { display: block; height: 100%; background: var(--brass); border-radius: 6px; min-width: 2px; }
     .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 20px; }
     .cols > .p-card { margin-top: 0; }
     .months { display: flex; gap: 10px; align-items: flex-end; height: 230px; overflow-x: auto; padding-top: 8px; }
     .month { flex: 1 0 54px; display: grid; grid-template-rows: auto 1fr auto; height: 100%; gap: 4px; text-align: center; }
     .month .val { font-size: .7rem; color: var(--muted); white-space: nowrap; }
     .col { display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--line); }
-    .col .b { width: 60%; max-width: 34px; background: linear-gradient(180deg, #2f80d6, #1d5fa3); border-radius: 4px 4px 0 0; min-height: 2px; }
+    .col .b { width: 60%; max-width: 34px; background: linear-gradient(180deg, var(--brass), var(--brand-deep)); border-radius: 4px 4px 0 0; min-height: 2px; }
     .month small { font-size: .72rem; color: var(--muted); white-space: nowrap; }
     .owed { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
     .owed li { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--line); }

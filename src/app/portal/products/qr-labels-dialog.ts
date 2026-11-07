@@ -63,7 +63,7 @@ import { saveFile, TradeService } from './trade.service';
     .list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
     .list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 12px; }
     .list li + li { border-top: 1px solid var(--line); }
-    .list li.on { background: #f3f8fe; }
+    .list li.on { background: var(--accent-softer); }
     .name { display: grid; min-width: 0; }
     :host ::ng-deep .copies input { width: 56px; text-align: center; }
     .muted { color: var(--muted); }

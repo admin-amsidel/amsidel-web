@@ -369,7 +369,7 @@ import { TradeService } from './trade.service';
     .commission { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 14px 0 0; }
     .commission legend { font-size: .82rem; font-weight: 600; color: var(--pine); padding: 0 6px; }
     .su-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-    .su-open { font-size: .86rem; font-weight: 600; color: #1d5fa3; text-decoration: none; white-space: nowrap; }
+    .su-open { font-size: .86rem; font-weight: 600; color: var(--brand-deep); text-decoration: none; white-space: nowrap; }
     .su-share { margin: 0 0 10px; font-size: .85rem; }
     .su { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
     .su li { display: flex; gap: 10px; align-items: flex-start; }
