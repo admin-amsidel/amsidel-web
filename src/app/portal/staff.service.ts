@@ -101,7 +101,7 @@ export class StaffService {
     return this.http.get<UserType[]>(`${API_BASE}/api/user-types`);
   }
 
-  saveUserType(body: { name: string; baseRole: string; description: string | null; active: boolean }, id?: number): Observable<UserType> {
+  saveUserType(body: { name: string; baseRole: string; description: string | null; active: boolean; brandId?: number | null }, id?: number): Observable<UserType> {
     return id ? this.http.put<UserType>(`${API_BASE}/api/user-types/${id}`, body) : this.http.post<UserType>(`${API_BASE}/api/user-types`, body);
   }
 

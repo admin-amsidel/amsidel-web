@@ -14,7 +14,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { AuthService } from '../auth.service';
 import { AccessSubject, MenuAccessEntry, MenuAccessService } from '../menu-access.service';
 import { apiProblem, Employee, MenuNode, ROLE_LABELS, UserType } from '../portal.models';
-import { UserTypesDialog } from './user-types-dialog';
+import { RouterLink } from '@angular/router';
 import { StaffService } from '../staff.service';
 import { ExcelButton, ExcelColumn } from '../excel-export';
 
@@ -30,7 +30,7 @@ const BUILT_IN_SUBJECTS: Subject[] = (['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'] 
 function typeSubjects(types: UserType[]): Subject[] {
   return types.map((t) => ({
     type: 'ROLE' as const, key: t.code, label: t.name, locked: t.baseRole === 'OWNER',
-    hint: t.builtIn ? HINTS[t.code] ?? '' : `${ROLE_LABELS[t.baseRole]} level · ${t.employees} ${t.employees === 1 ? 'person' : 'people'}${t.active ? '' : ' · switched off'}`,
+    hint: t.builtIn ? HINTS[t.code] ?? '' : `${ROLE_LABELS[t.baseRole]} level${t.brandCode ? ' · ' + t.brandCode : ''} · ${t.employees} ${t.employees === 1 ? 'person' : 'people'}${t.active ? '' : ' · switched off'}`,
   }));
 }
 
@@ -47,13 +47,13 @@ const ALL = '*';
 
 /**
  * Menu access: which menus each user type, designation and specific person may open, by checkpoint number.
- * Ticking a menu gives all its sub-menus; "Every menu" gives "*". A person with menus of their own gets only
+ * Ticking a menu ticks each of its sub-menus, which can then be unticked one by one; "Every menu" gives "*". A person with menus of their own gets only
  * those; anyone else gets their user type's menus plus their designation's. Saving needs the Owner or Admin user
  * type (the backend checks it too).
  */
 @Component({
   selector: 'app-menu-access',
-  imports: [ExcelButton, FormsModule, ButtonModule, CheckboxModule, MessageModule, SelectModule, ToggleSwitchModule, UserTypesDialog],
+  imports: [ExcelButton, FormsModule, ButtonModule, CheckboxModule, MessageModule, SelectModule, ToggleSwitchModule, RouterLink],
   template: `
     <div class="p-head">
       <div>
@@ -72,7 +72,7 @@ const ALL = '*';
     <div class="ma">
       <section class="p-card who">
         <div class="h2row"><h2>User types</h2>
-          @if (canSave()) { <p-button label="Manage" ariaLabel="Manage user types" icon="pi pi-cog" size="small" [text]="true" (onClick)="typesDialog().show()" /> }</div>
+          @if (auth.can('USER_TYPES')) { <p-button label="Manage" ariaLabel="Manage portal access roles" icon="pi pi-cog" size="small" [text]="true" routerLink="/portal/admin/roles" /> }</div>
         <div class="list">
           @for (s of roleSubjects(); track s.key) {
             <button type="button" class="subj" [class.on]="isSelected(s)" (click)="select(s)">
@@ -133,7 +133,7 @@ const ALL = '*';
             @for (m of menus(); track m.code) {
               <li>
                 <label class="row top" [for]="'ma-' + m.code">
-                  <p-checkbox [inputId]="'ma-' + m.code" [binary]="true" [ngModel]="covers(m)" (ngModelChange)="toggle(m, $event)"
+                  <p-checkbox [inputId]="'ma-' + m.code" [binary]="true" [ngModel]="topOn(m)" [indeterminate]="topSome(m)" (ngModelChange)="toggle(m, $event)"
                               [disabled]="readOnly() || all()" />
                   <i [class]="'pi ' + (m.icon ?? 'pi-folder')" aria-hidden="true"></i>
                   <span class="name"><b>{{ m.name }}</b><small>{{ m.description }}</small></span>
@@ -144,8 +144,8 @@ const ALL = '*';
                     @for (c of m.children; track c.code) {
                       <li>
                         <label class="row" [for]="'ma-' + c.code">
-                          <p-checkbox [inputId]="'ma-' + c.code" [binary]="true" [ngModel]="covers(c, m)" (ngModelChange)="toggle(c, $event)"
-                                      [disabled]="readOnly() || all() || (has(m) && !c.ownTick)" />
+                          <p-checkbox [inputId]="'ma-' + c.code" [binary]="true" [ngModel]="covers(c, m)" (ngModelChange)="toggle(c, $event, m)"
+                                      [disabled]="readOnly() || all()" />
                           <i [class]="'pi ' + (c.icon ?? 'pi-circle')" aria-hidden="true"></i>
                           <span class="name"><b>{{ c.name }}</b>@if (c.ownTick) { <small class="own">its own tick</small> }<small>{{ c.description }}</small></span>
                           <code>{{ c.checkpoint }}</code>
@@ -169,7 +169,6 @@ const ALL = '*';
       </section>
     </div>
   
-    <app-user-types-dialog (changed)="reloadTypes()" />
   `,
   styles: `
     .own { color: #b45309; font-weight: 600; }
@@ -215,7 +214,7 @@ const ALL = '*';
 export class MenuAccessPage implements OnInit {
   private readonly service = inject(MenuAccessService);
   private readonly staff = inject(StaffService);
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly toast = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
 
@@ -242,7 +241,6 @@ export class MenuAccessPage implements OnInit {
       .map((e) => ({ value: e.id, label: `${e.name} · ${e.empNumber}`, search: `${e.name} ${e.empNumber} ${e.userId}` }));
   });
   protected readonly roleSubjects = signal<Subject[]>(BUILT_IN_SUBJECTS);
-  protected readonly typesDialog = viewChild.required(UserTypesDialog);
   protected readonly error = signal('');
   protected readonly selected = signal<Subject | null>(null);
   /** The ticked checkpoints of the selected subject, not yet saved. */
@@ -352,15 +350,47 @@ export class MenuAccessPage implements OnInit {
     return this.draft().has(String(m.checkpoint));
   }
 
-  protected toggle(m: MenuNode, on: boolean): void {
+  /** The sub-menus a tick on their menu gives (not those with their own tick). */
+  private subs(m: MenuNode): MenuNode[] {
+    return m.children.filter((c) => !c.ownTick);
+  }
+
+  /** A main menu is ticked when it is given whole or all its sub-menus are; half when only some are. */
+  protected topOn(m: MenuNode): boolean {
+    const subs = this.subs(m);
+    return this.covers(m) || (subs.length > 0 && subs.every((c) => this.covers(c, m)));
+  }
+
+  protected topSome(m: MenuNode): boolean {
+    return !this.topOn(m) && this.subs(m).some((c) => this.covers(c, m));
+  }
+
+  /**
+   * A main menu ticks or unticks each of its sub-menus; a sub-menu is ticked or unticked on its own. Each sub-menu is
+   * saved by its own checkpoint, so leaving one out leaves out only that one. A menu given whole before (its own checkpoint)
+   * is split into its sub-menus the first time one of them is unticked. A main menu that is a page itself keeps its checkpoint.
+   */
+  protected toggle(m: MenuNode, on: boolean, parent?: MenuNode): void {
     this.draft.update((d) => {
       const next = new Set(d);
-      if (on) {
-        next.add(String(m.checkpoint));
-        // the parent's checkpoint covers its sub-menus (but not one with its own tick)
-        m.children.filter((c) => !c.ownTick).forEach((c) => next.delete(String(c.checkpoint)));
+      const key = String(m.checkpoint);
+      if (parent) {
+        const parentKey = String(parent.checkpoint);
+        if (!m.ownTick && next.has(parentKey) && !parent.path) {
+          next.delete(parentKey);
+          this.subs(parent).forEach((c) => next.add(String(c.checkpoint)));
+        }
+        if (on) next.add(key);
+        else next.delete(key);
       } else {
-        next.delete(String(m.checkpoint));
+        const subs = this.subs(m);
+        if (on) {
+          if (m.path || !subs.length) next.add(key);
+          subs.forEach((c) => next.add(String(c.checkpoint)));
+        } else {
+          next.delete(key);
+          subs.forEach((c) => next.delete(String(c.checkpoint)));
+        }
       }
       return next;
     });

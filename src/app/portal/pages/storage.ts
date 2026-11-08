@@ -18,6 +18,8 @@ import { apiProblem } from '../portal.models';
 import { bytesText, FileFilter, StorageService, StorageSummary, StoredFileRow } from './storage.service';
 import { EMPTY, expand, Observable, reduce } from 'rxjs';
 import { ExcelButton, ExcelColumn } from '../excel-export';
+import { zoneDateTime } from '../portal-time';
+import { AuthService } from '../auth.service';
 
 /** What goes wrong for people when a file of this kind is deleted; said before it is. */
 const EFFECTS: Record<string, string> = {
@@ -44,6 +46,10 @@ const EFFECTS: Record<string, string> = {
       <div>
         <h1>Storage</h1>
         <p>How much space is used, and every stored file with its size, type and owner.</p>
+        @if (s(); as sum) {
+          <p class="updated"><i class="pi pi-clock" aria-hidden="true"></i> Figures last updated <b>{{ when(sum.updatedAt) }}</b>@if (sum.nextUpdateAt) { · next update {{ when(sum.nextUpdateAt) }}}@else { · the update job is switched off}.
+            The figures are measured three times a day; Refresh measures now. The list of files below is always as it is now.</p>
+        }
       </div>
       <div class="head-actions">
         <p-button label="Refresh" icon="pi pi-refresh" [outlined]="true" [loading]="refreshing()" (onClick)="loadSummary(true)" />
@@ -161,6 +167,9 @@ const EFFECTS: Record<string, string> = {
     </section>
   `,
   styles: `
+    .updated { margin-top: 6px; font-size: .84rem; color: var(--muted); }
+    .updated .pi { margin-right: 4px; }
+    .updated b { color: var(--ink); }
     .meter-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
     .meter-head h2 { margin: 0; }
     .meter { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin: 8px 0 6px; }
@@ -202,6 +211,12 @@ const EFFECTS: Record<string, string> = {
   `,
 })
 export class Storage implements OnInit {
+  private readonly zoneAuth = inject(AuthService);
+  /** 9 Nov, 8:00 AM, in the person's time zone. */
+  protected when(at: string): string {
+    return zoneDateTime(at, this.zoneAuth.zone(), false) ?? "";
+  }
+
   private readonly api = inject(StorageService);
   private readonly confirm = inject(ConfirmationService);
   private readonly toast = inject(MessageService);

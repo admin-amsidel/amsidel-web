@@ -55,8 +55,32 @@ export class AuthService {
   /** The load from the server behind last time's menus, while they are in use. */
   private fresh$: Observable<MyAccess | null> | null = null;
 
+  /** When my menus were last asked of the server. */
+  private accessCheckedAt = 0;
+
   constructor() {
     this.armExpiry(this.session());
+    // menus changed by an admin reach an open tab when it is used again (back to the tab), at most once a minute
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') this.recheckAccess();
+      });
+    }
+  }
+
+  /** My menus asked again quietly, when the last ask is over a minute old; the page follows if they changed. */
+  private recheckAccess(): void {
+    if (!this.isLoggedIn() || !this.access() || Date.now() - this.accessCheckedAt < 60_000) return;
+    this.accessCheckedAt = Date.now();
+    this.http.get<MyAccess>(`${API_BASE}/api/auth/access`, { context: silent() }).subscribe({
+      next: (a) => {
+        if (JSON.stringify(a) !== JSON.stringify(this.access())) {
+          this.access.set(a);
+          saveAccess(this.user()?.id, a);
+        }
+      },
+      error: () => {},
+    });
   }
 
   /** May I open this menu (a code such as TASKS)? */
@@ -72,6 +96,7 @@ export class AuthService {
       const cached = this.access();
       const load$ = this.http.get<MyAccess>(`${API_BASE}/api/auth/access`, cached ? { context: silent() } : {}).pipe(
         tap((a) => {
+          this.accessCheckedAt = Date.now();
           this.access.set(a);
           this.accessDenied.set(null);
           saveAccess(this.user()?.id, a);

@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AuthService } from '../auth.service';
 import { bytesText, StorageService, StorageSummary } from '../pages/storage.service';
+import { zoneDateTime } from '../portal-time';
 
 /** The Overview's view of storage, loading on its own: how full the database is and what takes the space. */
 @Component({
@@ -29,6 +30,7 @@ import { bytesText, StorageService, StorageSummary } from '../pages/storage.serv
           <span><b>{{ v.filesThisMonth }}</b> added this month, {{ size(v.bytesThisMonth) }}</span>
           @if (v.byCategory.length) { <span>Largest: <b>{{ v.byCategory[0].label }}</b>, {{ size(v.byCategory[0].bytes) }}</span> }
         </div>
+        <small class="updated">Updated {{ when(v.updatedAt) }}@if (v.nextUpdateAt) { · next {{ when(v.nextUpdateAt) }} }</small>
       } @else if (failed()) {
         <p class="muted">Could not load the figures. <button type="button" class="retry" (click)="load()">Retry</button></p>
       } @else {
@@ -37,6 +39,7 @@ import { bytesText, StorageService, StorageSummary } from '../pages/storage.serv
     </section>
   `,
   styles: `
+    .updated { display: block; margin-top: 6px; font-size: .76rem; color: var(--muted); }
     .card { margin-bottom: 16px; }
     .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
     .head h2 { margin: 0 0 6px; font-size: 1.05rem; }
@@ -53,6 +56,11 @@ import { bytesText, StorageService, StorageSummary } from '../pages/storage.serv
   `,
 })
 export class StorageCard implements OnInit {
+  /** 9 Nov, 8:00 AM, in the person's time zone. */
+  protected when(at: string): string {
+    return zoneDateTime(at, this.auth.zone(), false) ?? "";
+  }
+
   private readonly api = inject(StorageService);
   protected readonly auth = inject(AuthService);
   protected readonly size = bytesText;

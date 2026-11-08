@@ -28,6 +28,9 @@ export interface StorageSummary {
   tables: StorageTable[];
   brands: StorageBrand[];
   categories: { value: string; label: string }[];
+  /** When these figures were measured (the scheduled job, three times a day, or Refresh); when the job runs next (null: stopped). */
+  updatedAt: string;
+  nextUpdateAt: string | null;
   canDelete: boolean;
 }
 

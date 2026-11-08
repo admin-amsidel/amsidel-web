@@ -49,19 +49,20 @@
         }
 
         <div class="pf">
-          <label for="f-role">Role (portal access) *</label>
-          <p-select inputId="f-role" formControlName="userTypeId" [options]="roleOptions()" optionLabel="label" optionValue="value"
-                    (onChange)="pickUserType($event.value)" placeholder="Choose the user type" />
-          @if (isSelf()) { <small class="hint">You cannot change your own role.</small> }
-          @else { <small class="hint">User types are managed (added, removed) on the Menu access page.</small> }
+          <label for="f-brand">Brand *</label>
+          <p-select inputId="f-brand" formControlName="brandId" [options]="brandOptions()" optionLabel="label" optionValue="value"
+                    placeholder="Choose the brand first"
+                    [invalid]="!!brandError()" />
+          @if (brandError(); as m) { <small class="error">{{ m }}</small> }
         </div>
 
         <div class="pf">
-          <label for="f-brand">Brand</label>
-          <p-select inputId="f-brand" formControlName="brandId" [options]="brandOptions()" optionLabel="label" optionValue="value"
-                    [showClear]="groupLevelAllowed()" [placeholder]="groupLevelAllowed() ? 'Group level (all brands)' : 'Choose a brand'"
-                    [invalid]="!!brandError()" />
-          @if (brandError(); as m) { <small class="error">{{ m }}</small> }
+          <label for="f-role">Role (portal access) *</label>
+          <p-select inputId="f-role" formControlName="userTypeId" [options]="roleOptions()" optionLabel="label" optionValue="value"
+                    (onChange)="pickUserType($event.value)" [placeholder]="brandChosen() ? 'Choose the role' : 'Choose the brand first'" />
+          @if (isSelf()) { <small class="hint">You cannot change your own role.</small> }
+          @else if (!brandChosen()) { <small class="hint">Choose the brand first: the roles shown are those for all brands and that brand's own.</small> }
+          @else { <small class="hint">Roles for all brands and the chosen brand's own (Administration › Portal access roles).</small> }
         </div>
       </div>
     </section>

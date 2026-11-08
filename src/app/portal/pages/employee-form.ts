@@ -43,11 +43,15 @@ function pastDate(c: AbstractControl<Date | null>): ValidationErrors | null {
   return c.value && toIsoDate(c.value)! >= toIsoDate(new Date())! ? { future: true } : null;
 }
 
+/** In the brand list: group level (no brand), chosen on purpose. Saved as no brand. */
+const GROUP_LEVEL = 0;
+
 /** Managers and employees belong to a brand; only owners and admins can be group level. */
 function staffNeedsBrand(g: AbstractControl): ValidationErrors | null {
   const role = g.get('role')?.value as Role;
   const isStaff = role === 'MANAGER' || role === 'EMPLOYEE';
-  return isStaff && g.get('brandId')?.value == null ? { brand: true } : null;
+  const brand = g.get('brandId')?.value;
+  return isStaff && (brand == null || brand === GROUP_LEVEL) ? { brand: true } : null;
 }
 
 /** Add an employee, or view / edit one (route /portal/employees/new or /portal/employees/:id). */
@@ -209,19 +213,40 @@ export class EmployeeForm implements OnInit {
     this.documents.status(id).subscribe({ next: (s) => this.status.set(s), error: () => this.status.set(null) });
   }
 
+  /** What the brand list holds: a brand, GROUP_LEVEL, or nothing chosen yet. */
+  private readonly brandRaw = toSignal(this.form.controls.brandId.valueChanges, { initialValue: this.form.controls.brandId.value });
+  /** The brand chosen; null for group level (or nothing chosen yet). */
+  private readonly brandValue = computed(() => (this.brandRaw() === GROUP_LEVEL ? null : this.brandRaw()));
+  /** The brand (or group level) is chosen first; the roles follow it. */
+  protected readonly brandChosen = computed(() => this.brandRaw() != null);
   /** The user types I may give: owners all, admins those on the manager and employee levels; active ones, plus the person's own. */
   protected readonly userTypes = signal<UserType[]>([]);
   protected readonly roleOptions = computed(() => {
     const owner = this.me()?.role === 'OWNER';
     const current = this.employee()?.userTypeId ?? this.builtIn(this.employee()?.role)?.id;
+    if (!this.brandChosen()) return [];
+    const group = this.brandRaw() === GROUP_LEVEL;
     return this.userTypes()
-      .filter((t) => t.id === current || (t.active && (owner || t.baseRole === 'MANAGER' || t.baseRole === 'EMPLOYEE')))
-      .map((t) => ({ value: t.id, label: t.builtIn ? t.name : `${t.name} · ${ROLE_LABELS[t.baseRole]} level` }));
+      .filter((t) => t.id === current || (t.active && (owner || t.baseRole === 'MANAGER' || t.baseRole === 'EMPLOYEE')
+        && (t.brandId == null || t.brandId === this.brandValue())
+        // group level: only the owner and admin levels (managers and employees belong to a brand)
+        && (!group || t.baseRole === 'OWNER' || t.baseRole === 'ADMIN')))
+      .map((t) => ({ value: t.id, label: t.builtIn ? t.name : `${t.name} · ${ROLE_LABELS[t.baseRole]} level${t.brandCode ? ' · ' + t.brandCode : ''}` }));
   });
 
   private builtIn(role: Role | undefined | null): UserType | undefined {
     return role ? this.userTypes().find((t) => t.builtIn && t.code === role) : undefined;
   }
+
+  /** The role chosen before may not fit the brand chosen now (another brand's, or a staff level at group level): it is cleared. */
+  private readonly roleFitsBrand = effect(() => {
+    const options = this.roleOptions();
+    const control = this.form.controls.userTypeId;
+    const id = untracked(() => control.value);
+    if (id != null && this.brandChosen() && !options.some((o) => o.value === id)) {
+      untracked(() => control.setValue(null));
+    }
+  });
 
   /** A user type chosen: its access level becomes the role (brand rules follow it). */
   protected pickUserType(id: number | null): void {
@@ -241,7 +266,6 @@ export class EmployeeForm implements OnInit {
       .sort((a, b) => (a.brandId == null ? 1 : 0) - (b.brandId == null ? 1 : 0))
       .map((d) => ({ value: d.id, label: designationOption(d) + (d.active ? '' : ' (no longer used)') }));
   });
-  private readonly brandValue = toSignal(this.form.controls.brandId.valueChanges, { initialValue: this.form.controls.brandId.value });
 
   /** Someone of the chosen brand or a group-level person (or everyone, for a group-level person), most senior first. */
   private candidates(keep: number | null | undefined): { value: number; label: string }[] {
@@ -262,15 +286,16 @@ export class EmployeeForm implements OnInit {
   protected readonly brandOptions = computed(() => {
     const me = this.me();
     const current = this.employee()?.brandId;
-    return this.brands()
-      .filter((b) => (me?.role !== 'OWNER' && me?.brandId != null ? b.id === me.brandId : b.active || b.id === current))
-      .map((b) => ({ value: b.id, label: b.name + (b.active ? '' : ' (inactive)') }));
+    return [
+      ...(this.groupLevelAllowed() || (this.employee() && this.employee()!.brandId == null) ? [{ value: GROUP_LEVEL, label: 'Group level (no brand: owners and admins)' }] : []),
+      ...this.brands()
+        .filter((b) => (me?.role !== 'OWNER' && me?.brandId != null ? b.id === me.brandId : b.active || b.id === current))
+        .map((b) => ({ value: b.id, label: b.name + (b.active ? '' : ' (inactive)') })),
+    ];
   });
 
-  protected readonly groupLevelAllowed = computed(() => {
-    const role = this.role();
-    return this.me()?.role === 'OWNER' && (role === 'OWNER' || role === 'ADMIN');
-  });
+  /** Only owners make group-level people (owners and admins without a brand). */
+  protected readonly groupLevelAllowed = computed(() => this.me()?.role === 'OWNER');
 
   ngOnInit(): void {
 
@@ -354,7 +379,7 @@ export class EmployeeForm implements OnInit {
       userId: v.userId,
       role: v.role,
       userTypeId: v.userTypeId,
-      brandId: v.brandId,
+      brandId: v.brandId === GROUP_LEVEL ? null : v.brandId,
       designationId: v.designationId,
       reportsToId: v.reportsToId,
       approverId: v.approverId,
@@ -439,7 +464,7 @@ export class EmployeeForm implements OnInit {
       password: '',
       role: e.role,
       userTypeId: e.userTypeId ?? this.builtIn(e.role)?.id ?? null,
-      brandId: e.brandId,
+      brandId: e.brandId ?? GROUP_LEVEL,
       designationId: e.designationId,
       reportsToId: e.reportsToId,
       approverId: e.approverId,

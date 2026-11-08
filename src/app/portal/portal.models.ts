@@ -22,8 +22,12 @@ export interface UserType {
   builtIn: boolean;
   active: boolean;
   description: string | null;
-  /** How many employees have it (none: it may be deleted). */
+  /** How many employees have it (none: it may be changed or deleted). */
   employees: number;
+  /** The brand it is for; null = every brand. */
+  brandId: number | null;
+  brandCode: string | null;
+  brandName: string | null;
 }
 
 /** The user type's name, else the role's. */
