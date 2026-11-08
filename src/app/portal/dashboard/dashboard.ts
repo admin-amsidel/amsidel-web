@@ -84,7 +84,7 @@ type Ticked = keyof typeof TICKS.me;
     @if (auth.can('OVERVIEW_SALES') && (mode() !== 'team' || auth.can('MANUAL_SALES_DETAILS'))) {
       <app-manual-sales-card [team]="mode() === 'team'" [brandId]="mode() === 'team' ? brandId() : null" />
     }
-    @if (auth.can('OVERVIEW_TRAVEL') && (mode() !== 'team' || auth.can('TA_TEAM'))) { <app-travel-card [team]="mode() === 'team'" /> }
+    @if (auth.can('OVERVIEW_TRAVEL') && (mode() !== 'team' || auth.can('TA_TEAM'))) { <app-travel-card [team]="mode() === 'team'" [brandId]="mode() === 'team' ? brandId() : null" /> }
 
     @if (mode() === 'me' && me.summary.failed()) {
       <p-message severity="error" styleClass="page-message">Today's details could not be loaded. The sections below load on their own.</p-message>

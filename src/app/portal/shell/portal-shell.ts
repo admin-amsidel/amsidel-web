@@ -291,6 +291,8 @@ function sectionOf(path: string): Section {
     /* sidebar beside the page */
     .p-layout { display: flex; align-items: flex-start; }
     .p-layout > .p-main { flex: 1 1 auto; min-width: 0; }
+    /* phones: room under the page, so its last lines scroll clear of the notification and chat buttons */
+    @media (max-width: 760px) { .p-layout > .p-main { padding-bottom: 150px; } }
 
     .denied { max-width: 560px; margin: 40px auto; text-align: center; display: grid; justify-items: center; gap: 6px; }
     .denied > i { font-size: 2rem; color: var(--brass-dark); }

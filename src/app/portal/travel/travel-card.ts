@@ -46,6 +46,8 @@ export class TravelCard {
   private readonly api = inject(TravelService);
   protected readonly auth = inject(AuthService);
   readonly team = input(false);
+  /** The Overview's brand choice in the Team view (0 = people without a brand); null = every brand. */
+  readonly brandId = input<number | null>(null);
   protected readonly months = signal<TravelMonth[] | null>(null);
   protected readonly totals = signal<TravelTotals | null>(null);
   protected readonly symbol = signal('₹');
@@ -54,12 +56,13 @@ export class TravelCard {
   constructor() {
     effect(() => {
       const team = this.team();
+      const brandId = this.brandId();
       untracked(() => {
         this.months.set(null);
         this.failed.set(false);
         const done = { error: () => this.failed.set(true) };
         if (team) {
-          this.api.team({ from: null, to: null, status: null }).subscribe({ next: (v) => { this.totals.set(v.totals); this.months.set(v.months); }, ...done });
+          this.api.team({ from: null, to: null, status: null, brandId }).subscribe({ next: (v) => { this.totals.set(v.totals); this.symbol.set(v.claims[0]?.currencySymbol ?? '₹'); this.months.set(v.months); }, ...done });
         } else {
           this.api.mine({ from: null, to: null, status: null }).subscribe({ next: (v) => { this.totals.set(v.totals); this.symbol.set(v.currencySymbol); this.months.set(v.months); }, ...done });
         }

@@ -138,19 +138,12 @@ p-progressbar.tone-done .p-progressbar-value { background: var(--progress-done);
   .p-head .head-actions { width: 100%; }
 }
 
-/* phones: a row of choice buttons (periods, views, filters) stays one line and scrolls sideways, never wider than the screen */
+/* phones: a row of choice buttons (periods, views, filters) wraps onto a second line, so every choice shows (a row that
+   scrolled sideways hid the last ones, and nothing told people to swipe) */
 @media (max-width: 760px) {
-  .p-selectbutton {
-    display: flex; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
-  }
-  .p-selectbutton::-webkit-scrollbar { display: none; }
+  .p-selectbutton { display: inline-flex; flex-wrap: wrap; max-width: 100%; row-gap: 4px; overflow: visible; }
   .p-selectbutton .p-togglebutton { flex: none; white-space: nowrap; }
   .p-tablist-tab-list { flex-wrap: nowrap; }
-}
-
-/* phones: in a dialog every choice must show, so the buttons wrap onto a second line instead */
-@media (max-width: 760px) {
-  .p-dialog .p-selectbutton { flex-wrap: wrap; overflow: visible; }
 }
 
 /* ---- phones: a compact list in place of a wide table (only-desk / only-phone pick which shows) ----

@@ -41,7 +41,7 @@ export interface RateRow { employeeId: number; name: string; empNumber: string; 
 /** A customer of the project portal. */
 export interface TravelCustomer { id: number; code: string | null; name: string; phone: string | null; location: string | null; }
 
-export interface TravelFilter { from: string | null; to: string | null; status: TravelStatus | null; employeeId?: number | null; }
+export interface TravelFilter { from: string | null; to: string | null; status: TravelStatus | null; employeeId?: number | null; /** One brand (0 = no brand). */ brandId?: number | null; }
 
 export interface Fix { latitude: number; longitude: number; accuracy: number | null; }
 
@@ -89,6 +89,7 @@ export class TravelService {
     if (f.to) p = p.set('to', f.to);
     if (f.status) p = p.set('status', f.status);
     if (f.employeeId) p = p.set('employeeId', f.employeeId);
+    if (f.brandId != null) p = p.set('brandId', f.brandId);
     return p;
   }
 

@@ -124,9 +124,15 @@ const ALL = '*';
           }
           @if (s.type === 'EMPLOYEE') {
             <p-message severity="info" styleClass="who-note">
-              Only the menus ticked here count for {{ s.label }}; their user type and designation are not used. Untick
-              everything and save to go back to them.
+              Only the menus ticked here count for {{ s.label }}; their user type and designation are not used.
             </p-message>
+            @if (canSave() && saved(s).length) {
+              <div class="remove-own">
+                <p-button label="Remove this person's own menus" icon="pi pi-times-circle" severity="danger" [outlined]="true" size="small"
+                          [loading]="saving()" (onClick)="removeOwn(s)" />
+                <small class="muted">They go back to the menus of their user type and designation.</small>
+              </div>
+            }
           }
 
           <ul class="tree" [class.dim]="all()">
@@ -181,6 +187,8 @@ const ALL = '*';
     .note { margin: -4px 0 8px; font-size: .78rem; color: var(--muted); }
     :host ::ng-deep .add { width: 100%; margin-bottom: 6px; }
     :host ::ng-deep .who-note { margin-bottom: 10px; }
+    .remove-own { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: -2px 0 14px; }
+    .remove-own small { font-size: .8rem; }
     .list { display: grid; gap: 4px; }
     .subj {
       display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 9px 12px;
@@ -425,7 +433,33 @@ export class MenuAccessPage implements OnInit {
     });
   }
 
-  private saved(s: Subject): string[] {
+  /** A person's own menus taken away: their user type's and designation's count again, and they leave the list. */
+  protected removeOwn(s: Subject): void {
+    this.confirm.confirm({
+      header: 'Remove own menus', icon: 'pi pi-times-circle',
+      message: `Remove ${s.label}'s own menu access? They will get the menus of their user type and designation again.`,
+      acceptLabel: 'Remove', rejectLabel: 'Keep', acceptButtonProps: { severity: 'danger' }, rejectButtonProps: { outlined: true },
+      accept: () => {
+        this.saving.set(true);
+        this.service.save(s.type, s.key, []).subscribe({
+          next: () => {
+            this.saving.set(false);
+            this.entries.update((map) => { const next = new Map(map); next.delete(keyOf(s.type, s.key)); return next; });
+            this.userSubjects.update((list) => list.filter((x) => x.key !== s.key));
+            this.select(this.roleSubjects()[1] ?? this.roleSubjects()[0]);
+            this.toast.add({ severity: 'success', summary: 'Own menus removed', detail: `${s.label} now gets the menus of their user type and designation` });
+            this.auth.reloadAccess().subscribe();
+          },
+          error: (err) => {
+            this.saving.set(false);
+            this.toast.add({ severity: 'error', summary: 'Not removed', detail: apiProblem(err).message });
+          },
+        });
+      },
+    });
+  }
+
+  protected saved(s: Subject): string[] {
     if (s.locked) return [ALL];
     return this.entries().get(keyOf(s.type, s.key)) ?? [];
   }
