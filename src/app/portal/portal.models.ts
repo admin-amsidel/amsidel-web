@@ -238,7 +238,7 @@ export interface Designation {
   brandName: string | null;
 }
 
-/** "L3.7 · Sales Executive (SE) · DW" (the brand code only for a brand's own designation). */
+/** "L3.7 · Sales Executive (SE) · AD" (the brand code only for a brand's own designation). */
 export function designationOption(d: Designation): string {
   return designationLabel(d) + (d.shortCode ? ` (${d.shortCode})` : '') + (d.brandCode ? ' · ' + d.brandCode : '');
 }

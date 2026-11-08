@@ -85,7 +85,7 @@ type Show = 'ALL' | 'OPEN' | 'SHARED';
               <div>
                 <h2>{{ v.project.name }}</h2>
                 <p class="muted">{{ v.project.code }} · {{ v.project.customerName }}{{ v.project.customerPhone ? ' · ' + v.project.customerPhone : '' }}
-                  · <a [routerLink]="'/portal/products/projects/' + v.project.id">Open the project</a></p>
+                  · <a [routerLink]="'/portal/customers/projects/' + v.project.id">Open the project</a></p>
               </div>
               <p-tag [value]="label(v.project.status)" [severity]="severity(v.project.status)" styleClass="big-tag" />
             </div>

@@ -45,7 +45,7 @@ type Show = 'OPEN' | 'COMPLETED' | 'SETTLED' | 'CANCELLED' | 'ALL';
       </div>
       <div class="head-actions">
         <app-brand-pick (changed)="load()" />
-        <p-button label="New project" icon="pi pi-plus" (onClick)="router.navigate(['/portal/products/projects', 'new'])" />
+        <p-button label="New project" icon="pi pi-plus" (onClick)="router.navigate(['/portal/customers/projects', 'new'])" />
       </div>
     </div>
     @if (error()) { <p-message severity="error" styleClass="page-message">{{ error() }}</p-message> }
@@ -75,7 +75,7 @@ type Show = 'OPEN' | 'COMPLETED' | 'SETTLED' | 'CANCELLED' | 'ALL';
             <th class="num">To pay</th><th class="num">Paid</th><th class="num">Due</th></tr>
         </ng-template>
         <ng-template #body let-p>
-          <tr class="row-link" (click)="router.navigate(['/portal/products/projects', p.id])">
+          <tr class="row-link" (click)="router.navigate(['/portal/customers/projects', p.id])">
             <td data-label="Project" class="stack-full"><b>{{ p.name }}</b>
               <small class="muted block">{{ p.code }}{{ brand.many() && !brand.selected() ? ' · ' + p.brandCode : '' }}{{ p.createdByName ? ' · by ' + p.createdByName : '' }}</small></td>
             <td data-label="Customer">{{ p.customerName }}<small class="muted block">{{ p.customerPhone }}</small></td>
@@ -95,7 +95,7 @@ type Show = 'OPEN' | 'COMPLETED' | 'SETTLED' | 'CANCELLED' | 'ALL';
       </p-table>
       <ul class="mlist only-phone" aria-label="Projects">
         @for (p of shown(); track p.id) {
-          <li><button type="button" class="mrow" (click)="router.navigate(['/portal/products/projects', p.id])">
+          <li><button type="button" class="mrow" (click)="router.navigate(['/portal/customers/projects', p.id])">
             <span><span class="mrow__title">{{ p.name }}</span>
               <span class="mrow__sub">{{ p.code }} · {{ p.customerName }}{{ p.ownerName ? ' · ' + p.ownerName : '' }}</span>
               <span class="mrow__sub"><p-tag [value]="status(p).label" [severity]="status(p).severity" styleClass="tiny" />

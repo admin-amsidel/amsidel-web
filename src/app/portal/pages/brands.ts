@@ -125,7 +125,7 @@ import { ExcelButton, ExcelColumn } from '../excel-export';
         <div class="pf span"><label for="b-name">Name *</label>
           <input pInputText id="b-name" maxlength="150" placeholder="e.g. Amsidel Doors & Windows" [ngModel]="name()" (ngModelChange)="name.set($event)" /></div>
         <div class="pf"><label for="b-code">Code *</label>
-          <input pInputText id="b-code" maxlength="10" placeholder="e.g. DW" [ngModel]="code()" (ngModelChange)="code.set($event.toUpperCase())" />
+          <input pInputText id="b-code" maxlength="10" placeholder="e.g. AD" [ngModel]="code()" (ngModelChange)="code.set($event.toUpperCase())" />
           <small class="hint">Also the start of employee numbers (DW0001).</small></div>
         <div class="pf"><label for="b-cat">Category</label>
           <p-select inputId="b-cat" [options]="categories" [editable]="true" [showClear]="true" placeholder="Choose or type" appendTo="body"

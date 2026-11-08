@@ -82,7 +82,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
             on {{ d.createdAt | date: 'd MMM y' }}
             @if (d.issuedAt) { · {{ d.kind === 'SALES_ORDER' ? 'confirmed' : 'issued' }} {{ d.issuedAt | date: 'd MMM y, h:mm a' }} by <b>{{ d.issuedByName }}</b> }
             @if (d.updatedByName && d.updatedAt) { · last changed by {{ d.updatedByName }}, {{ d.updatedAt | date: 'd MMM y, h:mm a' }} }
-            @if (d.projectId) { · project <a [routerLink]="'/portal/products/projects/' + d.projectId">{{ d.projectCode }} {{ d.projectName }}</a> }
+            @if (d.projectId) { · project <a [routerLink]="'/portal/customers/projects/' + d.projectId">{{ d.projectCode }} {{ d.projectName }}</a> }
             @if (d.quotationId) { · from {{ kindName(d.sourceKind).toLowerCase() }} <a [routerLink]="link(d.sourceKind, d.quotationId)">{{ d.quotationNumber }}</a> }
             @if (d.invoiceId) { · {{ kindName(d.madeKind).toLowerCase() }} <a [routerLink]="link(d.madeKind, d.invoiceId)">{{ d.invoiceNumber }}</a> }
           </p>
@@ -175,7 +175,7 @@ const DEFAULT_TERMS = 'Prices include delivery within the city. 50% advance with
                           [placeholder]="customerId() ? (projectOptions().length ? 'Not part of a project' : 'No open projects for this customer') : 'Choose the customer first'"
                           [disabled]="!editable() || !customerId()" [ngModel]="projectId()" (ngModelChange)="projectId.set($event); dirty.set(true)" />
                 @if (projectId()) {
-                  <small class="hint"><a [routerLink]="'/portal/products/projects/' + projectId()">Open the project</a> · its tasks, other bills and payments</small>
+                  <small class="hint"><a [routerLink]="'/portal/customers/projects/' + projectId()">Open the project</a> · its tasks, other bills and payments</small>
                 }
               </div>
             </div>

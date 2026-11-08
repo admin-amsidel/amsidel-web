@@ -97,7 +97,7 @@ type Side = 'ALL' | 'IN' | 'OUT';
               <small class="muted block">{{ e.partyName ? (e.income ? 'From ' : 'To ') + e.partyName + ' · ' : '' }}by {{ e.updatedByName ?? e.createdByName ?? '—' }}</small></td>
             <td data-label="Bill / project" (click)="$event.stopPropagation()">
               @if (e.invoiceId) { <a [routerLink]="'/portal/products/invoices/' + e.invoiceId">{{ e.invoiceNumber }}</a> }
-              @if (e.projectId) { <a class="block" [routerLink]="'/portal/products/projects/' + e.projectId">{{ e.projectCode }}</a> }
+              @if (e.projectId) { <a class="block" [routerLink]="'/portal/customers/projects/' + e.projectId">{{ e.projectCode }}</a> }
               @if (e.purchaseBillId) { <a class="block" [routerLink]="'/portal/products/purchases/' + e.purchaseBillId">{{ e.purchaseBillNumber }}</a> }
               <small class="muted block">{{ e.customerName ?? e.supplierName ?? '' }}</small>
               @if (!e.invoiceId && !e.projectId && !e.purchaseBillId && !e.customerName && !e.supplierName) { <span class="muted">—</span> }

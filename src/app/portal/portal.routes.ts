@@ -229,6 +229,27 @@ export const PORTAL_ROUTES: Routes = [
         loadComponent: () => import('./pages/brands').then((m) => m.Brands),
       },
       {
+        path: 'travel',
+        title: 'My Travel Claims · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'TA_MY' },
+        loadComponent: () => import('./travel/my-travel').then((m) => m.MyTravel),
+      },
+      {
+        path: 'travel/team',
+        title: 'Team Travel Claims · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'TA_TEAM' },
+        loadComponent: () => import('./travel/team-travel').then((m) => m.TeamTravel),
+      },
+      {
+        path: 'travel/rates',
+        title: 'Allowance Rates · Amsidel Company Portal',
+        canActivate: [menuGuard],
+        data: { menu: 'TA_RATES' },
+        loadComponent: () => import('./travel/travel-rates').then((m) => m.TravelRates),
+      },
+      {
         path: 'manual-sales/tasks',
         title: 'Manual Sales Tasks · Amsidel Company Portal',
         canActivate: [menuGuard],

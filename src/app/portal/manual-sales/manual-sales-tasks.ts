@@ -20,6 +20,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { AuthService } from '../auth.service';
 import { apiProblem, toIsoDate } from '../portal.models';
 import { ManualSalesService, ManualTask, moneyText, TaskFilter, TaskOptions } from './manual-sales.service';
+import { PhoneInput, phoneProblem } from '../phone-input';
 
 type Period = 'ALL' | 'MONTH' | 'DATES';
 
@@ -29,7 +30,7 @@ type Period = 'ALL' | 'MONTH' | 'DATES';
  */
 @Component({
   selector: 'app-manual-sales-tasks',
-  imports: [FormsModule, ButtonModule, DatePickerModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule, MultiSelectModule, SelectModule, TableModule, TagModule, TextareaModule],
+  imports: [PhoneInput, FormsModule, ButtonModule, DatePickerModule, DialogModule, IconFieldModule, InputIconModule, InputTextModule, MessageModule, MultiSelectModule, SelectModule, TableModule, TagModule, TextareaModule],
   template: `
     <div class="p-head">
       <div>
@@ -112,7 +113,7 @@ type Period = 'ALL' | 'MONTH' | 'DATES';
           <input pInputText id="ms-cust" list="ms-customers" maxlength="150" [ngModel]="customerName()" (ngModelChange)="customerName.set($event)" />
           <datalist id="ms-customers">@for (c of options()?.customers ?? []; track c) { <option [value]="c"></option> }</datalist></div>
         <div class="pf"><label for="ms-cphone">Customer phone</label>
-          <input pInputText id="ms-cphone" maxlength="30" [ngModel]="customerPhone()" (ngModelChange)="customerPhone.set($event)" /></div>
+          <app-phone-input inputId="ms-cphone" label="customer phone" [ngModel]="customerPhone()" (ngModelChange)="customerPhone.set($event ?? '')" /></div>
         <div class="pf span"><label for="ms-proj">Project</label>
           <input pInputText id="ms-proj" list="ms-projects" maxlength="150" [ngModel]="projectName()" (ngModelChange)="projectName.set($event)" />
           <datalist id="ms-projects">@for (c of options()?.projects ?? []; track c) { <option [value]="c"></option> }</datalist></div>
@@ -120,7 +121,7 @@ type Period = 'ALL' | 'MONTH' | 'DATES';
           <input pInputText id="ms-agent" list="ms-agents" maxlength="150" [ngModel]="agentName()" (ngModelChange)="agentName.set($event)" />
           <datalist id="ms-agents">@for (c of options()?.agents ?? []; track c) { <option [value]="c"></option> }</datalist></div>
         <div class="pf"><label for="ms-aphone">Agent phone</label>
-          <input pInputText id="ms-aphone" maxlength="30" [ngModel]="agentPhone()" (ngModelChange)="agentPhone.set($event)" /></div>
+          <app-phone-input inputId="ms-aphone" label="agent phone" [ngModel]="agentPhone()" (ngModelChange)="agentPhone.set($event ?? '')" /></div>
         <div class="pf span"><label for="ms-who">Assigned to</label>
           <p-multiselect inputId="ms-who" [options]="peopleOptions()" optionLabel="label" optionValue="value" [filter]="true" filterPlaceHolder="Search people" placeholder="Choose people"
                          display="chip" [maxSelectedLabels]="4" selectedItemsLabel="{0} people" appendTo="body" [ngModel]="assigneeIds()" (ngModelChange)="assigneeIds.set($event ?? [])" />
@@ -372,6 +373,10 @@ export class ManualSalesTasks implements OnInit {
 
   protected save(): void {
     if (!this.title().trim()) return this.formError.set('Give the task a title.');
+    const customerPhoneProblem = phoneProblem(this.customerPhone());
+    if (customerPhoneProblem) return this.formError.set('Customer phone: ' + customerPhoneProblem);
+    const agentPhoneProblem = phoneProblem(this.agentPhone());
+    if (agentPhoneProblem) return this.formError.set('Agent phone: ' + agentPhoneProblem);
     const t = this.editing();
     this.busy.set(true);
     this.formError.set('');

@@ -49,7 +49,7 @@ const SIDEBAR_KEY = 'amsidel.portal.sidebar';
 /** The portal's parts: the product and customer portals by their address, everything else the employee portal. */
 type Section = 'EMPLOYEE' | 'PRODUCT' | 'CUSTOMER';
 const SECTION_ROOTS: [Section, string][] = [['PRODUCT', '/portal/products'], ['CUSTOMER', '/portal/customers']];
-const SECTION_LABELS: Record<Section, string> = { EMPLOYEE: 'Employee portal', PRODUCT: 'Product portal', CUSTOMER: 'Customer portal' };
+const SECTION_LABELS: Record<Section, string> = { EMPLOYEE: 'Employee portal', PRODUCT: 'Product portal', CUSTOMER: 'Project portal' };
 
 function sectionOf(path: string): Section {
   const p = path.split(/[?#]/)[0];
@@ -95,7 +95,7 @@ function sectionOf(path: string): Section {
           }
           @if (customerStart(); as start) {
             <a [routerLink]="start" [class.on]="section() === 'CUSTOMER'" [attr.aria-current]="section() === 'CUSTOMER' ? 'page' : null">
-              <i class="pi pi-address-book" aria-hidden="true"></i><span>Customer portal</span></a>
+              <i class="pi pi-briefcase" aria-hidden="true"></i><span>Project portal</span></a>
           }
         </nav>
       }

@@ -25,6 +25,7 @@ import { zoneClock } from '../portal-time';
 import { MeetingCalendar } from './meeting-calendar';
 import { Part, PartLoader, PartState } from './part';
 import { ManualSalesCard } from '../manual-sales/manual-sales-card';
+import { TravelCard } from '../travel/travel-card';
 import { ActiveUsersCard } from './active-users-card';
 import { StorageCard } from './storage-card';
 import { ExcelTable } from '../excel-export';
@@ -58,7 +59,7 @@ type Ticked = keyof typeof TICKS.me;
   imports: [
     ExcelTable,
     DatePipe, FormsModule, RouterLink, InputTextModule, MessageModule, SelectModule, SelectButtonModule, SkeletonModule, TableModule,
-    Avatar, Columns, Gauge, SplitBar, LeavePlanAlerts, MeetingCalendar, PartLoader, StorageCard, ManualSalesCard, ActiveUsersCard,
+    Avatar, Columns, Gauge, SplitBar, LeavePlanAlerts, MeetingCalendar, PartLoader, StorageCard, ManualSalesCard, TravelCard, ActiveUsersCard,
   ],
   template: `
     <div class="p-head">
@@ -83,6 +84,7 @@ type Ticked = keyof typeof TICKS.me;
     @if (auth.can('OVERVIEW_SALES') && (mode() !== 'team' || auth.can('MANUAL_SALES_DETAILS'))) {
       <app-manual-sales-card [team]="mode() === 'team'" [brandId]="mode() === 'team' ? brandId() : null" />
     }
+    @if (auth.can('OVERVIEW_TRAVEL') && (mode() !== 'team' || auth.can('TA_TEAM'))) { <app-travel-card [team]="mode() === 'team'" /> }
 
     @if (mode() === 'me' && me.summary.failed()) {
       <p-message severity="error" styleClass="page-message">Today's details could not be loaded. The sections below load on their own.</p-message>

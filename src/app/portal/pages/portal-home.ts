@@ -188,7 +188,7 @@ export class PortalHome implements OnInit {
 
 type Part = 'EMPLOYEE' | 'PRODUCT' | 'CUSTOMER';
 
-const PARTS: [Part, string][] = [['EMPLOYEE', 'Employee portal'], ['PRODUCT', 'Product portal'], ['CUSTOMER', 'Customer portal']];
+const PARTS: [Part, string][] = [['EMPLOYEE', 'Employee portal'], ['PRODUCT', 'Product portal'], ['CUSTOMER', 'Project portal']];
 
 function partOf(path: string): Part {
   return path.startsWith('/portal/products') ? 'PRODUCT' : path.startsWith('/portal/customers') ? 'CUSTOMER' : 'EMPLOYEE';

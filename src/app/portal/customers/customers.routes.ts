@@ -8,8 +8,9 @@ import { menuGuard } from '../portal.guards';
 const T = ' · Amsidel Company Portal';
 
 /**
- * The customer portal, under /portal/customers: the list (add, change, delete), one customer's details page, and
- * customer & supplier email with its limits per brand.
+ * The project portal, under /portal/customers: projects and their status updates, customers (list and details), agents
+ * and their commissions, and customer & supplier email with its limits per brand. It needs no product portal, so a
+ * client without products still tracks projects with their employees, customers and agents.
  */
 export const CUSTOMER_ROUTES: Routes = [
   {
@@ -47,6 +48,27 @@ export const CUSTOMER_ROUTES: Routes = [
     canActivate: [menuGuard],
     data: { menu: 'AGENTS' },
     loadComponent: () => import('./agents').then((m) => m.Agents),
+  },
+  {
+    path: 'projects',
+    title: 'Projects' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_PROJECTS' },
+    loadComponent: () => import('../products/projects').then((m) => m.Projects),
+  },
+  {
+    path: 'projects/:id',
+    title: 'Project' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_PROJECTS' },
+    loadComponent: () => import('../products/project-editor').then((m) => m.ProjectEditor),
+  },
+  {
+    path: 'project-status',
+    title: 'Project status' + T,
+    canActivate: [menuGuard],
+    data: { menu: 'PROD_PROJECT_STATUS' },
+    loadComponent: () => import('../products/project-status').then((m) => m.ProjectStatusPage),
   },
   {
     path: ':id',

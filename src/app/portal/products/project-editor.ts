@@ -48,7 +48,7 @@ import { TradeService } from './trade.service';
   template: `
     <div class="p-head">
       <div>
-        <a class="back" routerLink="/portal/products/projects">← Projects</a>
+        <a class="back" routerLink="/portal/customers/projects">← Projects</a>
         <h1>{{ p() ? p()!.name : 'New project' }}
           @if (p(); as x) {
             <span class="tags">
@@ -232,7 +232,7 @@ import { TradeService } from './trade.service';
               <div class="su-head">
                 <h2>Status updates for the customer</h2>
                 @if (auth.can('PROD_PROJECT_STATUS')) {
-                  <a class="su-open" [routerLink]="'/portal/products/project-status'" [queryParams]="{ project: x.id }">
+                  <a class="su-open" [routerLink]="'/portal/customers/project-status'" [queryParams]="{ project: x.id }">
                     Post or share <i class="pi pi-arrow-right" aria-hidden="true"></i></a>
                 }
               </div>
@@ -604,7 +604,7 @@ export class ProjectEditor implements OnInit {
       next: (x) => {
         const fresh = !this.p();
         this.done(x, fresh ? 'Project created' : 'Project saved');
-        if (fresh) this.router.navigate(['/portal/products/projects', x.id], { replaceUrl: true });
+        if (fresh) this.router.navigate(['/portal/customers/projects', x.id], { replaceUrl: true });
       },
       error: (e) => this.failed(e, (m) => this.formError.set(m)),
     });
@@ -650,7 +650,7 @@ export class ProjectEditor implements OnInit {
       accept: () => this.trade.deleteProject(x.id).subscribe({
         next: () => {
           this.toast.add({ severity: 'success', summary: 'Project deleted', detail: x.code });
-          this.router.navigate(['/portal/products/projects']);
+          this.router.navigate(['/portal/customers/projects']);
         },
         error: (e) => this.failed(e),
       }),

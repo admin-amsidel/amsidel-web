@@ -43,12 +43,12 @@ export interface BrandSiteContent {
 }
 
 /**
- * Each brand's page, by brand code. A new brand gets an entry here, with its pictures in public/images/.
+ * Each brand's page, by brand code (AD = Amsidel Doors & Windows; the key must match the code on the Brands page). A new brand gets an entry here, with its pictures in public/images/.
  * Amsidel Doors & Windows is taken from the public site (pages/about, pages/projects, data/site.config), so the two say
  * the same. No client has been named yet, so the page shows the kinds of customer the site lists.
  */
 export const BRAND_SITES: Record<string, BrandSiteContent> = {
-  DW: {
+  AD: {
     tagline: 'A new name in doors and windows, built on old-fashioned care.',
     logo: 'brand/amsidel-logo.png',
     hero: 'images/hero/hero-1.webp',

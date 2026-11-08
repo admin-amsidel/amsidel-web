@@ -103,27 +103,10 @@ export const PRODUCT_ROUTES: Routes = [
     data: { menu: 'PROD_INVOICES', kind: 'INVOICE' },
     loadComponent: () => import('./sales-editor').then((m) => m.SalesEditor),
   },
-  {
-    path: 'projects',
-    title: 'Projects' + T,
-    canActivate: [menuGuard],
-    data: { menu: 'PROD_PROJECTS' },
-    loadComponent: () => import('./projects').then((m) => m.Projects),
-  },
-  {
-    path: 'projects/:id',
-    title: 'Project' + T,
-    canActivate: [menuGuard],
-    data: { menu: 'PROD_PROJECTS' },
-    loadComponent: () => import('./project-editor').then((m) => m.ProjectEditor),
-  },
-  {
-    path: 'project-status',
-    title: 'Project status' + T,
-    canActivate: [menuGuard],
-    data: { menu: 'PROD_PROJECT_STATUS' },
-    loadComponent: () => import('./project-status').then((m) => m.ProjectStatusPage),
-  },
+  // Projects moved to the project portal; old links and bookmarks still work
+  { path: 'projects', redirectTo: '/portal/customers/projects' },
+  { path: 'projects/:id', redirectTo: '/portal/customers/projects/:id' },
+  { path: 'project-status', redirectTo: '/portal/customers/project-status' },
   {
     path: 'ledger',
     title: 'Income & expenses' + T,

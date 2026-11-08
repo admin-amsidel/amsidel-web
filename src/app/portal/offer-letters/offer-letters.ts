@@ -24,6 +24,7 @@ import { apiProblem, Brand, Designation, designationsFor, fromIsoDate, toIsoDate
 import { StaffService } from '../staff.service';
 import { OfferBody, OfferLetterService, OfferRow, OfferStatus, OfferView } from './offer-letters.service';
 import { ExcelTable } from '../excel-export';
+import { PhoneInput, phoneProblem } from '../phone-input';
 
 /** One row of the package split being typed. */
 interface SplitRow {
@@ -40,6 +41,7 @@ interface SplitRow {
 @Component({
   selector: 'app-offer-letters',
   imports: [
+    PhoneInput,
     ExcelTable,
     FormsModule, DatePipe, ButtonModule, DatePickerModule, DialogModule, IconFieldModule, InputIconModule, InputNumberModule, InputTextModule,
     MessageModule, SelectModule, SelectButtonModule, TableModule, TagModule, TextareaModule,
@@ -128,7 +130,7 @@ interface SplitRow {
         <div class="pf wide"><label for="ol-intro">About the company *</label>
           <textarea pTextarea id="ol-intro" rows="3" maxlength="4000" [ngModel]="companyIntro()" (ngModelChange)="companyIntro.set($event)"></textarea></div>
         <div class="pf"><label for="ol-phone">Contact number *</label>
-          <input pInputText id="ol-phone" maxlength="20" [ngModel]="contactNumber()" (ngModelChange)="contactNumber.set($event)" /></div>
+          <app-phone-input inputId="ol-phone" label="contact number" [required]="true" [ngModel]="contactNumber()" (ngModelChange)="contactNumber.set($event ?? '')" /></div>
         <div class="pf"><label for="ol-email">Contact email *</label>
           <input pInputText id="ol-email" type="email" maxlength="150" [ngModel]="contactEmail()" (ngModelChange)="contactEmail.set($event)" /></div>
       </div>
@@ -444,6 +446,11 @@ export class OfferLetters implements OnInit {
     }
     if (!this.candidateName().trim()) {
       this.formError.set("Give the candidate's name.");
+      return null;
+    }
+    const phone = phoneProblem(this.contactNumber());
+    if (phone) {
+      this.formError.set('Contact number: ' + phone);
       return null;
     }
     // rows left completely empty are ignored; half-filled ones are the server's to refuse

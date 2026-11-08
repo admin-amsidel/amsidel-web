@@ -441,7 +441,7 @@ type LineShow = 'OPEN' | 'MATCHED' | 'ALL';
                   <td data-label="Invoice" class="stack-full"><a [routerLink]="'/portal/products/invoices/' + s.invoiceId"><b>{{ s.number }}</b></a>
                     <small class="muted block">{{ s.date | date: 'd MMM y' }} · {{ s.daysOpen }} days{{ brand.many() && !brand.selected() ? ' · ' + s.brandCode : '' }}</small></td>
                   <td data-label="Customer">{{ s.customerName }}<small class="muted block">{{ s.customerPhone }}</small></td>
-                  <td data-label="Project">@if (s.projectId) { <a [routerLink]="'/portal/products/projects/' + s.projectId">{{ s.projectCode }}</a><small class="muted block">{{ s.projectName }}</small> } @else { <span class="muted">—</span> }</td>
+                  <td data-label="Project">@if (s.projectId) { <a [routerLink]="'/portal/customers/projects/' + s.projectId">{{ s.projectCode }}</a><small class="muted block">{{ s.projectName }}</small> } @else { <span class="muted">—</span> }</td>
                   <td data-label="Billed" class="num">{{ money(s.total) }}</td>
                   <td data-label="Received" class="num">{{ money(s.paid) }}@if (s.writtenOff > 0) { <small class="muted block">+ {{ money(s.writtenOff) }} written off</small> }</td>
                   <td data-label="Difference" class="num due"><b>{{ money(s.due) }}</b></td>

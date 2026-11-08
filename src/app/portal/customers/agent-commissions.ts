@@ -129,7 +129,7 @@ function groupOf(view: View, c: Commission): { key: string; label: string; sub: 
               <td data-label="Completed" class="nowrap">{{ c.completedOn | date: 'd MMM y' }}</td>
               <td data-label="Agent"><b>{{ c.agentName }}</b><small class="muted block">{{ c.agentCode }}{{ c.agentUpi ? ' · ' + c.agentUpi : '' }}</small></td>
               <td data-label="Project">
-                @if (canOpenProject()) { <a [routerLink]="['/portal/products/projects', c.projectId]">{{ c.projectName }}</a> } @else { {{ c.projectName }} }
+                @if (canOpenProject()) { <a [routerLink]="['/portal/customers/projects', c.projectId]">{{ c.projectName }}</a> } @else { {{ c.projectName }} }
                 <small class="muted block">{{ c.projectCode }} · {{ c.customerName }}</small>
                 @if (c.remarks) { <small class="block remark">{{ c.remarks }}</small> }
               </td>

@@ -728,7 +728,7 @@ export class StaffMail implements OnInit {
 
     const overDay = this.dayUsage().find((u) => u.left !== null && u.mails > u.left);
     if (overDay) {
-      return this.formError.set(`${overDay.label} has ${overDay.left} ${this.trade ? 'customer & supplier' : 'staff'} ${overDay.left === 1 ? 'email' : 'emails'} left today (limit ${overDay.daily}), and this send needs ${overDay.mails}. Choose fewer people, or ask for the limit to be raised under ${this.trade ? 'Customer portal > Email > Email config' : 'Email > Staff email config'}.`);
+      return this.formError.set(`${overDay.label} has ${overDay.left} ${this.trade ? 'customer & supplier' : 'staff'} ${overDay.left === 1 ? 'email' : 'emails'} left today (limit ${overDay.daily}), and this send needs ${overDay.mails}. Choose fewer people, or ask for the limit to be raised under ${this.trade ? 'Project portal > Email > Email config' : 'Email > Staff email config'}.`);
     }
 
     const draft: Draft = {
